@@ -2,12 +2,33 @@
   "name": "spaceloop-workspace",
   "private": true,
   "version": "1.0.0",
+  "type": "module",
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
-    "install:frontend": "npm install --prefix frontend",
     "dev": "npm run dev --prefix frontend",
-    "build": "npm install --prefix frontend && npm run build --prefix frontend && node -e \"const fs = require('fs'); fs.cpSync('frontend/dist', 'dist', {recursive: true});\"",
+    "build": "npm run build --prefix frontend && node -e \"const fs = require('fs'); fs.cpSync('frontend/dist', 'dist', {recursive: true});\"",
     "preview": "npm run preview --prefix frontend",
     "dev:frontend": "npm run dev --prefix frontend",
     "build:frontend": "npm run build --prefix frontend"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "framer-motion": "^11.11.17",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
+    "tailwind-merge": "^2.5.5"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.16",
+    "vite": "^6.0.3"
   }
 }
