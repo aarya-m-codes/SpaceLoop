@@ -7,12 +7,12 @@ import { useTheme } from '../../hooks/useTheme';
  * Fullscreen first impression / front page of SpaceLoop.
  * 
  * Strict Observable Timeline Sequence:
- * - 0.0s: Sky visible, clouds visible and drifting continuously.
+ * - 0.0s: Clean atmospheric sky visible.
  * - 0.0s -> 1.4s: Buildings start at translateY(100vh) and visibly glide upward into place.
  * - 0.2s -> 1.2s: "SPACELOOP" visibly descends from translateY(-60px) + opacity: 0 -> translateY(0) + opacity: 1.
  * - 1.0s -> 1.8s: "Find a space, make it yours" in italics descends from translateY(-40px) + opacity: 0 -> translateY(0) + opacity: 1.
  * - 1.8s -> 2.4s: Scroll explore cue fades in smoothly.
- * - 0.0s onward: Multi-layer clouds continuously drift horizontally across the sky indefinitely.
+ * - 2.0s -> 2.6s: Existing header smoothly slides down from top.
  * 
  * Edge-to-Edge: 16px bleed and matched background prevent any white/black seams.
  */
@@ -108,43 +108,6 @@ export const HeroLivingEnvironment = ({ onScrollExplore }) => {
             <div className="w-full h-full rounded-full bg-gradient-to-r from-amber-200/50 via-yellow-100/35 to-transparent blur-2xl" />
           </div>
         )}
-      </div>
-
-      {/* ==========================================================================
-          3. CLOUD ANIMATION (0.0s -> Continuous Infinite Movement)
-             Layered at z-20 above the sky background for guaranteed visibility.
-             Three independent parallax layers with multi-directional drifting.
-         ========================================================================== */}
-      <div className="absolute inset-0 z-20 pointer-events-none overflow-hidden h-[54%]">
-        {/* Layer 1: Distant Slow Clouds (Drifting Left, 52s) */}
-        <div className="absolute top-[4%] w-[200%] h-32 opacity-50 cloud-layer-back flex">
-          <svg viewBox="0 0 1200 120" className="w-1/2 h-full fill-white/90 dark:fill-slate-200/40 shrink-0">
-            <path d="M50,80 Q90,30 150,50 Q200,20 260,45 Q310,15 380,50 Q430,35 480,75 Q520,40 580,60 Q630,25 700,55 Q760,30 820,65 Q880,35 940,60 Q1000,20 1060,55 Q1120,40 1180,80 Z" filter="blur(2px)" />
-          </svg>
-          <svg viewBox="0 0 1200 120" className="w-1/2 h-full fill-white/90 dark:fill-slate-200/40 shrink-0">
-            <path d="M50,80 Q90,30 150,50 Q200,20 260,45 Q310,15 380,50 Q430,35 480,75 Q520,40 580,60 Q630,25 700,55 Q760,30 820,65 Q880,35 940,60 Q1000,20 1060,55 Q1120,40 1180,80 Z" filter="blur(2px)" />
-          </svg>
-        </div>
-
-        {/* Layer 2: Mid-ground Clouds (Drifting Right, 36s) */}
-        <div className="absolute top-[13%] w-[200%] h-40 opacity-60 cloud-layer-mid flex">
-          <svg viewBox="0 0 1400 140" className="w-1/2 h-full fill-white/95 dark:fill-slate-100/50 shrink-0">
-            <path d="M40,90 Q100,40 170,60 Q230,25 300,55 Q370,20 440,65 Q510,35 580,70 Q660,25 740,60 Q820,30 900,75 Q980,35 1060,65 Q1140,25 1220,70 Q1300,45 1370,90 Z" filter="blur(2px)" />
-          </svg>
-          <svg viewBox="0 0 1400 140" className="w-1/2 h-full fill-white/95 dark:fill-slate-100/50 shrink-0">
-            <path d="M40,90 Q100,40 170,60 Q230,25 300,55 Q370,20 440,65 Q510,35 580,70 Q660,25 740,60 Q820,30 900,75 Q980,35 1060,65 Q1140,25 1220,70 Q1300,45 1370,90 Z" filter="blur(2px)" />
-          </svg>
-        </div>
-
-        {/* Layer 3: Foreground Gentle Clouds (Drifting Left, 26s) */}
-        <div className="absolute top-[22%] w-[200%] h-36 opacity-55 cloud-layer-fore flex">
-          <svg viewBox="0 0 1500 130" className="w-1/2 h-full fill-white dark:fill-slate-100/45 shrink-0">
-            <path d="M60,85 Q130,45 210,65 Q290,30 370,65 Q450,25 530,70 Q620,35 710,65 Q800,25 890,70 Q980,40 1070,75 Q1160,30 1250,70 Q1340,45 1430,85 Z" filter="blur(3px)" />
-          </svg>
-          <svg viewBox="0 0 1500 130" className="w-1/2 h-full fill-white dark:fill-slate-100/45 shrink-0">
-            <path d="M60,85 Q130,45 210,65 Q290,30 370,65 Q450,25 530,70 Q620,35 710,65 Q800,25 890,70 Q980,40 1070,75 Q1160,30 1250,70 Q1340,45 1430,85 Z" filter="blur(3px)" />
-          </svg>
-        </div>
       </div>
 
       {/* Top spacer */}
