@@ -33,45 +33,30 @@ export const AuthPage = () => {
 
   const redirectPath = location.state?.from || (role === 'host' ? '/host' : '/explore');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const executeLogin = async (loginEmail, loginPassword) => {
     setFormError('');
     setLoading(true);
 
     try {
-      if (isLogin) {
-        const result = await login(email, password);
-        success('Signed in successfully!');
-        
-        // Exact Role Detection from Authenticated Backend Data
-        const rawRole =
-          result?.activeRole ||
-          result?.user?.active_role ||
-          result?.user?.role ||
-          (result?.user?.is_admin ? 'admin' : role);
-        const userRole = String(rawRole).toLowerCase() === 'guest' ? 'seeker' : String(rawRole).toLowerCase();
-        
-        if (location.state?.from) {
-          navigate(location.state.from);
-        } else if (userRole === 'admin' || result?.user?.is_admin) {
-          navigate('/admin');
-        } else if (userRole === 'host') {
-          navigate('/host');
-        } else {
-          navigate('/seeker');
-        }
+      const result = await login(loginEmail, loginPassword);
+      success('Signed in successfully!');
+
+      // Exact Role Detection from Authenticated Backend Data
+      const rawRole =
+        result?.activeRole ||
+        result?.user?.active_role ||
+        result?.user?.role ||
+        (result?.user?.is_admin ? 'admin' : '');
+      const userRole = String(rawRole).toLowerCase() === 'guest' ? 'seeker' : String(rawRole).toLowerCase();
+
+      if (location.state?.from) {
+        navigate(location.state.from);
+      } else if (userRole === 'admin' || result?.user?.is_admin) {
+        navigate('/admin');
+      } else if (userRole === 'host') {
+        navigate('/host');
       } else {
-        const regResult = await register({
-          email,
-          password,
-          full_name: fullName,
-          phone,
-          role,
-        });
-        success('Account created! Welcome to SpaceLoop.');
-        const rawRegRole = regResult?.activeRole || regResult?.user?.role || role;
-        const regRole = String(rawRegRole).toLowerCase() === 'guest' ? 'seeker' : String(rawRegRole).toLowerCase();
-        navigate(regRole === 'host' ? '/host' : '/seeker');
+        navigate('/seeker');
       }
     } catch (err) {
       let msg = 'Authentication failed. Please verify credentials.';
@@ -98,20 +83,69 @@ export const AuthPage = () => {
     }
   };
 
-  const setDemoCredentials = (targetRole) => {
-    setFormError('');
+  const handleDemoLogin = async (targetRole) => {
+    setIsLogin(true);
+    let targetEmail = 'seeker.rohit@spaceloop.in';
+    const targetPassword = 'SpaceLoopDemo123!';
+    let demoRole = 'seeker';
+
     if (targetRole === 'host') {
-      setEmail('host.rahul@spaceloop.in');
-      setPassword('HostRahul#2026');
-      setRole('host');
+      targetEmail = 'host.arjun@spaceloop.in';
+      demoRole = 'host';
     } else if (targetRole === 'admin') {
-      setEmail('admin@spaceloop.in');
-      setPassword('Admin@SpaceLoop2026!');
-      setRole('admin');
+      targetEmail = 'admin.spaceloop@spaceloop.in';
+      demoRole = 'admin';
+    }
+
+    setEmail(targetEmail);
+    setPassword(targetPassword);
+    setRole(demoRole);
+
+    await executeLogin(targetEmail, targetPassword);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (isLogin) {
+      await executeLogin(email, password);
     } else {
-      setEmail('seeker.rohit@spaceloop.in');
-      setPassword('SeekerSecret2026!');
-      setRole('seeker');
+      setFormError('');
+      setLoading(true);
+      try {
+        const regResult = await register({
+          email,
+          password,
+          full_name: fullName,
+          phone,
+          role,
+        });
+        success('Account created! Welcome to SpaceLoop.');
+        const rawRegRole = regResult?.activeRole || regResult?.user?.role || role;
+        const regRole = String(rawRegRole).toLowerCase() === 'guest' ? 'seeker' : String(rawRegRole).toLowerCase();
+        navigate(regRole === 'host' ? '/host' : '/seeker');
+      } catch (err) {
+        let msg = 'Registration failed. Please check your information.';
+        if (err) {
+          if (typeof err === 'string' && err.trim()) {
+            msg = err.trim();
+          } else if (typeof err.message === 'string' && err.message !== '[object Object]' && err.message.trim()) {
+            msg = err.message.trim();
+          } else if (err.data?.error?.message) {
+            msg = err.data.error.message;
+          } else if (typeof err.data?.error === 'string') {
+            msg = err.data.error;
+          } else if (typeof err.data?.message === 'string') {
+            msg = err.data.message;
+          }
+        }
+        if (msg === '[object Object]') {
+          msg = 'Unable to create account. Please try again.';
+        }
+        setFormError(msg);
+        toastError(msg);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -282,22 +316,25 @@ export const AuthPage = () => {
           <div className="flex flex-wrap items-center justify-center gap-2">
             <button
               type="button"
-              onClick={() => setDemoCredentials('seeker')}
-              className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-primary/10 border border-border text-[11px] text-text-secondary hover:text-primary transition-colors"
+              disabled={loading}
+              onClick={() => handleDemoLogin('seeker')}
+              className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-primary/10 border border-border text-[11px] text-text-secondary hover:text-primary transition-colors disabled:opacity-50"
             >
               Seeker Demo
             </button>
             <button
               type="button"
-              onClick={() => setDemoCredentials('host')}
-              className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-primary/10 border border-border text-[11px] text-text-secondary hover:text-primary transition-colors"
+              disabled={loading}
+              onClick={() => handleDemoLogin('host')}
+              className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-primary/10 border border-border text-[11px] text-text-secondary hover:text-primary transition-colors disabled:opacity-50"
             >
               Host Demo
             </button>
             <button
               type="button"
-              onClick={() => setDemoCredentials('admin')}
-              className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-rose-500/10 border border-border text-[11px] text-text-secondary hover:text-rose-500 transition-colors"
+              disabled={loading}
+              onClick={() => handleDemoLogin('admin')}
+              className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-rose-500/10 border border-border text-[11px] text-text-secondary hover:text-rose-500 transition-colors disabled:opacity-50"
             >
               Admin Demo
             </button>

@@ -279,17 +279,26 @@ def register_cli_commands(app: Flask) -> None:
         init_db(app)
         print("SpaceLoop database tables created successfully.")
 
+    @app.cli.command("seed-demo")
+    def seed_demo_command():
+        """Ensure SpaceLoop demo accounts exist with valid credentials."""
+        try:
+            from backend.seed_data import ensure_demo_accounts
+        except ImportError:
+            from seed_data import ensure_demo_accounts
+        init_db(app)
+        report = ensure_demo_accounts(app)
+        print(f"SpaceLoop demo accounts ensured: {report}")
+
     @app.cli.command("seed-db")
     def seed_db_command():
         """Seed initial users, spaces, bookings, and reviews."""
         try:
-            from backend.app.persistence.seed import seed_all
+            from backend.seed_data import ensure_demo_accounts, seed_all
         except ImportError:
-            try:
-                from backend.seed_data import seed_all
-            except ImportError:
-                from seed_data import seed_all
+            from seed_data import ensure_demo_accounts, seed_all
         init_db(app)
+        ensure_demo_accounts(app)
         counts = seed_all(app)
         print(f"SpaceLoop database seeded: {counts}")
 
@@ -399,22 +408,23 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     register_system_routes(app)
     register_cli_commands(app)
 
-    # Auto-initialize database tables if not created yet (idempotent)
+    # Auto-initialize database tables and demo accounts (idempotent)
     if not app.config.get("TESTING"):
         with app.app_context():
             try:
                 import models  # noqa: F401
                 db.create_all()
                 try:
+                    try:
+                        from backend.seed_data import ensure_demo_accounts, seed_all
+                    except ImportError:
+                        from seed_data import ensure_demo_accounts, seed_all
+                    ensure_demo_accounts(app)
                     from models import Space
                     if Space.query.count() == 0:
-                        try:
-                            from backend.seed_data import seed_all
-                        except ImportError:
-                            from seed_data import seed_all
                         seed_all(app)
                 except Exception as seed_err:
-                    app.logger.info(f"Seed data skipped or already present: {seed_err}")
+                    app.logger.info(f"Seed/demo data check: {seed_err}")
             except Exception as db_err:
                 app.logger.warning(f"Database schema initialization deferred: {db_err}")
 
