@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sun, Moon, Menu, X, Compass, PlusCircle, Calendar, User } from 'lucide-react';
+import { Sun, Moon, Menu, X, Compass, PlusCircle, Calendar } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 import { Button } from './Button';
 import { mobileMenuVariants } from '../../utils/motion';
@@ -30,8 +30,8 @@ export const Navbar = () => {
       initial={isLanding ? { opacity: 0, y: -48 } : { opacity: 1, y: 0 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
-        delay: isLanding ? 1.9 : 0,
-        duration: 0.6,
+        delay: isLanding ? 2.0 : 0,
+        duration: 0.5,
         ease: [0.16, 1, 0.3, 1],
       }}
       className="fixed top-0 left-0 right-0 z-50 w-full glass-panel border-b border-border transition-colors duration-250"

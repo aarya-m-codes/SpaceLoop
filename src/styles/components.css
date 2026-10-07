@@ -14,31 +14,14 @@
   border-color: rgba(30, 43, 64, 0.7);
 }
 
-/* Seamless Transparent Scrollbar (Eliminates white/black lines at right edge) */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Ensure scrollbars never render solid tracks or white/black edge lines */
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(150, 150, 150, 0.25);
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(150, 150, 150, 0.5);
-}
-
-/* Utility to completely hide scrollbar where needed */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }

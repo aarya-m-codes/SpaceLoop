@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import {
   Compass,
   Laptop,
@@ -30,10 +31,33 @@ import { SPACES_DATA } from '../utils/constants';
 
 export const LandingPage = () => {
   const navigate = useNavigate();
+  const shouldReduceMotion = useReducedMotion();
+
   const [locationQuery, setLocationQuery] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [loopBotPrompt, setLoopBotPrompt] = useState('');
   const [loopBotResponse, setLoopBotResponse] = useState(null);
+  const [windowHeight, setWindowHeight] = useState(800);
+
+  useEffect(() => {
+    setWindowHeight(window.innerHeight || 800);
+    const handleResize = () => setWindowHeight(window.innerHeight || 800);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Scroll-linked transition for Hero -> Explore transition ONLY
+  const { scrollY } = useScroll();
+  const heroY = useTransform(scrollY, [0, windowHeight], ['0%', '-24%']);
+  const heroScale = useTransform(scrollY, [0, windowHeight], [1, 0.94]);
+  const heroOpacity = useTransform(scrollY, [0, windowHeight * 0.85, windowHeight], [1, 0.7, 0.2]);
+
+  const handleScrollExplore = () => {
+    const target = document.getElementById('spaceloop-content');
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   const categories = [
     { name: 'All Spaces', icon: Compass, count: '120+' },
@@ -103,29 +127,41 @@ export const LandingPage = () => {
   };
 
   return (
-    <div className="w-full relative">
+    <div className="w-full relative m-0 p-0 overflow-x-hidden border-none">
       
       {/* ==========================================================================
           SLIDE 1: FULLSCREEN LIVING ENVIRONMENTAL HERO
-          Pinned / Sticky at top with edge-to-edge full viewport coverage.
+          Pinned at top with cinematic upward page-lift / slide transition on scroll.
+          100% seamless: No visible edge, margin, border, or line.
          ========================================================================== */}
-      <div className="sticky top-0 h-screen w-full overflow-hidden z-0">
-        <HeroLivingEnvironment />
-      </div>
+      <motion.div
+        style={
+          shouldReduceMotion
+            ? {}
+            : {
+                y: heroY,
+                scale: heroScale,
+                opacity: heroOpacity,
+              }
+        }
+        className="sticky top-0 h-[100dvh] w-full overflow-hidden z-0 border-none m-0 p-0"
+      >
+        <HeroLivingEnvironment onScrollExplore={handleScrollExplore} />
+      </motion.div>
 
       {/* ==========================================================================
-          SLIDE 2: THE SPACELOOP PLATFORM CONTENT
-          Slides upward over the hero like turning a page / changing a slide.
-          Features elegant curved deck header and elevation shadow.
-          This effect appears ONLY HERE at the hero transition.
+          SLIDE 2: THE SPACELOOP PLATFORM CONTENT (EXPLORE SECTION)
+          Slides upward over the hero like turning a page upward.
+          This effect appears ONLY HERE for the Hero -> Explore transition.
+          Zero borders at the bottom or sides.
          ========================================================================== */}
       <div
         id="spaceloop-content"
-        className="relative z-10 w-full bg-background rounded-t-[36px] sm:rounded-t-[54px] shadow-[0_-30px_70px_rgba(0,0,0,0.65)] border-t border-border-subtle overflow-hidden transition-all duration-300"
+        className="relative z-10 w-full bg-background rounded-t-[32px] sm:rounded-t-[48px] shadow-[0_-25px_60px_rgba(0,0,0,0.45)] border-none overflow-hidden transition-all duration-300"
       >
-        {/* Subtle slide handle / pill indicator on top */}
+        {/* Subtle slide handle indicator */}
         <div className="w-full flex justify-center pt-3 pb-1">
-          <div className="w-12 h-1.5 rounded-full bg-border opacity-70" />
+          <div className="w-12 h-1 rounded-full bg-border opacity-60" />
         </div>
 
         {/* Search Bar Widget (Reveals as part of Slide 2) */}
@@ -194,7 +230,7 @@ export const LandingPage = () => {
         </section>
 
         {/* ==========================================================================
-            WHAT SPACELOOP IS
+            WHAT SPACELOOP IS (Normal scrolling continues from here onwards)
            ========================================================================== */}
         <section className="py-16 sm:py-20 bg-background transition-colors">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
