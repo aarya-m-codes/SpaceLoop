@@ -1,1 +1,3 @@
-from models import Review
+from backend.app.persistence.models import Review
+
+__all__ = ["Review"]

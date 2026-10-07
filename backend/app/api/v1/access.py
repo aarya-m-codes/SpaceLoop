@@ -1,12 +1,13 @@
-from flask import Blueprint, jsonify, request
-from security import token_required
+from flask import Blueprint, g, jsonify, request
+from backend.modules.auth.permissions import require_auth
 from backend.modules.bookings.service import BookingService
 
 access_bp = Blueprint('access_api', __name__)
 
 @access_bp.route('/validate', methods=['POST'])
-@token_required
-def validate_access(current_user):
+@require_auth
+def validate_access():
+    current_user = g.current_user
     data = request.get_json() or {}
     booking_id = data.get('booking_id')
     lat = data.get('lat')

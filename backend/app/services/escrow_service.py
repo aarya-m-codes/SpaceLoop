@@ -1,3 +1,4 @@
+"""SpaceLoop Escrow Service."""
 from backend.modules.escrow.service import EscrowService
-class EscrowAppService(EscrowService):
-    pass
+
+__all__ = ["EscrowService"]

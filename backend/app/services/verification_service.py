@@ -1,3 +1,4 @@
+"""SpaceLoop Verification Service."""
 from backend.modules.verification.service import VerificationService
-class VerificationAppService(VerificationService):
-    pass
+
+__all__ = ["VerificationService"]

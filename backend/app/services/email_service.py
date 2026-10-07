@@ -1,3 +1,4 @@
-from backend.modules.email.service import EmailNotificationService
-class EmailService(EmailNotificationService):
-    pass
+"""SpaceLoop Transactional Email Service."""
+from backend.modules.email.service import EmailService
+
+__all__ = ["EmailService"]

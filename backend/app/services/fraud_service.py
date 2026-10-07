@@ -1,3 +1,6 @@
-from fraud_engine.detector import FraudEngine
-class FraudService(FraudEngine):
-    pass
+"""SpaceLoop Fraud Engine Service."""
+from fraud_engine.service import FraudEngineService
+
+FraudService = FraudEngineService
+
+__all__ = ["FraudService", "FraudEngineService"]

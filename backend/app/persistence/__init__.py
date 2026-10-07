@@ -1,4 +1,4 @@
-"""SpaceLoop Root ORM Models (delegating to backend.app.persistence.models)."""
+"""SpaceLoop Persistence Layer."""
 from backend.app.persistence.models import (
     AccessLog,
     AuditLog,
@@ -23,10 +23,20 @@ from backend.app.persistence.models import (
     db,
     utc_now,
 )
+from backend.app.persistence.session import (
+    check_database_health,
+    configure_sqlite_connection,
+    get_session,
+    init_db,
+)
 
 __all__ = [
     "db",
     "utc_now",
+    "init_db",
+    "check_database_health",
+    "configure_sqlite_connection",
+    "get_session",
     "User",
     "Space",
     "Booking",

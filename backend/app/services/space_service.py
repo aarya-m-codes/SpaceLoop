@@ -1,3 +1,4 @@
+"""SpaceLoop Space Service."""
 from backend.modules.spaces.service import SpaceService
-class SpaceAppService(SpaceService):
-    pass
+
+__all__ = ["SpaceService"]

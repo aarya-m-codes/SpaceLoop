@@ -1,1 +1,3 @@
-from models import FraudEvent
+from backend.app.persistence.models import FraudAlert
+
+__all__ = ["FraudAlert"]
