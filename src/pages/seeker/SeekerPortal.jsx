@@ -31,6 +31,7 @@ import { ExploreSpaces } from '../ExploreSpaces';
 import { SeekerBookings } from '../SeekerBookings';
 import { Profile } from '../Profile';
 import { Button } from '../../components/common/Button';
+import { AnimatedBackground } from '@/components/core/animated-background';
 
 export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
   const { user, logout } = useAuth();
@@ -284,35 +285,48 @@ export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {spaces.slice(0, 3).map((space) => (
-                <div
-                  key={space.id}
-                  className="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition-all flex flex-col justify-between"
-                >
-                  <div className="space-y-2">
-                    <div className="w-full h-36 rounded-xl overflow-hidden bg-surface-elevated relative">
-                      <img
-                        src={space.images?.[0] || '/images/spaceloop-hero-light.jpg'}
-                        alt={space.title}
-                        className="w-full h-full object-cover"
-                      />
-                      <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 text-white backdrop-blur-md">
-                        ₹{space.hourly_rate}/hr
-                      </span>
+              <AnimatedBackground
+                className="rounded-3xl bg-zinc-100 dark:bg-zinc-800"
+                transition={{
+                  type: 'spring',
+                  bounce: 0.2,
+                  duration: 0.6,
+                }}
+                enableHover
+              >
+                {spaces.slice(0, 3).map((space, index) => (
+                  <div
+                    key={space.id}
+                    data-id={`card-${space.id || index}`}
+                    className="p-2 w-full h-full flex flex-col"
+                  >
+                    <div className="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition-all flex flex-col justify-between h-full">
+                      <div className="space-y-2">
+                        <div className="w-full h-36 rounded-xl overflow-hidden bg-surface-elevated relative">
+                          <img
+                            src={space.images?.[0] || '/images/spaceloop-hero-light.jpg'}
+                            alt={space.title}
+                            className="w-full h-full object-cover"
+                          />
+                          <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 text-white backdrop-blur-md">
+                            ₹{space.hourly_rate}/hr
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-sm text-text-primary truncate">{space.title}</h4>
+                        <p className="text-xs text-text-muted truncate">{space.city || space.address}</p>
+                      </div>
+                      <div className="pt-3 mt-3 border-t border-border flex items-center justify-between">
+                        <span className="text-[11px] text-emerald-500 font-medium">Instant Unlock</span>
+                        <Link to={`/spaces/${space.id}`}>
+                          <Button variant="outline" size="xs">
+                            Details
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
-                    <h4 className="font-bold text-sm text-text-primary truncate">{space.title}</h4>
-                    <p className="text-xs text-text-muted truncate">{space.city || space.address}</p>
                   </div>
-                  <div className="pt-3 mt-3 border-t border-border flex items-center justify-between">
-                    <span className="text-[11px] text-emerald-500 font-medium">Instant Unlock</span>
-                    <Link to={`/spaces/${space.id}`}>
-                      <Button variant="outline" size="xs">
-                        Details
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </AnimatedBackground>
             </div>
           </div>
         </div>
@@ -361,44 +375,57 @@ export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {wishlist.map((item) => {
-                const space = typeof item === 'object' ? item : spaces.find((s) => s.id === item) || {};
-                return (
-                  <div
-                    key={space.id || Math.random()}
-                    className="p-4 rounded-2xl bg-surface border border-border flex flex-col justify-between"
-                  >
-                    <div className="space-y-2">
-                      <div className="w-full h-36 rounded-xl overflow-hidden bg-surface-elevated relative">
-                        <img
-                          src={space.images?.[0] || '/images/spaceloop-hero-light.jpg'}
-                          alt={space.title || 'Space'}
-                          className="w-full h-full object-cover"
-                        />
+              <AnimatedBackground
+                className="rounded-3xl bg-zinc-100 dark:bg-zinc-800"
+                transition={{
+                  type: 'spring',
+                  bounce: 0.2,
+                  duration: 0.6,
+                }}
+                enableHover
+              >
+                {wishlist.map((item, index) => {
+                  const space = typeof item === 'object' ? item : spaces.find((s) => s.id === item) || {};
+                  return (
+                    <div
+                      key={space.id || index}
+                      data-id={`wishlist-${space.id || index}`}
+                      className="p-2 w-full h-full flex flex-col"
+                    >
+                      <div className="p-4 rounded-2xl bg-surface border border-border flex flex-col justify-between h-full">
+                        <div className="space-y-2">
+                          <div className="w-full h-36 rounded-xl overflow-hidden bg-surface-elevated relative">
+                            <img
+                              src={space.images?.[0] || '/images/spaceloop-hero-light.jpg'}
+                              alt={space.title || 'Space'}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <h4 className="font-bold text-sm text-text-primary truncate">
+                            {space.title || 'Architectural Workspace'}
+                          </h4>
+                          <p className="text-xs text-text-muted truncate">{space.city || 'Bangalore'}</p>
+                          <p className="text-xs font-semibold text-primary">₹{space.hourly_rate || 250}/hr</p>
+                        </div>
+                        <div className="pt-3 mt-3 border-t border-border flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveWishlist(space.id)}
+                            className="text-xs text-rose-500 hover:underline"
+                          >
+                            Remove
+                          </button>
+                          <Link to={`/spaces/${space.id || ''}`}>
+                            <Button variant="primary" size="xs">
+                              Book Now
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
-                      <h4 className="font-bold text-sm text-text-primary truncate">
-                        {space.title || 'Architectural Workspace'}
-                      </h4>
-                      <p className="text-xs text-text-muted truncate">{space.city || 'Bangalore'}</p>
-                      <p className="text-xs font-semibold text-primary">₹{space.hourly_rate || 250}/hr</p>
                     </div>
-                    <div className="pt-3 mt-3 border-t border-border flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveWishlist(space.id)}
-                        className="text-xs text-rose-500 hover:underline"
-                      >
-                        Remove
-                      </button>
-                      <Link to={`/spaces/${space.id || ''}`}>
-                        <Button variant="primary" size="xs">
-                          Book Now
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </AnimatedBackground>
             </div>
           )}
         </div>

@@ -17,6 +17,7 @@ import { SpaceMapView } from '../components/spaces/SpaceMapView';
 import { AiSearchModal } from '../components/spaces/AiSearchModal';
 import { ScrollReveal } from '../components/common/ScrollReveal';
 import { Button } from '../components/common/Button';
+import { AnimatedBackground } from '@/components/core/animated-background';
 import { spacesApi } from '../services/api';
 import { useToast } from '../context/ToastContext';
 
@@ -221,9 +222,25 @@ export const ExploreSpaces = () => {
         <SpaceMapView spaces={filteredSpaces} />
       ) : filteredSpaces.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSpaces.map((space) => (
-            <SpaceCard key={space.id} space={space} />
-          ))}
+          <AnimatedBackground
+            className="rounded-3xl bg-zinc-100 dark:bg-zinc-800"
+            transition={{
+              type: 'spring',
+              bounce: 0.2,
+              duration: 0.6,
+            }}
+            enableHover
+          >
+            {filteredSpaces.map((space, index) => (
+              <div
+                key={space.id}
+                data-id={`card-${space.id || index}`}
+                className="p-2 w-full h-full flex flex-col"
+              >
+                <SpaceCard space={space} />
+              </div>
+            ))}
+          </AnimatedBackground>
         </div>
       ) : (
         <div className="text-center py-20 bg-surface rounded-3xl border border-border p-8 space-y-3">

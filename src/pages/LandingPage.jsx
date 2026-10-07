@@ -27,6 +27,7 @@ import { HeroLivingEnvironment } from '../components/home/HeroLivingEnvironment'
 import { SpaceCard } from '../components/spaces/SpaceCard';
 import { ScrollReveal } from '../components/common/ScrollReveal';
 import { Button } from '../components/common/Button';
+import { AnimatedBackground } from '@/components/core/animated-background';
 import { SPACES_DATA } from '../utils/constants';
 import { spacesApi, aiApi } from '../services/api';
 
@@ -347,11 +348,27 @@ export const LandingPage = () => {
 
           {/* Space Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {liveSpaces.slice(0, 6).map((space, index) => (
-              <ScrollReveal key={space.id} delay={index % 3}>
-                <SpaceCard space={space} />
-              </ScrollReveal>
-            ))}
+            <AnimatedBackground
+              className="rounded-3xl bg-zinc-100 dark:bg-zinc-800"
+              transition={{
+                type: 'spring',
+                bounce: 0.2,
+                duration: 0.6,
+              }}
+              enableHover
+            >
+              {liveSpaces.slice(0, 6).map((space, index) => (
+                <div
+                  key={space.id}
+                  data-id={`card-${space.id || index}`}
+                  className="p-2 w-full h-full flex flex-col"
+                >
+                  <ScrollReveal delay={index % 3} className="w-full h-full flex flex-col">
+                    <SpaceCard space={space} />
+                  </ScrollReveal>
+                </div>
+              ))}
+            </AnimatedBackground>
           </div>
         </section>
 
