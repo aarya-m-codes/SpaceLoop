@@ -46,10 +46,13 @@ logger = logging.getLogger("spaceloop.auth.service")
 
 def get_client_ip() -> str:
     """Safely obtain client IP address accounting for proxies."""
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.remote_addr or "127.0.0.1"
+    from flask import has_request_context
+    if has_request_context():
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        return request.remote_addr or "127.0.0.1"
+    return "127.0.0.1"
 
 
 def record_audit_log(

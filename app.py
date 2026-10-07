@@ -253,6 +253,7 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     # Register API blueprints
     from backend.app.api.v1.auth import auth_bp
     from backend.app.api.v1.bookings import bookings_bp
+    from backend.app.api.v1.escrow import escrow_bp
     from backend.app.api.v1.spaces import spaces_bp
     from backend.modules.spaces.photo_service import UPLOAD_FOLDER
     from flask import send_from_directory
@@ -262,6 +263,8 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     app.register_blueprint(spaces_bp, url_prefix="/api/v1/spaces", name="spaces_v1")
     app.register_blueprint(bookings_bp, url_prefix="/api/bookings")
     app.register_blueprint(bookings_bp, url_prefix="/api/v1/bookings", name="bookings_v1")
+    app.register_blueprint(escrow_bp, url_prefix="/api/escrow")
+    app.register_blueprint(escrow_bp, url_prefix="/api/v1/escrow", name="escrow_v1")
 
     @app.route("/uploads/<path:filename>", methods=["GET"])
     def uploaded_file(filename):
