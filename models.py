@@ -379,14 +379,34 @@ class RiskAssessment(db.Model):
     id = db.Column(Integer, primary_key=True)
     booking_id = db.Column(Integer, ForeignKey("bookings.id", ondelete="SET NULL"), nullable=True, index=True)
     user_id = db.Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    entity_type = db.Column(String(50), default="USER", nullable=True, index=True)
+    entity_id = db.Column(String(100), nullable=True, index=True)
     risk_score = db.Column(Float, nullable=False, default=0.0)
     risk_level = db.Column(String(20), nullable=False, default="LOW")  # LOW, MEDIUM, HIGH, CRITICAL
     evaluated_rules = db.Column(JSON, nullable=False, default=list)
-    action_taken = db.Column(String(30), nullable=False, default="ALLOW")  # ALLOW, REVIEW, BLOCK
+    signals = db.Column(JSON, nullable=True, default=list)
+    narrative = db.Column(Text, nullable=True)
+    action_taken = db.Column(String(30), nullable=False, default="ALLOW")  # ALLOW, CHALLENGE, REVIEW, BLOCK
     created_at = db.Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     # Relationships
     user = relationship("User", back_populates="risk_assessments", foreign_keys=[user_id])
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "booking_id": self.booking_id,
+            "entity_type": self.entity_type or "USER",
+            "entity_id": self.entity_id or str(self.user_id),
+            "risk_score": round(self.risk_score, 3),
+            "risk_level": self.risk_level,
+            "action_taken": self.action_taken,
+            "evaluated_rules": self.evaluated_rules or [],
+            "signals": self.signals or [],
+            "narrative": self.narrative or "",
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
 
 
 class FraudEventRecord(db.Model):
@@ -405,6 +425,18 @@ class FraudEventRecord(db.Model):
     # Relationships
     alerts = relationship("FraudAlertRecord", back_populates="event", cascade="all, delete-orphan")
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "event_type": self.event_type,
+            "ip_address": self.ip_address,
+            "device_fingerprint": self.device_fingerprint,
+            "payload": self.payload or {},
+            "severity": self.severity,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
 
 class FraudAlertRecord(db.Model):
     """Escalated actionable alerts requiring administrative review."""
@@ -422,6 +454,19 @@ class FraudAlertRecord(db.Model):
 
     # Relationships
     event = relationship("FraudEventRecord", back_populates="alerts", foreign_keys=[event_id])
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "event_id": self.event_id,
+            "user_id": self.user_id,
+            "title": self.title,
+            "details": self.details or {},
+            "status": self.status,
+            "resolved_by": self.resolved_by,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
+        }
 
 
 class PasswordResetToken(db.Model):

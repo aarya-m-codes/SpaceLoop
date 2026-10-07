@@ -188,3 +188,8 @@ def require_permission(*required_permissions: str) -> Callable:
             return f(*args, **kwargs)
         return decorated
     return decorator
+
+
+def require_admin(f: Callable) -> Callable:
+    """Decorator requiring the authenticated user to hold the ADMIN role."""
+    return require_role(ROLE_ADMIN)(f)
