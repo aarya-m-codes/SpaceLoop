@@ -253,7 +253,7 @@ class SpaceService:
 
         # Query confirmed bookings
         booking_query = Booking.query.filter_by(space_id=space_id).filter(
-            Booking.status.in_(["CONFIRMED", "CHECKED_IN"])
+            func.lower(Booking.status).in_(["confirmed", "checked_in", "active"])
         )
 
         # Filter by specific date if supplied (YYYY-MM-DD)
@@ -296,7 +296,7 @@ class SpaceService:
 
                 # Check slot collision
                 overlap = Booking.query.filter_by(space_id=space_id).filter(
-                    Booking.status.in_(["CONFIRMED", "CHECKED_IN"]),
+                    func.lower(Booking.status).in_(["confirmed", "checked_in", "active"]),
                     Booking.start_time < req_end,
                     Booking.end_time > req_start,
                 ).first()
@@ -358,7 +358,7 @@ class SpaceService:
         booking_q = Booking.query.filter_by(
             space_id=space_id,
             guest_id=guest_user.id,
-        ).filter(Booking.status.in_(["COMPLETED", "CHECKED_IN"]))
+        ).filter(func.lower(Booking.status).in_(["completed", "checked_in", "active"]))
 
         if booking_id:
             booking_q = booking_q.filter_by(id=booking_id)

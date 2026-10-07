@@ -178,8 +178,18 @@ class Booking(db.Model):
     taxes_gst = db.Column(Float, nullable=False, default=0.0)
     total_amount = db.Column(Float, nullable=False)
     currency = db.Column(String(10), default="INR", nullable=False)
-    status = db.Column(String(30), default="PENDING", nullable=False, index=True)
+    status = db.Column(String(30), default="pending", nullable=False, index=True)
+    guest_count = db.Column(Integer, default=1, nullable=False)
+    escrow_deposit = db.Column(Float, default=100.0, nullable=False)
+    session_state = db.Column(String(30), default="not_started", nullable=False, index=True)
+    escrow_status = db.Column(String(30), default="held", nullable=False, index=True)
+    arrival_pin = db.Column(String(4), nullable=True)
     access_code = db.Column(String(32), nullable=True)
+    check_in_time = db.Column(DateTime(timezone=True), nullable=True)
+    check_out_time = db.Column(DateTime(timezone=True), nullable=True)
+    check_in_lat = db.Column(Float, nullable=True)
+    check_in_lng = db.Column(Float, nullable=True)
+    inspection_photos = db.Column(JSON, nullable=False, default=list)
     cancellation_reason = db.Column(Text, nullable=True)
     created_at = db.Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = db.Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
@@ -191,23 +201,91 @@ class Booking(db.Model):
     access_logs = relationship("AccessLog", back_populates="booking", cascade="all, delete-orphan")
     review = relationship("Review", back_populates="booking", uselist=False)
 
+    @property
+    def renter_id(self) -> int:
+        return self.guest_id
+
+    @property
+    def renter(self):
+        return self.guest
+
+    @property
+    def duration_hours(self) -> float:
+        return self.total_hours
+
+    @property
+    def total_price(self) -> float:
+        return self.total_amount
+
     def to_dict(self) -> dict[str, Any]:
-        return {
+        norm_status = (self.status or "pending").lower()
+        norm_session = (self.session_state or "not_started").lower()
+        norm_escrow = (self.escrow_status or "held").lower()
+
+        data: dict[str, Any] = {
             "id": self.id,
             "space_id": self.space_id,
             "guest_id": self.guest_id,
+            "renter_id": self.guest_id,
             "start_time": self.start_time.isoformat() if self.start_time else None,
             "end_time": self.end_time.isoformat() if self.end_time else None,
+            "duration_hours": self.total_hours,
             "total_hours": self.total_hours,
+            "guest_count": self.guest_count if self.guest_count is not None else 1,
+            "subtotal": self.base_amount,
             "base_amount": self.base_amount,
             "platform_fee": self.platform_fee,
+            "escrow_deposit": self.escrow_deposit if self.escrow_deposit is not None else 100.0,
             "taxes_gst": self.taxes_gst,
+            "total_price": self.total_amount,
             "total_amount": self.total_amount,
             "currency": self.currency,
-            "status": self.status,
-            "access_code": self.access_code,
+            "status": norm_status,
+            "session_state": norm_session,
+            "escrow_status": norm_escrow,
+            "arrival_pin": self.arrival_pin or (self.access_code[:4] if self.access_code else "1234"),
+            "access_code": self.access_code or self.arrival_pin,
+            "check_in_time": self.check_in_time.isoformat() if self.check_in_time else None,
+            "check_out_time": self.check_out_time.isoformat() if self.check_out_time else None,
+            "check_in_lat": self.check_in_lat,
+            "check_in_lng": self.check_in_lng,
+            "inspection_photos": self.inspection_photos or [],
+            "cancellation_reason": self.cancellation_reason,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+        if self.check_in_lat is not None and self.check_in_lng is not None:
+            data["gps_coordinates"] = {
+                "latitude": self.check_in_lat,
+                "longitude": self.check_in_lng,
+            }
+        else:
+            data["gps_coordinates"] = None
+
+        if self.space:
+            data["space"] = {
+                "id": self.space.id,
+                "title": self.space.title,
+                "space_type": self.space.space_type,
+                "location": self.space.location or self.space.address_line1,
+                "address": self.space.address_line1,
+                "city": self.space.city,
+                "images": self.space.images or [],
+                "host_id": self.space.host_id,
+                "price_per_hour": self.space.price_per_hour,
+            }
+
+        if self.guest:
+            data["renter"] = {
+                "id": self.guest.id,
+                "full_name": self.guest.full_name,
+                "email": self.guest.email,
+                "phone": self.guest.phone,
+            }
+            data["guest"] = data["renter"]
+
+        return data
 
 
 class EscrowTransaction(db.Model):

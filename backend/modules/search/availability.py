@@ -54,7 +54,10 @@ class AvailabilityEngine:
         conflict = (
             Booking.query.filter(
                 Booking.space_id == space_id,
-                Booking.status.in_(["CONFIRMED", "CHECKED_IN", "PENDING"]),
+                Booking.status.in_([
+                    "CONFIRMED", "CHECKED_IN", "PENDING", "ACTIVE",
+                    "confirmed", "checked_in", "active", "pending"
+                ]),
                 Booking.start_time < slot_end,
                 Booking.end_time > slot_start,
             )

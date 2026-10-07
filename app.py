@@ -263,6 +263,8 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     app.register_blueprint(spaces_bp, url_prefix="/api/v1/spaces", name="spaces_v1")
     app.register_blueprint(bookings_bp, url_prefix="/api/bookings")
     app.register_blueprint(bookings_bp, url_prefix="/api/v1/bookings", name="bookings_v1")
+    app.register_blueprint(bookings_bp, url_prefix="/api/booking", name="booking_singular")
+    app.register_blueprint(bookings_bp, url_prefix="/api/v1/booking", name="booking_v1_singular")
     app.register_blueprint(escrow_bp, url_prefix="/api/escrow")
     app.register_blueprint(escrow_bp, url_prefix="/api/v1/escrow", name="escrow_v1")
 

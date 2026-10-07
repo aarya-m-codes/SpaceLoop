@@ -27,20 +27,27 @@ class ConcurrencyManager:
         return "".join(secrets.choice(ACCESS_PIN_CHARS) for _ in range(length))
 
     @classmethod
+    def generate_arrival_pin(cls) -> str:
+        """Generate a secure, cryptographically random 4-digit arrival PIN."""
+        return f"{secrets.randbelow(10000):04d}"
+
+    @classmethod
     def clean_expired_holds(cls, space_id: int) -> int:
-        """Mark unconfirmed PENDING bookings older than hold timeout as EXPIRED."""
+        """Mark unconfirmed pending bookings older than hold timeout as expired."""
         cutoff = utc_now() - timedelta(minutes=PENDING_HOLD_TIMEOUT_MINUTES)
         expired_bookings = (
             Booking.query.filter(
                 Booking.space_id == space_id,
-                Booking.status == "PENDING",
+                Booking.status.in_(["PENDING", "pending"]),
                 Booking.created_at < cutoff,
             ).all()
         )
         count = 0
         for b in expired_bookings:
-            b.status = "EXPIRED"
-            b.cancellation_reason = "Slot reservation hold expired prior to payment confirmation."
+            b.status = "cancelled"
+            b.session_state = "cancelled"
+            b.escrow_status = "refunded"
+            b.cancellation_reason = "Slot reservation hold expired prior to confirmation."
             count += 1
         if count > 0:
             db.session.commit()
@@ -72,7 +79,10 @@ class ConcurrencyManager:
                 logger.debug(f"Row lock on space {space_id} deferred: {exc}")
 
         # 3. Query active overlapping bookings
-        active_statuses = ["PENDING", "CONFIRMED", "CHECKED_IN"]
+        active_statuses = [
+            "PENDING", "CONFIRMED", "CHECKED_IN", "ACTIVE",
+            "pending", "confirmed", "checked_in", "active"
+        ]
 
         query = Booking.query.filter(
             Booking.space_id == space_id,

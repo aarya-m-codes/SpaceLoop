@@ -145,8 +145,10 @@ class EscrowService:
             escrow.released_at = utc_now()
 
             # Mark associated booking completed if not already
-            if escrow.booking and escrow.booking.status in ["CONFIRMED", "CHECKED_IN"]:
+            if escrow.booking and (escrow.booking.status or "").upper() in ["CONFIRMED", "CHECKED_IN", "ACTIVE"]:
                 escrow.booking.status = "COMPLETED"
+                escrow.booking.session_state = "checked_out"
+                escrow.booking.escrow_status = "released"
 
             db.session.commit()
 
@@ -196,8 +198,10 @@ class EscrowService:
             if reason:
                 escrow.dispute_reason = f"Refund Reason: {reason}"
 
-            if escrow.booking and escrow.booking.status not in ["CANCELLED", "COMPLETED"]:
+            if escrow.booking and (escrow.booking.status or "").upper() not in ["CANCELLED", "COMPLETED", "REJECTED"]:
                 escrow.booking.status = "CANCELLED"
+                escrow.booking.session_state = "cancelled"
+                escrow.booking.escrow_status = "refunded"
                 escrow.booking.cancellation_reason = reason or "Cancelled with full escrow refund."
 
             db.session.commit()
@@ -251,6 +255,7 @@ class EscrowService:
 
             if escrow.booking:
                 escrow.booking.status = "DISPUTED"
+                escrow.booking.escrow_status = "disputed"
 
             # Log fraud / safety event
             fraud_event = FraudEventRecord(
@@ -358,8 +363,10 @@ class EscrowService:
             try:
                 escrow.status = "RELEASED"
                 escrow.released_at = now_utc
-                if escrow.booking and escrow.booking.status in ["CONFIRMED", "CHECKED_IN"]:
+                if escrow.booking and (escrow.booking.status or "").upper() in ["CONFIRMED", "CHECKED_IN", "ACTIVE"]:
                     escrow.booking.status = "COMPLETED"
+                    escrow.booking.session_state = "checked_out"
+                    escrow.booking.escrow_status = "released"
                 released_count += 1
             except Exception as exc:
                 logger.error(f"Error processing auto-release for escrow {escrow.id}: {exc}")
