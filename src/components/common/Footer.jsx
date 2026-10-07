@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShieldCheck, Heart, Globe, ArrowUpRight } from 'lucide-react';
+import { ShieldCheck, Heart, Globe, ArrowUpRight, Infinity } from 'lucide-react';
 
 export const Footer = () => {
   return (
@@ -10,8 +10,8 @@ export const Footer = () => {
           {/* Brand Info */}
           <div className="space-y-4 md:col-span-1">
             <Link to="/" className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-white font-bold text-base shadow-sm">
-                SL
+              <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-white shadow-sm">
+                <Infinity className="w-4 h-4 text-white stroke-[2.5]" />
               </div>
               <span className="font-bold text-lg text-text-primary tracking-tight">
                 SpaceLoop

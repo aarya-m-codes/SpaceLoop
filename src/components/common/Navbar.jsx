@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -9,6 +9,8 @@ import {
   Compass,
   PlusCircle,
   Calendar,
+  Infinity,
+  ArrowRight,
   User,
   Shield,
   Layers,
@@ -16,25 +18,53 @@ import {
   ChevronDown,
   Building2,
   DollarSign,
-  Sparkles,
 } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { Button } from './Button';
-import { mobileMenuVariants } from '../../utils/motion';
 
 export const Navbar = () => {
   const { theme, toggleTheme, isDark } = useTheme();
-  const { user, isAuthenticated, activeRole, switchContext, logout, isSeeker, isHost, isAdmin } = useAuth();
+  const { user, isAuthenticated, activeRole, switchContext, logout } = useAuth();
   const { success, error: toastError } = useToast();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [roleSwitching, setRoleSwitching] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const menuRef = useRef(null);
 
   const isLanding = location.pathname === '/';
+
+  // Close dropdown on click outside or Escape key
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setMenuOpen(false);
+        setProfileDropdownOpen(false);
+      }
+    };
+    if (menuOpen || profileDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [menuOpen, profileDropdownOpen]);
+
+  // Close menus on route change
+  useEffect(() => {
+    setMenuOpen(false);
+    setProfileDropdownOpen(false);
+  }, [location.pathname]);
 
   const handleRoleSwitch = async (targetRole) => {
     if (roleSwitching || targetRole === activeRole) return;
@@ -43,7 +73,7 @@ export const Navbar = () => {
       await switchContext(targetRole);
       success(`Switched to ${targetRole.toUpperCase()} mode`);
       setProfileDropdownOpen(false);
-      setMobileMenuOpen(false);
+      setMenuOpen(false);
       if (targetRole === 'host') {
         navigate('/host');
       } else if (targetRole === 'seeker') {
@@ -65,42 +95,11 @@ export const Navbar = () => {
     navigate('/');
   };
 
-  // Dynamic navigation links based on active role context
-  const getNavLinks = () => {
-    if (activeRole === 'host') {
-      return [
-        { name: 'Dashboard', path: '/host', icon: Layers },
-        { name: 'List a Space', path: '/host/spaces/new', icon: PlusCircle },
-        { name: 'Reservations', path: '/host/reservations', icon: Calendar },
-        { name: 'Earnings', path: '/host/earnings', icon: DollarSign },
-      ];
-    }
-    if (activeRole === 'admin') {
-      return [
-        { name: 'Trust & Safety', path: '/admin', icon: Shield },
-        { name: 'Explore Spaces', path: '/explore', icon: Compass },
-      ];
-    }
-    // Default Seeker links
-    return [
-      { name: 'Explore', path: isLanding ? '#spaceloop-content' : '/explore', icon: Compass },
-      { name: 'How It Works', path: '/#how-it-works' },
-      { name: 'My Bookings', path: '/bookings', icon: Calendar },
-      { name: 'List a Space', path: '/host', icon: PlusCircle },
-    ];
-  };
-
-  const navLinks = getNavLinks();
-
-  const isActive = (path) => {
-    if (path === '/') return location.pathname === '/';
-    return location.pathname.startsWith(path);
-  };
-
-  const handleNavClick = (e, path) => {
-    if (path === '#spaceloop-content') {
+  const handleHowItWorksClick = (e) => {
+    setMenuOpen(false);
+    if (isLanding) {
       e.preventDefault();
-      const el = document.getElementById('spaceloop-content');
+      const el = document.getElementById('how-it-works');
       if (el) {
         el.scrollIntoView({ behavior: 'smooth' });
       }
@@ -115,61 +114,134 @@ export const Navbar = () => {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Brand Logo */}
-          <Link
-            to="/"
-            className="flex items-center gap-2.5 group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg"
-          >
-            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-white shadow-sm transition-transform duration-200 group-hover:scale-105">
-              <span className="font-bold text-lg tracking-tight">SL</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-lg tracking-tight text-text-primary group-hover:text-primary transition-colors duration-200">
-                SpaceLoop
-              </span>
-            </div>
-          </Link>
+          
+          {/* ==========================================================================
+              LEFT GROUP: Hamburger Menu beside the Infinity Logo & SpaceLoop Brand
+             ========================================================================== */}
+          <div className="flex items-center gap-2.5 sm:gap-3" ref={menuRef}>
+            
+            {/* Hamburger Button */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuOpen(!menuOpen)}
+                aria-expanded={menuOpen}
+                aria-label="Toggle navigation menu"
+                className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated border border-transparent hover:border-border transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary flex items-center justify-center cursor-pointer"
+              >
+                {menuOpen ? (
+                  <X className="w-5 h-5 text-text-primary transition-transform duration-150 rotate-90" />
+                ) : (
+                  <Menu className="w-5 h-5 text-text-primary transition-transform duration-150" />
+                )}
+              </button>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1.5" aria-label="Main Navigation">
-            {navLinks.map((link) => {
-              const active = isActive(link.path);
-              const Icon = link.icon;
-              return (
-                <Link
-                  key={link.name}
-                  to={link.path}
-                  onClick={(e) => handleNavClick(e, link.path)}
-                  className={`relative px-3.5 py-2 text-sm font-medium rounded-lg transition-colors duration-150 flex items-center gap-1.5 ${
-                    active
-                      ? 'text-primary'
-                      : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
-                  }`}
-                >
-                  {Icon && <Icon className="w-4 h-4 shrink-0" />}
-                  <span>{link.name}</span>
-                  {active && (
-                    <motion.div
-                      layoutId="activeNavIndicator"
-                      className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full"
-                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                    />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
+              {/* Hamburger Dropdown Menu containing How It Works, List a Space, Bookings */}
+              <AnimatePresence>
+                {menuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.96 }}
+                    transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute top-full left-0 mt-2.5 w-72 sm:w-80 rounded-2xl glass-panel shadow-2xl border border-border p-2.5 z-50 overflow-hidden"
+                  >
+                    <div className="px-3 pt-1.5 pb-2 text-[10px] font-bold uppercase tracking-wider text-text-muted flex items-center justify-between">
+                      <span>Menu</span>
+                      <span className="text-[10px] lowercase font-normal opacity-70">esc to close</span>
+                    </div>
 
-          {/* Right Controls: Role Context Switcher, Theme, User Profile */}
-          <div className="hidden md:flex items-center gap-3">
+                    <div className="space-y-1">
+                      {/* How It Works */}
+                      <Link
+                        to="/#how-it-works"
+                        onClick={handleHowItWorksClick}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-primary group-hover:bg-primary-light transition-colors shrink-0">
+                          <Compass className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-semibold text-text-primary text-sm">How It Works</span>
+                          <span className="text-[11px] text-text-muted truncate">Discover, book, unlock & use</span>
+                        </div>
+                      </Link>
+
+                      {/* List a Space */}
+                      <Link
+                        to="/host"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-primary group-hover:bg-primary-light transition-colors shrink-0">
+                          <PlusCircle className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-semibold text-text-primary text-sm">List a Space</span>
+                          <span className="text-[11px] text-text-muted truncate">Earn revenue from your workspace</span>
+                        </div>
+                      </Link>
+
+                      {/* Bookings */}
+                      <Link
+                        to="/bookings"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-primary group-hover:bg-primary-light transition-colors shrink-0">
+                          <Calendar className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-semibold text-text-primary text-sm">Bookings</span>
+                          <span className="text-[11px] text-text-muted truncate">Manage active reservations & PINs</span>
+                        </div>
+                      </Link>
+                    </div>
+
+                    <div className="pt-2 mt-2 border-t border-border flex flex-col gap-1.5">
+                      <Link
+                        to="/explore"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-primary hover:bg-primary-light transition-colors"
+                      >
+                        <span>Explore All Spaces</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Brand Logo with Infinity Symbol */}
+            <Link
+              to="/"
+              className="flex items-center gap-2.5 group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg"
+            >
+              <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-white shadow-sm transition-transform duration-200 group-hover:scale-105">
+                <Infinity className="w-5 h-5 text-white stroke-[2.5]" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-bold text-lg tracking-tight text-text-primary group-hover:text-primary transition-colors duration-200">
+                  SpaceLoop
+                </span>
+              </div>
+            </Link>
+
+          </div>
+
+          {/* ==========================================================================
+              RIGHT GROUP: Role Switcher, Theme Toggle & Profile / Auth
+             ========================================================================== */}
+          <div className="flex items-center gap-2.5 sm:gap-3">
             {/* Role Context Pill (Seeker / Host / Admin) */}
             {isAuthenticated && (
-              <div className="flex items-center bg-surface-elevated p-1 rounded-xl border border-border text-xs font-semibold">
+              <div className="hidden sm:flex items-center bg-surface-elevated p-1 rounded-xl border border-border text-xs font-semibold">
                 <button
                   type="button"
                   onClick={() => handleRoleSwitch('seeker')}
                   disabled={roleSwitching}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                     activeRole === 'seeker'
                       ? 'bg-primary text-white shadow-sm'
                       : 'text-text-secondary hover:text-text-primary'
@@ -181,7 +253,7 @@ export const Navbar = () => {
                   type="button"
                   onClick={() => handleRoleSwitch('host')}
                   disabled={roleSwitching}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                     activeRole === 'host'
                       ? 'bg-primary text-white shadow-sm'
                       : 'text-text-secondary hover:text-text-primary'
@@ -194,7 +266,7 @@ export const Navbar = () => {
                     type="button"
                     onClick={() => handleRoleSwitch('admin')}
                     disabled={roleSwitching}
-                    className={`px-2.5 py-1 rounded-lg transition-all ${
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                       activeRole === 'admin'
                         ? 'bg-rose-600 text-white shadow-sm'
                         : 'text-text-secondary hover:text-text-primary'
@@ -206,7 +278,7 @@ export const Navbar = () => {
               </div>
             )}
 
-            {/* Theme Toggle */}
+            {/* Theme Toggle Button */}
             <motion.button
               type="button"
               onClick={toggleTheme}
@@ -214,7 +286,7 @@ export const Navbar = () => {
               whileTap={{ scale: 0.92, rotate: 15 }}
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.15 }}
-              className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated border border-transparent hover:border-border transition-colors duration-200"
+              className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated border border-transparent hover:border-border transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
             >
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
@@ -235,7 +307,7 @@ export const Navbar = () => {
                 <button
                   type="button"
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center gap-2 p-1.5 pl-2.5 rounded-xl border border-border bg-surface-elevated hover:bg-surface transition-colors"
+                  className="flex items-center gap-2 p-1.5 pl-2.5 rounded-xl border border-border bg-surface-elevated hover:bg-surface transition-colors cursor-pointer"
                 >
                   <div className="flex flex-col text-right">
                     <span className="text-xs font-bold text-text-primary max-w-[100px] truncate">
@@ -287,7 +359,7 @@ export const Navbar = () => {
                         <button
                           type="button"
                           onClick={() => handleRoleSwitch('seeker')}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors text-left"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors text-left cursor-pointer"
                         >
                           <Compass className="w-4 h-4 text-emerald-500" />
                           <span>Switch to Seeker View</span>
@@ -296,7 +368,7 @@ export const Navbar = () => {
                         <button
                           type="button"
                           onClick={() => handleRoleSwitch('host')}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors text-left"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors text-left cursor-pointer"
                         >
                           <Building2 className="w-4 h-4 text-primary" />
                           <span>Switch to Host View</span>
@@ -318,7 +390,7 @@ export const Navbar = () => {
                         <button
                           type="button"
                           onClick={handleLogout}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-colors text-left"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-colors text-left cursor-pointer"
                         >
                           <LogOut className="w-4 h-4" />
                           <span>Sign Out</span>
@@ -344,130 +416,8 @@ export const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile Menu & Theme Buttons */}
-          <div className="flex md:hidden items-center gap-2">
-            <button
-              type="button"
-              onClick={toggleTheme}
-              aria-label="Toggle theme"
-              className="p-2 rounded-xl text-text-secondary hover:bg-surface-elevated transition-colors"
-            >
-              {isDark ? <Sun className="w-5 h-5 text-primary" /> : <Moon className="w-5 h-5" />}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-expanded={mobileMenuOpen}
-              aria-label="Toggle mobile menu"
-              className="p-2 rounded-xl text-text-primary hover:bg-surface-elevated transition-colors"
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
         </div>
       </div>
-
-      {/* Mobile Drawer */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            variants={mobileMenuVariants}
-            initial="closed"
-            animate="open"
-            exit="closed"
-            className="md:hidden border-t border-border bg-surface overflow-hidden shadow-2xl"
-          >
-            <div className="px-4 py-3 space-y-2">
-              {/* Context Selector in Mobile */}
-              {isAuthenticated && (
-                <div className="flex items-center justify-between p-2 rounded-xl bg-surface-elevated border border-border">
-                  <span className="text-xs font-semibold text-text-secondary">Mode:</span>
-                  <div className="flex gap-1 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => handleRoleSwitch('seeker')}
-                      className={`px-3 py-1 rounded-lg ${
-                        activeRole === 'seeker' ? 'bg-primary text-white font-bold' : 'text-text-secondary'
-                      }`}
-                    >
-                      Seeker
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRoleSwitch('host')}
-                      className={`px-3 py-1 rounded-lg ${
-                        activeRole === 'host' ? 'bg-primary text-white font-bold' : 'text-text-secondary'
-                      }`}
-                    >
-                      Host
-                    </button>
-                    {(user?.is_admin || user?.role === 'admin') && (
-                      <button
-                        type="button"
-                        onClick={() => handleRoleSwitch('admin')}
-                        className={`px-3 py-1 rounded-lg ${
-                          activeRole === 'admin' ? 'bg-rose-600 text-white font-bold' : 'text-text-secondary'
-                        }`}
-                      >
-                        Admin
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {navLinks.map((link) => {
-                const Icon = link.icon;
-                const active = isActive(link.path);
-                return (
-                  <Link
-                    key={link.name}
-                    to={link.path}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                      active
-                        ? 'bg-primary-light text-primary font-semibold'
-                        : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
-                    }`}
-                  >
-                    {Icon && <Icon className="w-4 h-4 shrink-0" />}
-                    <span>{link.name}</span>
-                  </Link>
-                );
-              })}
-
-              <div className="pt-3 border-t border-border flex flex-col gap-2">
-                {isAuthenticated ? (
-                  <>
-                    <Link to="/profile" onClick={() => setMobileMenuOpen(false)}>
-                      <Button variant="outline" className="w-full flex items-center justify-center gap-2">
-                        <User className="w-4 h-4" />
-                        <span>Profile & Verification</span>
-                      </Button>
-                    </Link>
-                    <Button variant="ghost" onClick={handleLogout} className="w-full text-rose-500">
-                      Sign Out
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
-                      <Button variant="outline" className="w-full">
-                        Sign In / Register
-                      </Button>
-                    </Link>
-                    <Link to="/explore" onClick={() => setMobileMenuOpen(false)}>
-                      <Button variant="primary" className="w-full">
-                        Explore Spaces
-                      </Button>
-                    </Link>
-                  </>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </header>
   );
 };
