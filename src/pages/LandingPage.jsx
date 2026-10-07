@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
@@ -13,6 +13,15 @@ import {
   ArrowRight,
   Star,
   CheckCircle2,
+  Bot,
+  Sparkles,
+  Zap,
+  Building,
+  Lock,
+  DollarSign,
+  HeartHandshake,
+  Cpu,
+  Send,
 } from 'lucide-react';
 import { HeroInteractive } from '../components/home/HeroInteractive';
 import { SpaceCard } from '../components/spaces/SpaceCard';
@@ -22,6 +31,8 @@ import { SPACES_DATA } from '../utils/constants';
 
 export const LandingPage = () => {
   const shouldReduceMotion = useReducedMotion();
+  const [loopBotPrompt, setLoopBotPrompt] = useState('');
+  const [loopBotResponse, setLoopBotResponse] = useState(null);
 
   const categories = [
     { name: 'All Spaces', icon: Compass, count: '120+' },
@@ -31,48 +42,153 @@ export const LandingPage = () => {
     { name: 'Rooftops & Lounges', icon: Coffee, count: '15' },
   ];
 
+  const keyFeatures = [
+    {
+      title: 'Encrypted Digital Key Pass',
+      description: 'Zero key handoffs or physical lockboxes. Your reservation generates a verified time-bound QR code and keypad PIN.',
+      icon: Key,
+    },
+    {
+      title: 'True Hourly Flexibility',
+      description: 'Book for 1 hour or a full day. Transparent rates with instant confirmation and zero recurring membership lock-in.',
+      icon: Clock,
+    },
+    {
+      title: 'Curated Architectural Quality',
+      description: 'Every space is inspected for natural light, acoustic isolation, high-speed mesh WiFi, and ergonomic design.',
+      icon: Building,
+    },
+    {
+      title: 'Automated Host Protection',
+      description: 'Enterprise grade insurance, guest identity verification, and direct automated bank deposits powered by Stripe.',
+      icon: Shield,
+    },
+  ];
+
   const steps = [
     {
       step: '01',
-      title: 'Discover & Filter',
-      description: 'Explore verified architectural spaces nearby with real-time availability and transparent hourly pricing.',
+      title: 'Discover & Match',
+      description: 'Search by neighborhood, capacity, or natural lighting needs. Filter instantly or let LoopBot recommend the optimal spot.',
       icon: Compass,
     },
     {
       step: '02',
-      title: 'Book in Seconds',
-      description: 'Select your time slot and guest count. Receive an instant booking confirmation with no hidden platform fees.',
+      title: 'Instant Reservation',
+      description: 'Select your exact date and hourly duration. Confirm securely in one click with transparent pricing and no surprise fees.',
       icon: Clock,
     },
     {
       step: '03',
-      title: 'Digital Key Access',
-      description: 'Unlock your reserved space directly via our encrypted digital pass and QR access right on your phone.',
+      title: 'Keyless Entry & Access',
+      description: 'Arrive at the location and unlock the smart door with your phone pass. Enjoy focus, collaborate, and check out seamlessly.',
       icon: Key,
     },
   ];
 
+  const handleLoopBotSubmit = (e) => {
+    e.preventDefault();
+    if (!loopBotPrompt.trim()) return;
+    setLoopBotResponse({
+      query: loopBotPrompt,
+      recommended: SPACES_DATA[0],
+      reason: 'Matched: 1Gbps WiFi, panoramic natural light, rooftop breakout lounge, and instant pass entry.',
+    });
+  };
+
   return (
     <div className="w-full">
-      {/* 1. Hero Section with Interactive Building Interface */}
+      {/* ==========================================================================
+          1. THE SINGLE HERO VISUAL / ANIMATION (Appears ONLY ONCE here at the top)
+         ========================================================================== */}
       <HeroInteractive />
 
-      {/* 2. Popular Categories Bar */}
-      <section className="py-8 border-y border-border bg-surface/60 transition-colors">
+      {/* ==========================================================================
+          2. WHAT SPACELOOP IS (Smooth transition into SpaceLoop details)
+         ========================================================================== */}
+      <section className="py-16 sm:py-20 border-t border-border bg-surface transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl mx-auto text-center">
+            <ScrollReveal delay={0}>
+              <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+                What SpaceLoop Is
+              </span>
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-text-primary tracking-tight mt-2 leading-tight">
+                An on-demand architectural network for modern creative work.
+              </h2>
+              <p className="mt-4 text-sm sm:text-base text-text-secondary leading-relaxed">
+                SpaceLoop bridges the gap between rigid long-term commercial leases and noisy coffee shops. We unlock distinctive architectural pavilions, design lofts, and soundproof studios on demand, giving creators, teams, and independent thinkers instant access to spaces that inspire.
+              </p>
+            </ScrollReveal>
+          </div>
+
+          {/* Quick Metrics Bar */}
+          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+            {[
+              { label: 'Verified Spaces', value: '1,450+' },
+              { label: 'Instant Digital Access', value: '100%' },
+              { label: 'Average User Rating', value: '4.94 / 5' },
+              { label: 'Global Cities', value: '24' },
+            ].map((metric, i) => (
+              <ScrollReveal key={metric.label} delay={i}>
+                <div className="p-4 sm:p-5 rounded-2xl bg-surface-elevated border border-border text-center">
+                  <div className="text-xl sm:text-2xl font-black text-text-primary font-mono">
+                    {metric.value}
+                  </div>
+                  <div className="text-xs text-text-muted mt-1 font-medium">
+                    {metric.label}
+                  </div>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ==========================================================================
+          3. EXPLORE SPACES (Space Discovery & Handpicked Listings)
+         ========================================================================== */}
+      <section className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+          <div>
+            <ScrollReveal delay={0}>
+              <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+                Space Discovery
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight mt-1">
+                Explore Available Spaces
+              </h2>
+              <p className="text-xs sm:text-sm text-text-secondary mt-1">
+                Bookable right now with instant digital key confirmation.
+              </p>
+            </ScrollReveal>
+          </div>
+
+          <ScrollReveal delay={1}>
+            <Link to="/explore">
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <span>View All 1,450+ Spaces</span>
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
+          </ScrollReveal>
+        </div>
+
+        {/* Category Pills */}
+        <div className="mb-8">
           <ScrollReveal delay={0}>
-            <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none sm:justify-center">
-              {categories.map((cat, idx) => {
+            <div className="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none">
+              {categories.map((cat) => {
                 const Icon = cat.icon;
                 return (
                   <Link
                     key={cat.name}
                     to={`/explore?category=${encodeURIComponent(cat.name)}`}
-                    className="group shrink-0 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-surface border border-border hover:border-primary/50 text-text-secondary hover:text-text-primary transition-all duration-200 hover:-translate-y-0.5 shadow-sm hover:shadow-md"
+                    className="group shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-surface border border-border hover:border-primary/50 text-text-secondary hover:text-text-primary text-xs font-medium transition-all shadow-sm hover:shadow"
                   >
-                    <Icon className="w-4 h-4 text-primary transition-transform duration-200 group-hover:scale-110" />
-                    <span className="text-sm font-medium">{cat.name}</span>
-                    <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-surface-elevated text-text-muted">
+                    <Icon className="w-3.5 h-3.5 text-primary" />
+                    <span>{cat.name}</span>
+                    <span className="text-[10px] px-1 rounded bg-surface-elevated text-text-muted">
                       {cat.count}
                     </span>
                   </Link>
@@ -81,34 +197,10 @@ export const LandingPage = () => {
             </div>
           </ScrollReveal>
         </div>
-      </section>
 
-      {/* 3. Featured Spaces Section */}
-      <section className="py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4">
-          <div>
-            <ScrollReveal delay={0}>
-              <span className="text-xs font-semibold uppercase tracking-wider text-primary">
-                Featured Spaces
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight mt-1">
-                Handpicked Workspaces & Studios
-              </h2>
-            </ScrollReveal>
-          </div>
-          <ScrollReveal delay={1}>
-            <Link to="/explore">
-              <Button variant="outline" size="sm" className="gap-1.5">
-                <span>Browse All Spaces</span>
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </ScrollReveal>
-        </div>
-
-        {/* Space Cards Grid with Scroll Reveals */}
+        {/* Grid of Distinct SpaceCards (No copies of hero visual) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          {SPACES_DATA.map((space, index) => (
+          {SPACES_DATA.slice(0, 6).map((space, index) => (
             <ScrollReveal key={space.id} delay={index % 3}>
               <SpaceCard space={space} />
             </ScrollReveal>
@@ -116,43 +208,42 @@ export const LandingPage = () => {
         </div>
       </section>
 
-      {/* 4. How SpaceLoop Works */}
-      <section id="how-it-works" className="py-16 sm:py-24 bg-surface-elevated border-y border-border transition-colors">
+      {/* ==========================================================================
+          4. KEY FEATURES
+         ========================================================================== */}
+      <section className="py-16 sm:py-24 bg-surface border-y border-border transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16">
+          <div className="max-w-2xl mx-auto text-center mb-14">
             <ScrollReveal delay={0}>
               <span className="text-xs font-semibold uppercase tracking-wider text-primary">
-                Seamless Flow
+                Platform Capabilities
               </span>
-              <h2 className="text-3xl font-bold text-text-primary tracking-tight mt-1">
-                How SpaceLoop Works
+              <h2 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight mt-1">
+                Engineered for Effortless Access
               </h2>
-              <p className="text-text-secondary text-sm sm:text-base mt-3">
-                From discovery to entering your private space, experience effortless access without traditional office friction.
+              <p className="text-text-secondary text-sm mt-2">
+                Everything you need to reserve, enter, work, and leave with zero admin overhead.
               </p>
             </ScrollReveal>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {steps.map((item, idx) => {
-              const Icon = item.icon;
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {keyFeatures.map((feat, idx) => {
+              const Icon = feat.icon;
               return (
-                <ScrollReveal key={item.step} delay={idx}>
-                  <div className="relative p-6 sm:p-8 rounded-2xl bg-surface border border-border shadow-sm hover:shadow-md transition-shadow duration-200">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="w-12 h-12 rounded-xl bg-primary-light flex items-center justify-center text-primary">
-                        <Icon className="w-6 h-6" />
+                <ScrollReveal key={feat.title} delay={idx}>
+                  <div className="p-6 rounded-2xl bg-surface-elevated border border-border shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col justify-between h-full">
+                    <div>
+                      <div className="w-10 h-10 rounded-xl bg-primary-light text-primary flex items-center justify-center mb-4">
+                        <Icon className="w-5 h-5" />
                       </div>
-                      <span className="text-2xl font-black text-text-muted/40 font-mono">
-                        {item.step}
-                      </span>
+                      <h3 className="font-bold text-base text-text-primary mb-2">
+                        {feat.title}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
+                        {feat.description}
+                      </p>
                     </div>
-                    <h3 className="text-lg font-bold text-text-primary mb-2">
-                      {item.title}
-                    </h3>
-                    <p className="text-sm text-text-secondary leading-relaxed">
-                      {item.description}
-                    </p>
                   </div>
                 </ScrollReveal>
               );
@@ -161,70 +252,338 @@ export const LandingPage = () => {
         </div>
       </section>
 
-      {/* 5. Trust & Host Section */}
-      <section className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="rounded-3xl bg-surface border border-border p-8 sm:p-12 lg:p-16 shadow-lg">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-            <div>
-              <span className="text-xs font-semibold uppercase tracking-wider text-primary">
-                Host on SpaceLoop
-              </span>
-              <h2 className="text-2xl sm:text-4xl font-extrabold text-text-primary tracking-tight mt-2">
-                Turn your architectural space into passive revenue.
-              </h2>
-              <p className="mt-4 text-text-secondary text-sm sm:text-base leading-relaxed">
-                Join verified hosts sharing distinctive architectural lofts, executive meeting spaces, and photo studios. Automated access passes, guest screening, and automated payouts.
-              </p>
+      {/* ==========================================================================
+          5. HOW SPACELOOP WORKS
+         ========================================================================== */}
+      <section id="how-it-works" className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center max-w-2xl mx-auto mb-14">
+          <ScrollReveal delay={0}>
+            <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+              Step-by-Step Flow
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight mt-1">
+              How SpaceLoop Works
+            </h2>
+            <p className="text-text-secondary text-sm mt-2">
+              Three simple steps from discovery to physical door unlock.
+            </p>
+          </ScrollReveal>
+        </div>
 
-              <div className="mt-6 space-y-3">
-                <div className="flex items-center gap-2.5 text-sm text-text-primary">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span>$1,000,000 Host Liability & Property Protection</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {steps.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <ScrollReveal key={item.step} delay={idx}>
+                <div className="relative p-6 sm:p-8 rounded-2xl bg-surface border border-border shadow-sm hover:shadow-md transition-shadow duration-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary-light flex items-center justify-center text-primary">
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    <span className="text-2xl font-black text-text-muted/30 font-mono">
+                      {item.step}
+                    </span>
+                  </div>
+                  <h3 className="text-base font-bold text-text-primary mb-2">
+                    {item.title}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
+                    {item.description}
+                  </p>
                 </div>
-                <div className="flex items-center gap-2.5 text-sm text-text-primary">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span>Automated digital pass generation upon verified booking</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-sm text-text-primary">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span>Instant Stripe direct deposit payouts</span>
-                </div>
-              </div>
+              </ScrollReveal>
+            );
+          })}
+        </div>
+      </section>
 
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link to="/host">
-                  <Button variant="primary" size="lg">
-                    <span>Become a Host</span>
-                    <ArrowRight className="w-4 h-4 ml-1" />
-                  </Button>
-                </Link>
-                <Link to="/help">
-                  <Button variant="outline" size="lg">
-                    Host FAQ
-                  </Button>
-                </Link>
-              </div>
+      {/* ==========================================================================
+          6. AI SMART MATCHING & LOOPBOT
+         ========================================================================== */}
+      <section className="py-16 sm:py-24 bg-surface-elevated border-y border-border transition-colors">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+            <div className="lg:col-span-6 space-y-4">
+              <ScrollReveal delay={0}>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary-light text-primary border border-primary/20">
+                  <Bot className="w-3.5 h-3.5" />
+                  <span>AI Powered Discovery</span>
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-text-primary tracking-tight mt-2">
+                  Meet LoopBot: Your intelligent workspace curator.
+                </h2>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                  Instead of fiddling with 10 filter dropdowns, simply type what your team needs in natural language. LoopBot parses attendee size, acoustic requirements, natural lighting, and equipment to match you with verified spaces instantly.
+                </p>
+
+                <div className="pt-2 space-y-2 text-xs text-text-secondary">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                    <span>Real-time availability and dynamic capacity calculations</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                    <span>Context-aware recommendations based on meeting type</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                    <span>Instant booking pass generation directly from chat</span>
+                  </div>
+                </div>
+              </ScrollReveal>
             </div>
 
-            <div className="relative rounded-2xl overflow-hidden border border-border aspect-[4/3] bg-surface-elevated">
-              <img
-                src="/images/hero-light.jpeg"
-                alt="SpaceLoop Host Space Showcase"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute bottom-4 left-4 right-4 p-4 rounded-xl bg-surface/90 backdrop-blur-md border border-border text-xs text-text-primary flex items-center justify-between">
-                <div>
-                  <p className="font-semibold">San Francisco Host</p>
-                  <p className="text-text-muted">Earned $4,850 last month</p>
+            {/* Interactive LoopBot Chat Card (UI representation, no screenshots) */}
+            <div className="lg:col-span-6">
+              <ScrollReveal delay={1}>
+                <div className="p-6 rounded-3xl bg-surface border border-border shadow-lg space-y-4">
+                  <div className="flex items-center justify-between border-b border-border pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                        LB
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-text-primary">LoopBot SmartMatch</h4>
+                        <p className="text-[10px] text-emerald-500 font-medium">Online • Instant Query Parsing</p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] px-2 py-0.5 rounded-md bg-surface-elevated text-text-muted">
+                      v2.0
+                    </span>
+                  </div>
+
+                  {/* Sample Chat Prompt Bubble */}
+                  <div className="space-y-3 text-xs">
+                    <div className="p-3 rounded-2xl bg-surface-elevated text-text-primary border border-border-subtle max-w-[85%]">
+                      "I need a quiet space for 4 people with natural light and an external monitor this afternoon."
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-primary-light text-text-primary border border-primary/20 max-w-[90%] ml-auto space-y-2">
+                      <p className="font-semibold text-primary text-[11px]">
+                        ✨ Found 1 perfect match available at 2:00 PM:
+                      </p>
+                      <div className="p-2.5 rounded-xl bg-surface border border-border text-xs flex items-center justify-between gap-2">
+                        <div>
+                          <p className="font-bold text-text-primary">The Atrium Sunlit Studio</p>
+                          <p className="text-[11px] text-text-muted">$45/hr • SoHo Arts District</p>
+                        </div>
+                        <Link to="/spaces/2">
+                          <Button size="sm" variant="primary" className="text-xs h-7 px-2.5">
+                            Book
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Input form */}
+                  <form onSubmit={handleLoopBotSubmit} className="pt-2 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={loopBotPrompt}
+                      onChange={(e) => setLoopBotPrompt(e.target.value)}
+                      placeholder="Try: 'Rooftop for 8 people with sunset view'..."
+                      className="flex-grow px-3.5 py-2 text-xs rounded-xl bg-surface-elevated border border-border-subtle focus:border-primary/50 text-text-primary placeholder:text-text-muted focus:outline-none"
+                    />
+                    <Button type="submit" size="sm" variant="primary" icon={Send}>
+                      Ask
+                    </Button>
+                  </form>
+
+                  {loopBotResponse && (
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-text-primary">
+                      <p className="font-semibold text-emerald-600">SmartMatch Recommendation:</p>
+                      <p className="text-[11px] text-text-secondary mt-0.5">{loopBotResponse.reason}</p>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-1 font-bold text-amber-500">
-                  <Star className="w-3.5 h-3.5 fill-current" />
-                  <span>4.98</span>
-                </div>
-              </div>
+              </ScrollReveal>
             </div>
           </div>
         </div>
+      </section>
+
+      {/* ==========================================================================
+          7. TRUST & SAFETY FEATURES
+         ========================================================================== */}
+      <section className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center max-w-2xl mx-auto mb-14">
+          <ScrollReveal delay={0}>
+            <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+              Trust & Safety
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight mt-1">
+              Protection for Every Host & Seeker
+            </h2>
+            <p className="text-text-secondary text-sm mt-2">
+              Built on verified digital identities, property guarantees, and automated IoT safety checks.
+            </p>
+          </ScrollReveal>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            {
+              title: '$1,000,000 Property Shield',
+              description: 'Comprehensive property damage protection and third-party host liability cover included automatically on every booking.',
+              icon: Shield,
+            },
+            {
+              title: 'Verified ID & Guest Screening',
+              description: 'Every seeker and host passes automated identity and safety verification before any access pass can be generated.',
+              icon: CheckCircle2,
+            },
+            {
+              title: 'Encrypted Digital Key Access',
+              description: 'Encrypted rolling digital PINs and QR passes that expire precisely when your booking duration concludes.',
+              icon: Lock,
+            },
+          ].map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <ScrollReveal key={item.title} delay={idx}>
+                <div className="p-6 rounded-2xl bg-surface border border-border shadow-sm text-left space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary-light text-primary flex items-center justify-center">
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <h3 className="font-bold text-base text-text-primary">{item.title}</h3>
+                  <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
+                    {item.description}
+                  </p>
+                </div>
+              </ScrollReveal>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ==========================================================================
+          8. HOST AND SEEKER BENEFITS
+         ========================================================================== */}
+      <section className="py-16 sm:py-24 bg-surface border-y border-border transition-colors">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <ScrollReveal delay={0}>
+              <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+                Ecosystem
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight mt-1">
+                Built for Seekers & Hosts Alike
+              </h2>
+            </ScrollReveal>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* For Seekers */}
+            <ScrollReveal delay={0}>
+              <div className="p-8 rounded-3xl bg-surface-elevated border border-border shadow-sm h-full flex flex-col justify-between">
+                <div className="space-y-4">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-primary-light text-primary">
+                    For Space Seekers
+                  </div>
+                  <h3 className="text-xl font-bold text-text-primary">
+                    Inspiring workspaces wherever you are.
+                  </h3>
+                  <ul className="space-y-3 text-xs sm:text-sm text-text-secondary">
+                    <li className="flex items-center gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <span>Zero monthly subscriptions — pay only for the hours you use</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <span>Instant digital pass generation directly on your smartphone</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <span>High-speed guaranteed WiFi speeds and focus-tested acoustics</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <span>Flexible 1-hour cancellation policy for ultimate peace of mind</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="pt-6">
+                  <Link to="/explore">
+                    <Button variant="primary" size="md">
+                      Find a Space Now
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            {/* For Hosts */}
+            <ScrollReveal delay={1}>
+              <div className="p-8 rounded-3xl bg-surface-elevated border border-border shadow-sm h-full flex flex-col justify-between">
+                <div className="space-y-4">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    For Space Hosts
+                  </div>
+                  <h3 className="text-xl font-bold text-text-primary">
+                    Monetize unused architectural capacity.
+                  </h3>
+                  <ul className="space-y-3 text-xs sm:text-sm text-text-secondary">
+                    <li className="flex items-center gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <span>100% automated keyless entry integration with standard smart locks</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <span>Set custom hourly pricing, minimum durations, and calendar blocks</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <span>$1,000,000 host liability coverage on every single booking</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <span>Automated Stripe payouts deposited directly into your bank account</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="pt-6">
+                  <Link to="/host">
+                    <Button variant="secondary" size="md">
+                      Calculate Host Earnings
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ==========================================================================
+          9. FINAL CTA (Clear call to action without repeated hero visual)
+         ========================================================================== */}
+      <section className="py-20 sm:py-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <ScrollReveal delay={0}>
+          <div className="rounded-3xl bg-surface border border-border p-8 sm:p-14 text-center max-w-4xl mx-auto shadow-xl space-y-6">
+            <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+              Ready to Get Started?
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-text-primary tracking-tight">
+              Unlock your next creative workspace in seconds.
+            </h2>
+            <p className="text-text-secondary text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
+              Explore spaces nearby or list your own architectural property to start generating recurring revenue.
+            </p>
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
+              <Link to="/explore">
+                <Button variant="primary" size="lg" icon={Compass}>
+                  Explore Spaces Nearby
+                </Button>
+              </Link>
+              <Link to="/host">
+                <Button variant="outline" size="lg">
+                  Become a Host
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </ScrollReveal>
       </section>
     </div>
   );

@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Search, MapPin, Calendar, Users, Sparkles, Sun, Moon, ArrowRight, ShieldCheck } from 'lucide-react';
-import { useTheme } from '../../hooks/useTheme';
+import { Search, MapPin, Calendar, ShieldCheck } from 'lucide-react';
 import { Button } from '../common/Button';
+import { HeroArchitecturalVisual } from './HeroArchitecturalVisual';
 
 /**
  * HeroInteractive Component
- * Features the architectural building interface on the 1st page of the website.
- * Smoothly crossfades between the uploaded Light (Sunset) and Dark (Twilight) themes.
- * Incorporates subtle, natural ambient motion that never distracts.
+ * Appears ONLY ONCE at the very top of the SpaceLoop landing page.
+ * Contains the headline, search entry, and the single hero visual identity.
  */
 export const HeroInteractive = () => {
-  const { isDark, toggleTheme } = useTheme();
   const shouldReduceMotion = useReducedMotion();
   const navigate = useNavigate();
 
@@ -25,7 +23,7 @@ export const HeroInteractive = () => {
   };
 
   return (
-    <section className="relative w-full pt-8 pb-16 lg:pt-14 lg:pb-24 overflow-hidden">
+    <section className="relative w-full pt-8 pb-14 lg:pt-14 lg:pb-20 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Top Announcement Tag */}
@@ -133,90 +131,17 @@ export const HeroInteractive = () => {
         </motion.div>
 
         {/* ==========================================================================
-            1ST PAGE ARCHITECTURAL BUILDING INTERFACE
-            Uploaded Reference: Light Theme (Sunset) <-> Dark Theme (Twilight)
-            Features smooth theme crossfade and restrained ambient breathing
+            EXACTLY ONE HERO VISUAL / ANIMATION
+            Appears ONLY ONCE at the top of the landing page.
+            Never repeats in any other section or page.
            ========================================================================== */}
         <motion.div
           initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.98, y: 16 }}
           animate={shouldReduceMotion ? {} : { opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-          className="relative max-w-5xl mx-auto rounded-3xl overflow-hidden border border-border shadow-lift-light dark:shadow-lift-dark bg-surface group"
+          transition={{ duration: 0.48, delay: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          className="max-w-5xl mx-auto"
         >
-          {/* Architectural Image Container with Ambient Motion */}
-          <div className="relative w-full aspect-[16/9] sm:aspect-[21/9] overflow-hidden bg-surface-elevated">
-            
-            {/* Light Theme Image (Sunset Golden Hour) */}
-            <img
-              src="/images/hero-light.jpeg"
-              alt="SpaceLoop Architectural Workspace - Sunset Daylight Atmosphere"
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-smooth ${
-                !isDark ? 'opacity-100 z-10' : 'opacity-0 z-0'
-              } ${shouldReduceMotion ? '' : 'ambient-breathe'}`}
-            />
-
-            {/* Dark Theme Image (Twilight Midnight Deep Blue) */}
-            <img
-              src="/images/hero-dark.jpeg"
-              alt="SpaceLoop Architectural Workspace - Twilight Night Atmosphere"
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-smooth ${
-                isDark ? 'opacity-100 z-10' : 'opacity-0 z-0'
-              } ${shouldReduceMotion ? '' : 'ambient-breathe'}`}
-            />
-
-            {/* Subtle Gradient Vignette to ground the interface */}
-            <div className="absolute inset-0 z-20 pointer-events-none bg-gradient-to-t from-black/60 via-transparent to-black/20" />
-
-            {/* Building Lighting State Indicator & Toggle on Hero */}
-            <div className="absolute top-4 right-4 z-30 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={toggleTheme}
-                aria-label="Toggle Hero Atmosphere"
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-surface/90 backdrop-blur-md text-text-primary border border-border shadow-md hover:bg-surface transition-colors"
-              >
-                {isDark ? (
-                  <>
-                    <Moon className="w-3.5 h-3.5 text-primary" />
-                    <span>Twilight Atmosphere</span>
-                  </>
-                ) : (
-                  <>
-                    <Sun className="w-3.5 h-3.5 text-primary" />
-                    <span>Sunset Atmosphere</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Floating Info Overlay on bottom of the building */}
-            <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6 z-30 flex flex-col sm:flex-row sm:items-end justify-between gap-4 text-white">
-              <div className="space-y-1">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white/20 backdrop-blur-md text-white border border-white/20">
-                  <Sparkles className="w-3 h-3 text-amber-300" />
-                  SpaceLoop Flagship Architectural Hub
-                </span>
-                <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white drop-shadow-sm">
-                  The Glass Loft Pavilion
-                </h3>
-                <p className="text-xs sm:text-sm text-white/90 drop-shadow-sm max-w-md">
-                  Floor-to-ceiling glass, rooftop garden terrace, and smart IoT keyless entry.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => navigate('/spaces/1')}
-                  className="bg-white/95 hover:bg-white text-stone-900 border-none shadow-md backdrop-blur-sm"
-                >
-                  <span>View Details</span>
-                  <ArrowRight className="w-3.5 h-3.5 ml-1" />
-                </Button>
-              </div>
-            </div>
-          </div>
+          <HeroArchitecturalVisual />
         </motion.div>
 
       </div>
