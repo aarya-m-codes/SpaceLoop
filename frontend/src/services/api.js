@@ -50,9 +50,33 @@ async function request(endpoint, options = {}) {
     }
 
     if (!response.ok) {
-      const errorMessage =
-        (data && typeof data === 'object' && (data.error || data.message || data.detail)) ||
-        `HTTP ${response.status}: ${response.statusText}`;
+      let errorMessage = '';
+      if (data && typeof data === 'object') {
+        if (typeof data.error === 'string') {
+          errorMessage = data.error;
+        } else if (data.error && typeof data.error === 'object') {
+          errorMessage = data.error.message || data.error.description || data.error.detail || data.error.code || '';
+        } else if (typeof data.message === 'string') {
+          errorMessage = data.message;
+        } else if (typeof data.detail === 'string') {
+          errorMessage = data.detail;
+        }
+      } else if (typeof data === 'string' && data.trim()) {
+        errorMessage = data.trim();
+      }
+
+      if (!errorMessage || errorMessage === '[object Object]') {
+        if (response.status === 401) {
+          errorMessage = 'Invalid email or password.';
+        } else if (response.status === 403) {
+          errorMessage = 'Access denied. You do not have permission for this action.';
+        } else if (response.status >= 500) {
+          errorMessage = 'Something went wrong on the server.';
+        } else {
+          errorMessage = `HTTP ${response.status}: ${response.statusText || 'Request failed'}`;
+        }
+      }
+
       const error = new Error(errorMessage);
       error.status = response.status;
       error.data = data;
@@ -62,10 +86,12 @@ async function request(endpoint, options = {}) {
     return data;
   } catch (err) {
     if (err.name === 'TypeError' && err.message.includes('fetch')) {
-      // Network failure / offline
-      const error = new Error('Could not connect to SpaceLoop backend server. Please verify the backend is running.');
+      const error = new Error('Unable to connect to SpaceLoop.');
       error.status = 0;
       throw error;
+    }
+    if (err && (typeof err.message !== 'string' || err.message === '[object Object]')) {
+      err.message = 'Authentication failed. Please verify credentials.';
     }
     throw err;
   }

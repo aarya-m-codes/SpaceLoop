@@ -10,6 +10,13 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const normalizeRole = (role) => {
+    if (!role) return 'seeker';
+    const r = String(role).toLowerCase().trim();
+    if (r === 'guest') return 'seeker';
+    return r;
+  };
+
   // Synchronize user profile on mount if token exists
   const fetchCurrentUser = useCallback(async () => {
     const storedToken = localStorage.getItem('spaceloop_token');
@@ -21,12 +28,26 @@ export const AuthProvider = ({ children }) => {
 
     try {
       setLoading(true);
-      const data = await authApi.me();
-      if (data && (data.user || data.id)) {
-        const userData = data.user || data;
+      const res = await authApi.me();
+      const payload = res?.data || res;
+      const userData = payload?.user || (payload?.id ? payload : null);
+
+      if (userData && userData.id) {
         setUser(userData);
-        const resolvedRole = localStorage.getItem('spaceloop_active_role') || userData.active_role || userData.role || 'seeker';
+        const backendRole =
+          payload?.active_role ||
+          userData.active_context_role ||
+          userData.active_role ||
+          userData.role ||
+          'seeker';
+        const resolvedRole = normalizeRole(backendRole);
         setActiveRole(resolvedRole);
+        localStorage.setItem('spaceloop_active_role', resolvedRole);
+      } else {
+        localStorage.removeItem('spaceloop_token');
+        localStorage.removeItem('spaceloop_active_role');
+        setUser(null);
+        setToken(null);
       }
     } catch (err) {
       console.warn('Failed to restore user session:', err);
@@ -51,9 +72,16 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const response = await authApi.login({ email, password });
-      const authToken = response.access_token || response.token;
-      const userData = response.user || response;
-      const currentRole = response.active_role || userData.active_role || userData.role || 'seeker';
+      const payload = response?.data || response;
+      const authToken = payload?.access_token || payload?.token || response?.access_token || response?.token;
+      const userData = payload?.user || (payload?.id ? payload : null);
+      const backendRole =
+        payload?.active_role ||
+        userData?.active_context_role ||
+        userData?.active_role ||
+        userData?.role ||
+        'seeker';
+      const currentRole = normalizeRole(backendRole);
 
       if (authToken) {
         localStorage.setItem('spaceloop_token', authToken);
@@ -61,10 +89,18 @@ export const AuthProvider = ({ children }) => {
       }
       localStorage.setItem('spaceloop_active_role', currentRole);
       setActiveRole(currentRole);
-      setUser(userData);
-      return { success: true, user: userData, activeRole: currentRole };
+      if (userData) {
+        setUser(userData);
+      }
+      return { success: true, user: userData, activeRole: currentRole, token: authToken };
     } catch (err) {
-      setError(err.message || 'Login failed');
+      const msg =
+        typeof err === 'string'
+          ? err
+          : err?.message && err.message !== '[object Object]'
+          ? err.message
+          : 'Authentication failed.';
+      setError(msg);
       throw err;
     }
   };
@@ -74,20 +110,36 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const response = await authApi.register(formData);
-      const authToken = response.access_token || response.token;
-      const userData = response.user || response;
-      const currentRole = formData.role || 'seeker';
+      const payload = response?.data || response;
+      const authToken = payload?.access_token || payload?.token || response?.access_token || response?.token;
+      const userData = payload?.user || (payload?.id ? payload : null);
+      const backendRole =
+        payload?.active_role ||
+        userData?.active_context_role ||
+        userData?.active_role ||
+        userData?.role ||
+        formData.role ||
+        'seeker';
+      const currentRole = normalizeRole(backendRole);
 
       if (authToken) {
         localStorage.setItem('spaceloop_token', authToken);
         setToken(authToken);
-        localStorage.setItem('spaceloop_active_role', currentRole);
-        setActiveRole(currentRole);
+      }
+      localStorage.setItem('spaceloop_active_role', currentRole);
+      setActiveRole(currentRole);
+      if (userData) {
         setUser(userData);
       }
-      return { success: true, user: userData };
+      return { success: true, user: userData, activeRole: currentRole, token: authToken };
     } catch (err) {
-      setError(err.message || 'Registration failed');
+      const msg =
+        typeof err === 'string'
+          ? err
+          : err?.message && err.message !== '[object Object]'
+          ? err.message
+          : 'Registration failed.';
+      setError(msg);
       throw err;
     }
   };
@@ -112,19 +164,27 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const response = await authApi.switchContext(targetRole);
-      const newRole = response.active_role || targetRole;
-      if (response.access_token) {
-        localStorage.setItem('spaceloop_token', response.access_token);
-        setToken(response.access_token);
+      const payload = response?.data || response;
+      const newRole = normalizeRole(payload?.active_role || targetRole);
+      const newToken = payload?.access_token || response?.access_token;
+      if (newToken) {
+        localStorage.setItem('spaceloop_token', newToken);
+        setToken(newToken);
       }
       localStorage.setItem('spaceloop_active_role', newRole);
       setActiveRole(newRole);
       if (user) {
-        setUser((prev) => ({ ...prev, active_role: newRole }));
+        setUser((prev) => ({ ...prev, active_role: newRole, active_context_role: newRole }));
       }
       return { success: true, activeRole: newRole };
     } catch (err) {
-      setError(err.message || 'Could not switch context');
+      const msg =
+        typeof err === 'string'
+          ? err
+          : err?.message && err.message !== '[object Object]'
+          ? err.message
+          : 'Could not switch context';
+      setError(msg);
       throw err;
     }
   };
@@ -157,9 +217,10 @@ export const AuthProvider = ({ children }) => {
     return res;
   };
 
-  const isSeeker = activeRole === 'seeker';
-  const isHost = activeRole === 'host' || user?.is_host || user?.role === 'host';
-  const isAdmin = activeRole === 'admin' || user?.is_admin || user?.role === 'admin';
+  const uRole = (user?.role || activeRole || '').toLowerCase();
+  const isSeeker = activeRole === 'seeker' || uRole === 'guest' || uRole === 'seeker';
+  const isHost = activeRole === 'host' || Boolean(user?.is_host) || uRole === 'host';
+  const isAdmin = activeRole === 'admin' || Boolean(user?.is_admin) || uRole === 'admin';
 
   const value = {
     user,

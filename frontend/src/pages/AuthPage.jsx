@@ -43,11 +43,13 @@ export const AuthPage = () => {
         const result = await login(email, password);
         success('Signed in successfully!');
         
-        // Exact Role Detection and Dashboard Redirection
-        const userRole =
+        // Exact Role Detection from Authenticated Backend Data
+        const rawRole =
           result?.activeRole ||
+          result?.user?.active_role ||
           result?.user?.role ||
           (result?.user?.is_admin ? 'admin' : role);
+        const userRole = String(rawRole).toLowerCase() === 'guest' ? 'seeker' : String(rawRole).toLowerCase();
         
         if (location.state?.from) {
           navigate(location.state.from);
@@ -59,7 +61,7 @@ export const AuthPage = () => {
           navigate('/seeker');
         }
       } else {
-        await register({
+        const regResult = await register({
           email,
           password,
           full_name: fullName,
@@ -67,10 +69,28 @@ export const AuthPage = () => {
           role,
         });
         success('Account created! Welcome to SpaceLoop.');
-        navigate(role === 'host' ? '/host' : '/seeker');
+        const rawRegRole = regResult?.activeRole || regResult?.user?.role || role;
+        const regRole = String(rawRegRole).toLowerCase() === 'guest' ? 'seeker' : String(rawRegRole).toLowerCase();
+        navigate(regRole === 'host' ? '/host' : '/seeker');
       }
     } catch (err) {
-      const msg = err.message || 'Authentication failed. Please verify credentials.';
+      let msg = 'Authentication failed. Please verify credentials.';
+      if (err) {
+        if (typeof err === 'string' && err.trim()) {
+          msg = err.trim();
+        } else if (typeof err.message === 'string' && err.message !== '[object Object]' && err.message.trim()) {
+          msg = err.message.trim();
+        } else if (err.data?.error?.message) {
+          msg = err.data.error.message;
+        } else if (typeof err.data?.error === 'string') {
+          msg = err.data.error;
+        } else if (typeof err.data?.message === 'string') {
+          msg = err.data.message;
+        }
+      }
+      if (msg === '[object Object]') {
+        msg = 'Invalid email or password.';
+      }
       setFormError(msg);
       toastError(msg);
     } finally {
@@ -79,13 +99,14 @@ export const AuthPage = () => {
   };
 
   const setDemoCredentials = (targetRole) => {
+    setFormError('');
     if (targetRole === 'host') {
-      setEmail('host.ananya@spaceloop.in');
-      setPassword('HostSecret2026!');
+      setEmail('host.rahul@spaceloop.in');
+      setPassword('HostRahul#2026');
       setRole('host');
     } else if (targetRole === 'admin') {
       setEmail('admin@spaceloop.in');
-      setPassword('AdminSecret2026!');
+      setPassword('Admin@SpaceLoop2026!');
       setRole('admin');
     } else {
       setEmail('seeker.rohit@spaceloop.in');
@@ -243,7 +264,13 @@ export const AuthPage = () => {
           </div>
 
           <Button type="submit" variant="primary" className="w-full mt-2" disabled={loading}>
-            {loading ? 'Authenticating...' : isLogin ? 'Sign In to SpaceLoop' : 'Register Account'}
+            {loading
+              ? isLogin
+                ? 'Signing in...'
+                : 'Creating account...'
+              : isLogin
+              ? 'Sign In to SpaceLoop'
+              : 'Register Account'}
           </Button>
         </form>
 

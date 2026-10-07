@@ -408,7 +408,10 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
                 try:
                     from models import Space
                     if Space.query.count() == 0:
-                        from backend.app.persistence.seed import seed_all
+                        try:
+                            from backend.seed_data import seed_all
+                        except ImportError:
+                            from seed_data import seed_all
                         seed_all(app)
                 except Exception as seed_err:
                     app.logger.info(f"Seed data skipped or already present: {seed_err}")

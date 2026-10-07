@@ -16,8 +16,9 @@ export const RoleRoute = ({ role, children }) => {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
         <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        <p className="text-xs text-text-muted font-medium">Checking session...</p>
       </div>
     );
   }
@@ -27,30 +28,42 @@ export const RoleRoute = ({ role, children }) => {
     return <Navigate to={`/auth?redirect=${encodeURIComponent(location.pathname)}`} replace />;
   }
 
+  const uRole = (user?.role || activeRole || '').toLowerCase();
+  const isUserAdmin = Boolean(user?.is_admin || uRole === 'admin' || activeRole === 'admin');
+  const isUserHost = Boolean(user?.is_host || uRole === 'host' || activeRole === 'host');
+
   // 2. Strict Admin Restriction
-  if (role === 'admin') {
-    const isUserAdmin = Boolean(user?.is_admin || user?.role === 'admin' || activeRole === 'admin');
-    if (!isUserAdmin) {
-      return (
-        <div className="min-h-screen py-24 px-4 flex items-center justify-center bg-background">
-          <div className="max-w-md w-full">
-            <ErrorState
-              type="unauthorized"
-              title="Admin Access Restricted"
-              description="You do not have administrative credentials to enter the SpaceLoop Governance Portal. All unauthorized administrative access attempts are logged."
-              actionText="Return to Seeker Portal"
-              actionFn={() => (window.location.href = '/seeker')}
-            />
-          </div>
+  if (role === 'admin' && !isUserAdmin) {
+    return (
+      <div className="min-h-screen py-24 px-4 flex items-center justify-center bg-background">
+        <div className="max-w-md w-full">
+          <ErrorState
+            type="unauthorized"
+            title="Admin Access Restricted"
+            description="You do not have administrative credentials to enter the SpaceLoop Governance Portal. All unauthorized administrative access attempts are logged."
+            actionText="Return to Seeker Portal"
+            actionFn={() => (window.location.href = '/seeker')}
+          />
         </div>
-      );
-    }
+      </div>
+    );
   }
 
-  // 3. Host Restriction
-  if (role === 'host') {
-    // If user is logged in, allow them to view or onboard as host
-    // (AuthContext supports switching activeRole)
+  // 3. Strict Host Restriction
+  if (role === 'host' && !isUserHost && !isUserAdmin) {
+    return (
+      <div className="min-h-screen py-24 px-4 flex items-center justify-center bg-background">
+        <div className="max-w-md w-full">
+          <ErrorState
+            type="unauthorized"
+            title="Host Portal Access Restricted"
+            description="You are currently signed in with a Seeker account. Switch to Host mode in your account menu or register as a host to list and manage workspaces."
+            actionText="Return to Seeker Dashboard"
+            actionFn={() => (window.location.href = '/seeker')}
+          />
+        </div>
+      </div>
+    );
   }
 
   return children;

@@ -89,17 +89,27 @@ export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
         ]);
 
         if (bookingsRes.status === 'fulfilled') {
+          const val = bookingsRes.value;
           const list =
-            bookingsRes.value.bookings ||
-            (Array.isArray(bookingsRes.value) ? bookingsRes.value : []);
-          setBookings(list);
+            val?.data?.items ||
+            val?.data?.bookings ||
+            val?.bookings ||
+            val?.items ||
+            (Array.isArray(val?.data) ? val.data : []) ||
+            (Array.isArray(val) ? val : []);
+          setBookings(Array.isArray(list) ? list : []);
         }
 
         if (spacesRes.status === 'fulfilled') {
+          const val = spacesRes.value;
           const raw =
-            spacesRes.value.spaces ||
-            (Array.isArray(spacesRes.value) ? spacesRes.value : []);
-          setSpaces(raw.length > 0 ? raw : SPACES_DATA);
+            val?.data?.spaces ||
+            val?.data?.items ||
+            val?.spaces ||
+            val?.items ||
+            (Array.isArray(val?.data) ? val.data : []) ||
+            (Array.isArray(val) ? val : []);
+          setSpaces(Array.isArray(raw) && raw.length > 0 ? raw : SPACES_DATA);
         } else {
           setSpaces(SPACES_DATA);
         }

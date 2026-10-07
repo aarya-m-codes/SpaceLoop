@@ -79,28 +79,40 @@ export const HostPortal = ({ initialTab = 'dashboard' }) => {
       ]);
 
       if (spacesRes.status === 'fulfilled') {
+        const val = spacesRes.value;
         const raw =
-          spacesRes.value.spaces ||
-          (Array.isArray(spacesRes.value) ? spacesRes.value : []);
+          val?.data?.spaces ||
+          val?.data?.items ||
+          val?.spaces ||
+          val?.items ||
+          (Array.isArray(val?.data) ? val.data : []) ||
+          (Array.isArray(val) ? val : []);
+        const validSpaces = Array.isArray(raw) ? raw : [];
         const hostSpaces = user?.id
-          ? raw.filter((s) => s.host_id === user.id || !s.host_id)
-          : raw;
-        setSpaces(hostSpaces.length > 0 ? hostSpaces : raw);
+          ? validSpaces.filter((s) => s.host_id === user.id)
+          : validSpaces;
+        setSpaces(hostSpaces);
         if (hostSpaces.length > 0 && !selectedSpaceForCalendar) {
           setSelectedSpaceForCalendar(hostSpaces[0].id);
         }
       }
 
       if (reservationsRes.status === 'fulfilled') {
+        const val = reservationsRes.value;
         const resList =
-          reservationsRes.value.bookings ||
-          reservationsRes.value.reservations ||
-          (Array.isArray(reservationsRes.value) ? reservationsRes.value : []);
-        setReservations(resList);
+          val?.data?.items ||
+          val?.data?.bookings ||
+          val?.data?.reservations ||
+          val?.bookings ||
+          val?.reservations ||
+          (Array.isArray(val?.data) ? val.data : []) ||
+          (Array.isArray(val) ? val : []);
+        setReservations(Array.isArray(resList) ? resList : []);
       }
 
       if (summaryRes.status === 'fulfilled') {
-        setEscrowSummary(summaryRes.value);
+        const val = summaryRes.value;
+        setEscrowSummary(val?.data || val || {});
       }
     } catch (err) {
       toastError(err.message || 'Could not fetch host data.');

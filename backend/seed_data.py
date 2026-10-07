@@ -96,10 +96,31 @@ def _seed_all_internal() -> dict[str, int]:
             is_verified=True,
             kyc_status="PENDING",
         )
+        seeker_rohit = User(
+            email="seeker.rohit@spaceloop.in",
+            password_hash=hash_password("SeekerSecret2026!"),
+            full_name="Rohit Sharma",
+            phone="+919876501234",
+            role="GUEST",
+            is_active=True,
+            is_verified=True,
+            kyc_status="VERIFIED",
+        )
+        host_ananya = User(
+            email="host.ananya@spaceloop.in",
+            password_hash=hash_password("HostSecret2026!"),
+            full_name="Ananya Iyer",
+            phone="+919876505678",
+            role="HOST",
+            is_active=True,
+            is_verified=True,
+            kyc_status="VERIFIED",
+            kyc_document_type="Aadhaar",
+        )
 
-        db.session.add_all([admin_user, host_rahul, host_priya, guest_arjun, guest_ananya])
+        db.session.add_all([admin_user, host_rahul, host_priya, guest_arjun, guest_ananya, seeker_rohit, host_ananya])
         db.session.flush()
-        counts["users"] = 5
+        counts["users"] = 7
 
         # 2. Create Seed Spaces across Indian Tech Hubs
         space1 = Space(

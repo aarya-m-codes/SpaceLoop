@@ -135,34 +135,44 @@ export const AdminDashboard = ({
         trustSafetyApi.getFraudAlerts(),
       ]);
 
-      if (statsRes.status === 'fulfilled' && statsRes.value?.data) {
-        setStats(statsRes.value.data);
+      if (statsRes.status === 'fulfilled') {
+        const val = statsRes.value;
+        setStats(val?.data || val || null);
       }
       if (usersRes.status === 'fulfilled') {
-        setUsersList(usersRes.value.users || []);
+        const val = usersRes.value;
+        setUsersList(val?.users || val?.data?.users || val?.data?.items || (Array.isArray(val) ? val : []));
       }
       if (spacesRes.status === 'fulfilled') {
-        setSpacesList(spacesRes.value.spaces || []);
+        const val = spacesRes.value;
+        setSpacesList(val?.spaces || val?.data?.spaces || val?.data?.items || (Array.isArray(val) ? val : []));
       }
       if (bookingsRes.status === 'fulfilled') {
-        setBookingsList(bookingsRes.value.bookings || []);
+        const val = bookingsRes.value;
+        setBookingsList(val?.bookings || val?.data?.bookings || val?.data?.items || (Array.isArray(val) ? val : []));
       }
       if (finRes.status === 'fulfilled') {
+        const val = finRes.value;
         setFinancials({
-          summary: finRes.value.summary || {},
-          transactions: finRes.value.transactions || [],
+          summary: val?.summary || val?.data?.summary || {},
+          transactions: val?.transactions || val?.data?.transactions || val?.data?.items || [],
         });
       }
       if (disputesRes.status === 'fulfilled') {
-        setDisputesList(disputesRes.value.disputes || []);
+        const val = disputesRes.value;
+        setDisputesList(val?.disputes || val?.data?.disputes || val?.data?.items || (Array.isArray(val) ? val : []));
       }
       if (auditRes.status === 'fulfilled') {
-        setAuditLogs(auditRes.value.audit_logs || []);
+        const val = auditRes.value;
+        setAuditLogs(val?.audit_logs || val?.data?.audit_logs || val?.data?.items || (Array.isArray(val) ? val : []));
       }
       if (assessRes.status === 'fulfilled') {
+        const val = assessRes.value;
         setAssessments(
-          assessRes.value.assessments ||
-            (Array.isArray(assessRes.value) ? assessRes.value : [])
+          val?.assessments ||
+            val?.data?.assessments ||
+            (Array.isArray(val?.data) ? val.data : []) ||
+            (Array.isArray(val) ? val : [])
         );
       }
       if (alertsRes.status === 'fulfilled') {
