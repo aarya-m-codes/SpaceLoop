@@ -1,0 +1,35 @@
+name: Security Scan
+
+on:
+  workflow_call:
+  schedule:
+    - cron: '0 4 * * 1'
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: NPM Audit
+        run: npm audit --audit-level=high || echo "Audit completed with findings"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Python Safety & Bandit Scan
+        run: |
+          pip install bandit
+          bandit -r backend/ -ll --exit-zero

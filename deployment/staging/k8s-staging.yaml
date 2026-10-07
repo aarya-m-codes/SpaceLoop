@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spaceloop-backend-staging
+  namespace: staging
+  labels:
+    app: spaceloop-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: spaceloop-backend
+  template:
+    metadata:
+      labels:
+        app: spaceloop-backend
+    spec:
+      containers:
+      - name: backend
+        image: spaceloop/backend:staging
+        ports:
+        - containerPort: 5000
+        env:
+        - name: FLASK_ENV
+          value: "staging"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spaceloop-backend-service
+  namespace: staging
+spec:
+  selector:
+    app: spaceloop-backend
+  ports:
+  - port: 80
+    targetPort: 5000

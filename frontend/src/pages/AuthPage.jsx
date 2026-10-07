@@ -40,9 +40,24 @@ export const AuthPage = () => {
 
     try {
       if (isLogin) {
-        await login(email, password);
+        const result = await login(email, password);
         success('Signed in successfully!');
-        navigate(redirectPath);
+        
+        // Exact Role Detection and Dashboard Redirection
+        const userRole =
+          result?.activeRole ||
+          result?.user?.role ||
+          (result?.user?.is_admin ? 'admin' : role);
+        
+        if (location.state?.from) {
+          navigate(location.state.from);
+        } else if (userRole === 'admin' || result?.user?.is_admin) {
+          navigate('/admin');
+        } else if (userRole === 'host') {
+          navigate('/host');
+        } else {
+          navigate('/seeker');
+        }
       } else {
         await register({
           email,
@@ -52,7 +67,7 @@ export const AuthPage = () => {
           role,
         });
         success('Account created! Welcome to SpaceLoop.');
-        navigate(role === 'host' ? '/host' : '/explore');
+        navigate(role === 'host' ? '/host' : '/seeker');
       }
     } catch (err) {
       const msg = err.message || 'Authentication failed. Please verify credentials.';

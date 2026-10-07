@@ -1,0 +1,9 @@
+{
+  "flags": {
+    "ENABLE_LOOPBOT_VOICE": false,
+    "ENABLE_SMART_NFC_ACCESS": true,
+    "ENABLE_INSTANT_ESCROW_RELEASE": false,
+    "ENABLE_HOST_IDENTITY_VERIFICATION": true,
+    "ENABLE_FRAUD_GRAPH_BLOCKING": true
+  }
+}

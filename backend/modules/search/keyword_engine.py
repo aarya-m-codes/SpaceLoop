@@ -13,6 +13,80 @@ class KeywordEngine:
     """Calculates lexical and token overlap similarity between search queries and space listings."""
 
     @classmethod
+    def calculate_noise_score(
+        cls,
+        requested_noise: str | None,
+        space: Any,
+    ) -> tuple[float, str]:
+        """Compute acoustic match score and explanatory diagnostic message.
+
+        Understands semantic relationships:
+        - quiet, peaceful, low noise, study-friendly, focused work
+        - meeting, social, lively, collaborative
+        Explicitly handles missing noise data rather than assuming or inventing.
+        """
+        if not requested_noise:
+            return 1.0, "No acoustic preference requested."
+
+        raw_noise = getattr(space, "ai_noise_level", None)
+        if not raw_noise or not str(raw_noise).strip():
+            # Explicit handling for unrecorded noise: never invent data
+            return 0.50, "Acoustic level unverified (no noise telemetry recorded)."
+
+        noise_lower = str(raw_noise).lower()
+        requested = requested_noise.lower()
+
+        # Target: Quiet / Silent / Study-friendly / Peaceful
+        if requested in ("quiet", "silent", "peaceful", "study", "low noise", "focused work"):
+            if any(term in noise_lower for term in ("isolated", "<30db", "<32db", "<35db", "whisper", "soundproof", "silent", "quiet")):
+                return 1.0, f"Verified quiet environment ({raw_noise})."
+            elif any(term in noise_lower for term in ("<40db", "<42db", "<45db", "low")):
+                return 0.85, f"Low-noise environment ({raw_noise})."
+            elif any(term in noise_lower for term in ("moderate", "<55db", "50-60db", "open floor")):
+                return 0.35, f"Moderate noise environment ({raw_noise}) - ambient floor chatter."
+            elif any(term in noise_lower for term in ("lively", "active", "social", "high")):
+                return 0.10, f"Lively active environment ({raw_noise}) - not ideal for silent study."
+            return 0.60, f"Acoustic profile: {raw_noise}."
+
+        # Target: Lively / Social / Meeting / Collaborative
+        elif requested in ("lively", "social", "active", "meeting", "collaborative"):
+            if any(term in noise_lower for term in ("lively", "active", "social", "open floor", "moderate")):
+                return 1.0, f"Vibrant collaborative environment ({raw_noise})."
+            elif getattr(space, "space_type", "") in ("meeting_room", "conference", "studio"):
+                return 0.90, f"Enclosed space suitable for discussion ({raw_noise})."
+            elif any(term in noise_lower for term in ("whisper", "silent", "isolated")):
+                return 0.60, f"Isolated quiet space ({raw_noise}) - suitable for confidential discussions."
+            return 0.80, f"Acoustic profile: {raw_noise}."
+
+        # Target: Moderate / Normal
+        elif requested in ("moderate", "normal", "medium"):
+            if any(term in noise_lower for term in ("moderate", "open floor", "<55db")):
+                return 1.0, f"Balanced moderate acoustics ({raw_noise})."
+            return 0.80, f"Acoustic profile: {raw_noise}."
+
+        return 0.70, f"Acoustic profile: {raw_noise}."
+
+    @classmethod
+    def get_matched_amenities(cls, space: Any, requested_amenities: list[str] | None) -> list[str]:
+        """Return list of matched requested amenities."""
+        if not requested_amenities:
+            return []
+        space_amenities_lower = [a.lower() for a in (getattr(space, "amenities", []) or [])]
+        matched = []
+        for req in requested_amenities:
+            req_lower = req.lower()
+            req_syns = AMENITY_SYNONYMS.get(req_lower, [req_lower])
+            for syn in req_syns:
+                if any(syn in a for a in space_amenities_lower):
+                    matched.append(req.title())
+                    break
+                # Check noise field for quiet
+                if req_lower == "quiet" and space.ai_noise_level and any(q in space.ai_noise_level.lower() for q in ("quiet", "silent", "soundproof")):
+                    matched.append("Quiet")
+                    break
+        return matched
+
+    @classmethod
     def calculate_similarity(
         cls,
         query: str,
@@ -36,25 +110,9 @@ class KeywordEngine:
         # 2. Amenity coverage boost
         amenity_score = 1.0
         if requested_amenities:
-            space_amenities_lower = [a.lower() for a in (space.amenities or [])]
-            # Check matches across space amenities, description, and acoustics
-            matched_amenities = 0
-            for req in requested_amenities:
-                req_synonyms = AMENITY_SYNONYMS.get(req, [req])
-                has_match = False
-                for syn in req_synonyms:
-                    if any(syn in a for a in space_amenities_lower):
-                        has_match = True
-                        break
-                    # Also check noise/lighting fields for quiet/acoustics/lighting
-                    if req == "quiet" and space.ai_noise_level and ("quiet" in space.ai_noise_level.lower() or "sound" in space.ai_noise_level.lower()):
-                        has_match = True
-                        break
-                if has_match:
-                    matched_amenities += 1
-
-            amenity_score = matched_amenities / len(requested_amenities)
-            # Weighted combination: 50% Jaccard + 50% amenity coverage
+            matched_amenities = cls.get_matched_amenities(space, requested_amenities)
+            amenity_score = len(matched_amenities) / len(requested_amenities)
+            # Weighted combination: 40% Jaccard + 60% amenity coverage
             composite_keyword = (0.4 * min(1.0, jaccard * 2.5)) + (0.6 * amenity_score)
         else:
             # Scaled Jaccard (raw Jaccard is typically between 0.1 and 0.4 due to long descriptions)

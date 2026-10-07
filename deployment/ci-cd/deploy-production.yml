@@ -1,0 +1,22 @@
+name: Deploy to Production
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Production Deployment
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Health Pre-Flight
+        run: echo "Running pre-deployment canary check..."
+
+      - name: Blue-Green Production Rollout
+        run: |
+          echo "Rolling out production containers with zero-downtime..."

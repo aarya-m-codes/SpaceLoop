@@ -1,0 +1,26 @@
+groups:
+  - name: spaceloop_critical_alerts
+    rules:
+      - alert: HighApiErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.02
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SpaceLoop API 5xx error rate exceeds 2%"
+
+      - alert: EscrowSettlementAnomaly
+        expr: spaceloop_escrow_failed_releases_total > 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: "Escrow release transaction failed to settle"
+
+      - alert: SmartAccessLockOffline
+        expr: rate(spaceloop_lock_offline_events_total[5m]) > 5
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Multiple smart door locks reporting offline heartbeat"

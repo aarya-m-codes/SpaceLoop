@@ -38,14 +38,18 @@ def _handle_chat_request():
     # Standard format fulfilling both top-level and data-wrapped contracts
     response_payload = {
         "success": True,
-        "data": result,
+        "data": result.get("data", {}),
         "response": result["response"],
+        "message": result["message"],
+        "type": result.get("type", "message"),
         "intent": result["intent"],
+        "standard_intent": result.get("standard_intent"),
         "sources": result["sources"],
         "suggested_actions": result["suggested_actions"],
         "conversation_id": result["conversation_id"],
         "language": result["language"],
         "provider": result.get("provider", "deterministic"),
+        "context": result.get("context", {}),
     }
 
     return jsonify(response_payload), 200

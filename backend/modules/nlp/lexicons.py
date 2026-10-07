@@ -191,7 +191,7 @@ SPACE_TYPE_SYNONYMS: dict[str, list[str]] = {
         "kholi", "खोली", "private office", "enclosed room",
     ],
     "meeting_room": [
-        "meeting room", "conference room", "boardroom", "meeting space",
+        "meeting room", "conference room", "boardroom", "meeting space", "meeting",
         "baithak", "बैठक", "discussion room", "conference hall", "meeting pod",
     ],
     "studio": [

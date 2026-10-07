@@ -39,13 +39,23 @@ import { useToast } from '../../context/ToastContext';
 import { Button } from '../../components/common/Button';
 import { ErrorState } from '../../components/common/ErrorState';
 
-export const AdminDashboard = () => {
+export const AdminDashboard = ({
+  initialTab = 'overview',
+  initialRoleFilter = '',
+  initialSpaceStatusFilter = '',
+}) => {
   const { user, isAdmin } = useAuth();
   const { success, error: toastError, info } = useToast();
 
   // Active navigation tab
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(initialTab);
   // 'overview' | 'users' | 'spaces' | 'bookings' | 'financials' | 'disputes' | 'trust' | 'fraud' | 'audit'
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -64,9 +74,22 @@ export const AdminDashboard = () => {
 
   // Filters & Searches
   const [userSearch, setUserSearch] = useState('');
-  const [userRoleFilter, setUserRoleFilter] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState(initialRoleFilter);
   const [spaceSearch, setSpaceSearch] = useState('');
+  const [spaceStatusFilter, setSpaceStatusFilter] = useState(initialSpaceStatusFilter);
   const [bookingFilter, setBookingFilter] = useState('');
+
+  useEffect(() => {
+    if (initialRoleFilter !== undefined) {
+      setUserRoleFilter(initialRoleFilter);
+    }
+  }, [initialRoleFilter]);
+
+  useEffect(() => {
+    if (initialSpaceStatusFilter !== undefined) {
+      setSpaceStatusFilter(initialSpaceStatusFilter);
+    }
+  }, [initialSpaceStatusFilter]);
 
   // Dispute Adjudication Modal state
   const [selectedDispute, setSelectedDispute] = useState(null);
@@ -346,12 +369,17 @@ export const AdminDashboard = () => {
 
   // Filtered Spaces
   const filteredSpaces = spacesList.filter((sp) => {
-    return (
+    const matchesSearch =
       !spaceSearch ||
       (sp.title && sp.title.toLowerCase().includes(spaceSearch.toLowerCase())) ||
       (sp.city && sp.city.toLowerCase().includes(spaceSearch.toLowerCase())) ||
-      (sp.location && sp.location.toLowerCase().includes(spaceSearch.toLowerCase()))
-    );
+      (sp.location && sp.location.toLowerCase().includes(spaceSearch.toLowerCase()));
+    const matchesStatus =
+      !spaceStatusFilter ||
+      (spaceStatusFilter === 'pending'
+        ? sp.status === 'pending' || !sp.is_verified
+        : sp.status === spaceStatusFilter);
+    return matchesSearch && matchesStatus;
   });
 
   // Filtered Bookings
@@ -868,15 +896,27 @@ export const AdminDashboard = () => {
               </p>
             </div>
 
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search by title, city, or area..."
-                value={spaceSearch}
-                onChange={(e) => setSpaceSearch(e.target.value)}
-                className="pl-8 pr-3 py-1.5 text-xs rounded-xl bg-surface border border-border text-text-primary focus:outline-none focus:border-primary w-64"
-              />
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search by title, city, or area..."
+                  value={spaceSearch}
+                  onChange={(e) => setSpaceSearch(e.target.value)}
+                  className="pl-8 pr-3 py-1.5 text-xs rounded-xl bg-surface border border-border text-text-primary focus:outline-none focus:border-primary w-56"
+                />
+              </div>
+
+              <select
+                value={spaceStatusFilter}
+                onChange={(e) => setSpaceStatusFilter(e.target.value)}
+                className="px-3 py-1.5 text-xs rounded-xl bg-surface border border-border text-text-primary focus:outline-none focus:border-primary"
+              >
+                <option value="">All Listings</option>
+                <option value="pending">Pending Approvals</option>
+                <option value="active">Active / Live</option>
+              </select>
             </div>
           </div>
 

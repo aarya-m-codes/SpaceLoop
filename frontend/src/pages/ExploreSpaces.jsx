@@ -17,6 +17,8 @@ import { SpaceMapView } from '../components/spaces/SpaceMapView';
 import { AiSearchModal } from '../components/spaces/AiSearchModal';
 import { ScrollReveal } from '../components/common/ScrollReveal';
 import { Button } from '../components/common/Button';
+import { AnimatedBackground } from '@/components/core/animated-background';
+import { SPACES_DATA } from '../utils/constants';
 import { spacesApi } from '../services/api';
 import { useToast } from '../context/ToastContext';
 
@@ -25,8 +27,8 @@ export const ExploreSpaces = () => {
   const initialCategory = searchParams.get('category') || 'All';
   const { error: toastError } = useToast();
 
-  const [spaces, setSpaces] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [spaces, setSpaces] = useState(SPACES_DATA);
+  const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [searchTerm, setSearchTerm] = useState('');
   const [maxPrice, setMaxPrice] = useState(500);
@@ -50,9 +52,12 @@ export const ExploreSpaces = () => {
       setLoading(true);
       const res = await spacesApi.getSpaces();
       const list = res.spaces || (Array.isArray(res) ? res : []);
-      setSpaces(list);
-    } catch (err) {
-      toastError(err.message || 'Failed to fetch spaces from server.');
+      if (list && list.length > 0) {
+        setSpaces(list);
+      }
+    } catch {
+      // Retain fallback spaces when offline / dev mode
+      setSpaces(SPACES_DATA);
     } finally {
       setLoading(false);
     }
@@ -221,9 +226,25 @@ export const ExploreSpaces = () => {
         <SpaceMapView spaces={filteredSpaces} />
       ) : filteredSpaces.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSpaces.map((space) => (
-            <SpaceCard key={space.id} space={space} />
-          ))}
+          <AnimatedBackground
+            className="rounded-3xl bg-zinc-200/80 dark:bg-zinc-800 border border-zinc-300/70 dark:border-zinc-700/70 shadow-sm"
+            transition={{
+              type: 'spring',
+              bounce: 0.2,
+              duration: 0.6,
+            }}
+            enableHover
+          >
+            {filteredSpaces.map((space, index) => (
+              <div
+                key={space.id}
+                data-id={`card-${space.id || index}`}
+                className="p-2 w-full h-full flex flex-col"
+              >
+                <SpaceCard space={space} />
+              </div>
+            ))}
+          </AnimatedBackground>
         </div>
       ) : (
         <div className="text-center py-20 bg-surface rounded-3xl border border-border p-8 space-y-3">

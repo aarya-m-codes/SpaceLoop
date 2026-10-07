@@ -1,0 +1,20 @@
+{
+  "environment": "production",
+  "api": {
+    "port": 5000,
+    "cors_origins": ["https://spaceloop.io", "https://app.spaceloop.io"]
+  },
+  "database": {
+    "max_connections": 50,
+    "echo_sql": false
+  },
+  "redis": {
+    "host": "spaceloop-redis-prod",
+    "port": 6379,
+    "db": 0
+  },
+  "ai": {
+    "provider": "gemini-flash",
+    "temperature": 0.2
+  }
+}

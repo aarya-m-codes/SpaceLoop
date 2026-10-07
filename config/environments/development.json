@@ -1,0 +1,20 @@
+{
+  "environment": "development",
+  "api": {
+    "port": 5000,
+    "cors_origins": ["http://localhost:3000", "http://127.0.0.1:3000"]
+  },
+  "database": {
+    "max_connections": 10,
+    "echo_sql": true
+  },
+  "redis": {
+    "host": "localhost",
+    "port": 6379,
+    "db": 0
+  },
+  "ai": {
+    "provider": "mock",
+    "temperature": 0.3
+  }
+}

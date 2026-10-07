@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spaceloop-backend-production
+  namespace: production
+  labels:
+    app: spaceloop-backend
+spec:
+  replicas: 4
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: spaceloop-backend
+  template:
+    metadata:
+      labels:
+        app: spaceloop-backend
+    spec:
+      containers:
+      - name: backend
+        image: spaceloop/backend:latest
+        ports:
+        - containerPort: 5000
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "1024Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 10
