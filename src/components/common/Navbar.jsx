@@ -156,8 +156,8 @@ export const Navbar = () => {
         isLanding ? 'landing-header-enter' : ''
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+      <div className="w-full px-3 sm:px-4 lg:px-6">
+        <div className="flex items-center justify-between h-16 w-full">
           
           {/* ==========================================================================
               LEFT GROUP: Hamburger Menu beside the Infinity Logo & SpaceLoop Brand
@@ -275,9 +275,9 @@ export const Navbar = () => {
           </div>
 
           {/* ==========================================================================
-              RIGHT GROUP: Role Switcher, Theme Toggle & Profile / Auth
+              RIGHT GROUP: Role Switcher, Actions, Profile & Theme Toggle at Extreme Right
              ========================================================================== */}
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             {/* Role Context Pill (Seeker / Host / Admin) */}
             {isAuthenticated && (
               <div className="hidden sm:flex items-center bg-surface-elevated p-1 rounded-xl border border-border text-xs font-semibold">
@@ -321,29 +321,6 @@ export const Navbar = () => {
                 )}
               </div>
             )}
-
-            {/* Theme Toggle Button */}
-            <motion.button
-              type="button"
-              onClick={toggleTheme}
-              aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-              whileTap={{ scale: 0.92, rotate: 15 }}
-              whileHover={{ scale: 1.05 }}
-              transition={{ duration: 0.15 }}
-              className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated border border-transparent hover:border-border transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
-            >
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={theme}
-                  initial={{ opacity: 0, rotate: -90, scale: 0.8 }}
-                  animate={{ opacity: 1, rotate: 0, scale: 1 }}
-                  exit={{ opacity: 0, rotate: 90, scale: 0.8 }}
-                  transition={{ duration: 0.18 }}
-                >
-                  {isDark ? <Sun className="w-5 h-5 text-primary" /> : <Moon className="w-5 h-5 text-text-secondary" />}
-                </motion.div>
-              </AnimatePresence>
-            </motion.button>
 
             {/* Profile Dropdown or Sign In */}
             {isAuthenticated ? (
@@ -458,6 +435,29 @@ export const Navbar = () => {
                 </Link>
               </div>
             )}
+
+            {/* Theme Toggle Button at Extreme Right */}
+            <motion.button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+              whileTap={{ scale: 0.92, rotate: 15 }}
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.15 }}
+              className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated border border-transparent hover:border-border transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer shrink-0"
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={theme}
+                  initial={{ opacity: 0, rotate: -90, scale: 0.8 }}
+                  animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                  exit={{ opacity: 0, rotate: 90, scale: 0.8 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  {isDark ? <Sun className="w-5 h-5 text-primary" /> : <Moon className="w-5 h-5 text-text-secondary" />}
+                </motion.div>
+              </AnimatePresence>
+            </motion.button>
           </div>
 
         </div>
