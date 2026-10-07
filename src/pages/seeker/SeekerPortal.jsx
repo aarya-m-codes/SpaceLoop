@@ -32,6 +32,7 @@ import { SeekerBookings } from '../SeekerBookings';
 import { Profile } from '../Profile';
 import { Button } from '../../components/common/Button';
 import { AnimatedBackground } from '@/components/core/animated-background';
+import { SPACES_DATA } from '../../utils/constants';
 
 export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
   const { user, logout } = useAuth();
@@ -50,7 +51,7 @@ export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
 
   // Real data states
   const [bookings, setBookings] = useState([]);
-  const [spaces, setSpaces] = useState([]);
+  const [spaces, setSpaces] = useState(SPACES_DATA);
   const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -71,7 +72,9 @@ export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
 
         if (spacesRes.status === 'fulfilled') {
           const raw = spacesRes.value.spaces || (Array.isArray(spacesRes.value) ? spacesRes.value : []);
-          setSpaces(raw);
+          setSpaces(raw.length > 0 ? raw : SPACES_DATA);
+        } else {
+          setSpaces(SPACES_DATA);
         }
 
         // Real wishlist from storage
@@ -286,7 +289,7 @@ export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <AnimatedBackground
-                className="rounded-3xl bg-zinc-100 dark:bg-zinc-800"
+                className="rounded-3xl bg-zinc-200/80 dark:bg-zinc-800 border border-zinc-300/70 dark:border-zinc-700/70 shadow-sm"
                 transition={{
                   type: 'spring',
                   bounce: 0.2,
@@ -376,7 +379,7 @@ export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <AnimatedBackground
-                className="rounded-3xl bg-zinc-100 dark:bg-zinc-800"
+                className="rounded-3xl bg-zinc-200/80 dark:bg-zinc-800 border border-zinc-300/70 dark:border-zinc-700/70 shadow-sm"
                 transition={{
                   type: 'spring',
                   bounce: 0.2,

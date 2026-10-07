@@ -349,7 +349,7 @@ export const LandingPage = () => {
           {/* Space Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             <AnimatedBackground
-              className="rounded-3xl bg-zinc-100 dark:bg-zinc-800"
+              className="rounded-3xl bg-zinc-200/80 dark:bg-zinc-800 border border-zinc-300/70 dark:border-zinc-700/70 shadow-sm"
               transition={{
                 type: 'spring',
                 bounce: 0.2,
