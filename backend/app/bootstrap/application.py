@@ -1,15 +1,32 @@
 """SpaceLoop Enterprise Application Factory Bootstrap."""
 import logging
 import os
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 from flask import Flask, abort, jsonify, request, send_from_directory
 from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from backend.app.config import BaseConfig, get_config
+# Ensure backend directory and repo root are in sys.path
+BOOTSTRAP_DIR = Path(__file__).resolve().parent
+BACKEND_DIR = BOOTSTRAP_DIR.parent.parent
+REPO_ROOT = BACKEND_DIR.parent
+for path in (str(BACKEND_DIR), str(REPO_ROOT)):
+    if path not in sys.path:
+        sys.path.insert(0, path)
+
 from backend.core.cors import init_cors
 from backend.core.database import check_database_health, db, init_db
+
+try:
+    from backend.app.config import BaseConfig, get_config
+except ImportError:
+    try:
+        from backend.config import BaseConfig, get_config
+    except ImportError:
+        from config import BaseConfig, get_config
 
 
 def configure_logging(app: Flask) -> None:
@@ -31,7 +48,7 @@ def register_error_handlers(app: Flask) -> None:
                 "success": False,
                 "error": {
                     "code": "BAD_REQUEST",
-                    "message": getattr(err, "description", "The request payload was invalid or malformed."),
+                    "message": str(getattr(err, "description", "Malformed request payload")),
                 },
             }),
             400,
@@ -44,7 +61,7 @@ def register_error_handlers(app: Flask) -> None:
                 "success": False,
                 "error": {
                     "code": "UNAUTHORIZED",
-                    "message": getattr(err, "description", "Authentication credentials are required or invalid."),
+                    "message": "Authentication required to access this resource.",
                 },
             }),
             401,
@@ -57,7 +74,7 @@ def register_error_handlers(app: Flask) -> None:
                 "success": False,
                 "error": {
                     "code": "FORBIDDEN",
-                    "message": getattr(err, "description", "You do not have permission to access this resource."),
+                    "message": "You do not have permission to perform this action.",
                 },
             }),
             403,
@@ -65,28 +82,32 @@ def register_error_handlers(app: Flask) -> None:
 
     @app.errorhandler(404)
     def handle_not_found(err: Any):
+        if request.path.startswith("/api/"):
+            return (
+                jsonify({
+                    "success": False,
+                    "error": {
+                        "code": "NOT_FOUND",
+                        "message": f"Resource not found: {request.path}",
+                    },
+                }),
+                404,
+            )
+        # For non-API requests, let SPA routing fallback handle it
+        dist_dir = find_frontend_dist_dir(app)
+        if dist_dir:
+            index_path = os.path.join(dist_dir, "index.html")
+            if os.path.exists(index_path):
+                return send_from_directory(dist_dir, "index.html")
         return (
             jsonify({
                 "success": False,
                 "error": {
                     "code": "NOT_FOUND",
-                    "message": getattr(err, "description", "The requested resource was not found."),
+                    "message": f"Endpoint not found: {request.path}",
                 },
             }),
             404,
-        )
-
-    @app.errorhandler(405)
-    def handle_method_not_allowed(err: Any):
-        return (
-            jsonify({
-                "success": False,
-                "error": {
-                    "code": "METHOD_NOT_ALLOWED",
-                    "message": getattr(err, "description", f"Method {request.method} is not allowed on this endpoint."),
-                },
-            }),
-            405,
         )
 
     @app.errorhandler(409)
@@ -96,23 +117,36 @@ def register_error_handlers(app: Flask) -> None:
                 "success": False,
                 "error": {
                     "code": "CONFLICT",
-                    "message": getattr(err, "description", "A conflicting resource or booking slot already exists."),
+                    "message": str(getattr(err, "description", "Resource state conflict")),
                 },
             }),
             409,
         )
 
     @app.errorhandler(422)
-    def handle_unprocessable(err: Any):
+    def handle_unprocessable_entity(err: Any):
         return (
             jsonify({
                 "success": False,
                 "error": {
-                    "code": "UNPROCESSABLE_ENTITY",
-                    "message": getattr(err, "description", "The request was well-formed but could not be processed."),
+                    "code": "VALIDATION_ERROR",
+                    "message": str(getattr(err, "description", "Unprocessable entity")),
                 },
             }),
             422,
+        )
+
+    @app.errorhandler(429)
+    def handle_rate_limit(err: Any):
+        return (
+            jsonify({
+                "success": False,
+                "error": {
+                    "code": "RATE_LIMIT_EXCEEDED",
+                    "message": "Too many requests. Please slow down.",
+                },
+            }),
+            429,
         )
 
     @app.errorhandler(500)
@@ -123,20 +157,21 @@ def register_error_handlers(app: Flask) -> None:
                 "success": False,
                 "error": {
                     "code": "INTERNAL_SERVER_ERROR",
-                    "message": "An unexpected server error occurred. Please try again later.",
+                    "message": "An internal server error occurred.",
                 },
             }),
             500,
         )
 
     @app.errorhandler(HTTPException)
-    def handle_generic_http_exception(err: HTTPException):
+    def handle_http_exception(err: HTTPException):
+        code = err.name.upper().replace(" ", "_") if getattr(err, "name", None) else f"HTTP_{err.code}"
         return (
             jsonify({
                 "success": False,
                 "error": {
-                    "code": err.name.upper().replace(" ", "_"),
-                    "message": err.description,
+                    "code": code,
+                    "message": err.description or "HTTP error occurred",
                 },
             }),
             err.code or 500,
@@ -157,19 +192,26 @@ def register_error_handlers(app: Flask) -> None:
         )
 
 
-def _get_dist_directory(app: Flask) -> str | None:
-    """Resolve production dist directory from either root or frontend workspace."""
-    root_dist = os.path.join(app.root_path, "dist")
-    if os.path.exists(root_dist) and os.path.exists(os.path.join(root_dist, "index.html")):
-        return root_dist
-    frontend_dist = os.path.join(app.root_path, "frontend", "dist")
-    if os.path.exists(frontend_dist) and os.path.exists(os.path.join(frontend_dist, "index.html")):
-        return frontend_dist
-    return root_dist if os.path.exists(root_dist) else None
+def find_frontend_dist_dir(app: Flask) -> str | None:
+    """Resolve the canonical frontend production distribution directory."""
+    candidates = [
+        # Canonical monorepo frontend location
+        os.path.abspath(os.path.join(REPO_ROOT, "frontend", "dist")),
+        os.path.abspath(os.path.join(BACKEND_DIR, "..", "frontend", "dist")),
+        os.path.abspath(os.path.join(app.root_path, "frontend", "dist")),
+        os.path.abspath(os.path.join(app.root_path, "..", "frontend", "dist")),
+        # Fallback to local dist directory if built in root or backend
+        os.path.abspath(os.path.join(app.root_path, "dist")),
+        os.path.abspath(os.path.join(REPO_ROOT, "dist")),
+    ]
+    for candidate in candidates:
+        if os.path.exists(os.path.join(candidate, "index.html")):
+            return candidate
+    return None
 
 
 def register_system_routes(app: Flask) -> None:
-    """Register core platform routes including health and diagnostic checks."""
+    """Register core platform routes including health, diagnostic checks, and SPA serving."""
 
     @app.route("/health", methods=["GET"])
     @app.route("/api/v1/health", methods=["GET"])
@@ -192,8 +234,9 @@ def register_system_routes(app: Flask) -> None:
 
     @app.route("/", methods=["GET"])
     def root():
-        dist_dir = _get_dist_directory(app)
-        if dist_dir and "text/html" in request.headers.get("Accept", ""):
+        dist_dir = find_frontend_dist_dir(app)
+        accept_header = request.headers.get("Accept", "")
+        if dist_dir and ("text/html" in accept_header or "*/*" in accept_header):
             index_path = os.path.join(dist_dir, "index.html")
             if os.path.exists(index_path):
                 return send_from_directory(dist_dir, "index.html")
@@ -206,16 +249,24 @@ def register_system_routes(app: Flask) -> None:
 
     @app.route("/<path:path>", methods=["GET"])
     def serve_frontend_assets(path):
-        if path.startswith("api/") or path.startswith("uploads/") or path == "health":
+        # Do not intercept API, uploads, or health endpoints
+        if path.startswith("api/") or path.startswith("uploads/") or path in ("health", "api/v1/health"):
             abort(404)
-        dist_dir = _get_dist_directory(app)
-        if dist_dir:
-            file_path = os.path.join(dist_dir, path)
-            if os.path.exists(file_path):
-                return send_from_directory(dist_dir, path)
-            index_file = os.path.join(dist_dir, "index.html")
-            if os.path.exists(index_file):
-                return send_from_directory(dist_dir, "index.html")
+
+        dist_dir = find_frontend_dist_dir(app)
+        if not dist_dir:
+            abort(404)
+
+        # Check for static file match (JS, CSS, images, etc.)
+        file_path = os.path.join(dist_dir, path)
+        if os.path.exists(file_path) and not os.path.isdir(file_path):
+            return send_from_directory(dist_dir, path)
+
+        # SPA client-side routing fallback for browser reloads
+        index_file = os.path.join(dist_dir, "index.html")
+        if os.path.exists(index_file):
+            return send_from_directory(dist_dir, "index.html")
+
         abort(404)
 
 
@@ -231,7 +282,13 @@ def register_cli_commands(app: Flask) -> None:
     @app.cli.command("seed-db")
     def seed_db_command():
         """Seed initial users, spaces, bookings, and reviews."""
-        from backend.app.persistence.seed import seed_all
+        try:
+            from backend.app.persistence.seed import seed_all
+        except ImportError:
+            try:
+                from backend.seed_data import seed_all
+            except ImportError:
+                from seed_data import seed_all
         init_db(app)
         counts = seed_all(app)
         print(f"SpaceLoop database seeded: {counts}")
@@ -240,7 +297,7 @@ def register_cli_commands(app: Flask) -> None:
 def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     """SpaceLoop Application Factory."""
     # Base directory is workspace root
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    base_dir = str(REPO_ROOT)
     app = Flask(__name__, root_path=base_dir)
 
     # Load configuration
@@ -251,7 +308,7 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     # Logging
     configure_logging(app)
 
-    # Apply ProxyFix middleware if configured
+    # Apply ProxyFix middleware if configured (e.g. running behind NGINX, ALB, or Traefik)
     if app.config.get("ENABLE_PROXY_FIX"):
         num_proxies = app.config.get("NUM_PROXIES", 1)
         app.wsgi_app = ProxyFix(
@@ -259,7 +316,6 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
             x_for=num_proxies,
             x_proto=num_proxies,
             x_host=num_proxies,
-            x_port=num_proxies,
             x_prefix=num_proxies,
         )
 
@@ -271,9 +327,9 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     from backend.modules.auth.session import init_session_context
     init_session_context(app)
 
-    # Attach production security headers
+    # Security headers
     @app.after_request
-    def attach_security_headers(response):
+    def set_security_headers(response):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"

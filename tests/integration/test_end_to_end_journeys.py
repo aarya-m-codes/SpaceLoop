@@ -52,10 +52,17 @@ class EndToEndJourneysTestCase(unittest.TestCase):
     def tearDown(self):
         db.session.remove()
         db.drop_all()
+        db.engine.dispose()
         self.ctx.pop()
-        os.close(self.temp_db_fd)
+        try:
+            os.close(self.temp_db_fd)
+        except OSError:
+            pass
         if os.path.exists(self.temp_db_path):
-            os.remove(self.temp_db_path)
+            try:
+                os.remove(self.temp_db_path)
+            except OSError:
+                pass
 
     # -------------------------------------------------------------------------
     # Helper Utilities

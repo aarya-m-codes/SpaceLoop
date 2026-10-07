@@ -1,117 +1,196 @@
-# SpaceLoop Enterprise Marketplace
+# SpaceLoop Marketplace
 
-[![CI Suite](https://github.com/aarya-m-codes/SpaceLoop/actions/workflows/ci.yml/badge.svg)](https://github.com/aarya-m-codes/SpaceLoop/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![Node 20+](https://img.shields.io/badge/Node-20%2B-green.svg)](https://nodejs.org/)
 
-SpaceLoop is an intelligent physical storage, creative studio, and workspace sharing marketplace. It pairs Seekers and Hosts through dynamic AI matching, verified identity credentials, micro-escrow deposits, GPS-geofenced temporal access controls, and autonomous fraud detection engines.
+SpaceLoop is an intelligent physical storage, creative studio, and workspace sharing marketplace. It connects Seekers and Hosts through dynamic AI matching, verified identity credentials, micro-escrow deposits, GPS-geofenced temporal access controls, and autonomous fraud detection engines.
 
 ---
 
-## Architecture Overview
+## Canonical Architecture
 
-SpaceLoop is organized around an enterprise modular domain architecture:
+The repository follows a clean, decoupled monorepo architecture:
 
 ```
-spaceloop/
-├── .github/          # CI/CD workflows, CodeQL, security audits, and issue templates
-├── frontend/         # Production React 18 + Vite frontend with modular feature structure
-├── backend/          # Flask clean architecture: bootstrap, API v1, services, engines, AI
-├── database/         # Schema definitions, migrations, seeds, and ER diagrams
-├── contracts/        # OpenAPI specifications, domain events, and error schemas
-├── infrastructure/   # Docker container definitions, Nginx gateway, and Redis configs
-├── deployment/       # Staging, production, blue/green rollout configurations
-├── config/           # Multi-environment configurations and feature flag defaults
-├── security/         # Threat models, security policies, SBOM, and checklists
-├── observability/    # Metrics, logging, OpenTelemetry integration, and alerts
-├── operations/       # Runbooks, disaster recovery, incident response guides
-├── docs/             # Technical architecture, system diagrams, and ADRs
-└── scripts/          # Setup, testing, maintenance, and database automation
+SpaceLoop/
+├── frontend/         # Canonical React 18 + Vite frontend application
+│   ├── src/          # Components, pages, hooks, contexts, routes, and styles
+│   ├── public/       # Static assets and images
+│   ├── index.html    # Vite entrypoint HTML
+│   ├── vite.config.js# Vite build and dev configuration (proxies /api to backend)
+│   ├── package.json  # Frontend npm dependencies
+│   └── package-lock.json
+├── backend/          # Canonical Flask Python backend application
+│   ├── app/          # Application factory bootstrap and v1 REST API blueprints
+│   ├── core/         # Core extensions: SQLAlchemy database, CORS, Geo, Cache
+│   ├── modules/      # Domain modules: auth, bookings, escrow, search, spaces, trust_safety
+│   ├── fraud_engine/ # ML Isolation Forest & heuristic fraud detection engine
+│   ├── config.py     # Environment configurations (Development, Testing, Production)
+│   ├── models.py     # Unified SQLAlchemy data models
+│   ├── security.py   # Password hashing, cryptographic tokens, and access PINs
+│   ├── space_ai.py   # AI search adaptation & deterministic fallback engine
+│   ├── seed_data.py  # Seed generator for bootstrap development data
+│   ├── requirements.txt # Python production dependencies
+│   └── run.py        # Authoritative WSGI / server entrypoint (`backend.run:app`)
+├── database/         # Schema definitions, migrations, and seeds
+├── contracts/        # API schemas and specifications
+├── infrastructure/   # Docker container configurations and Nginx gateway
+├── deployment/       # Staging and production deployment manifests
+├── tests/            # Automated pytest test suites and production simulation tests
+├── Procfile          # Render web service process definition
+├── Dockerfile        # Multi-stage production container build
+├── .env.example      # Reference environment variable specification
+└── README.md
 ```
 
 ---
 
-## Core Systems & Engines
+## Database Configuration
 
-### 1. Dual Fraud & Risk Intelligence
-- **System A: Marketplace Trust & Safety Engine (`backend/modules/trust_safety/`)**:
-  - Behavioral signal analysis: `SELF_BOOKING`, `COLLUSION_RING`, `VELOCITY_SPIKE`, `DEVICE_REUSE`, `DISCOM_MISMATCH`, `RAPID_DISPUTE`.
-  - Multi-entity bipartite graph analysis connecting Users, Spaces, Devices, IPs, and Bookings.
-  - LLM Forensic Narrative generation with cascading fallback: **Groq (Llama 3.3)** → **Google Gemini 1.5** → **Deterministic Rule Engine**.
-- **System B: Autonomous ML Fraud Engine (`fraud_engine/`)**:
-  - Event ingestion and numerical behavioral feature extraction.
-  - Isolation Forest anomaly detection with deterministic statistical fallbacks.
-  - Decision threshold matrix:
-    - `Risk >= 0.80` $\to$ **BLOCK**
-    - `Risk >= 0.60` $\to$ **HOLD / REVIEW**
-    - `Risk >= 0.40` $\to$ **CHALLENGE / MFA**
-    - `Risk < 0.40` $\to$ **ALLOW**
-
-### 2. Physical Geofencing & Access Security
-- 50-meter Haversine geofence validation for seeker check-in.
-- 15-minute temporal window guard around booking start time.
-- Dynamic rotating QR code verification with fallback time-bound 6-digit PIN.
-- Immutable cryptographic check-in and checkout audit logs.
-
-### 3. Financial Micro-Escrow & Pricing
-- Authoritative server-side price computation.
-- ₹100 refundable security deposit model held in micro-escrow until clean checkout inspection.
-- 5% platform fee with transparent host and seeker breakdowns.
-- Idempotent payout settlement with duplicate release prevention.
-
-### 4. Multilingual AI Space Assistant (LoopBot)
-- Natural language space search supporting English, Hindi, Hinglish, and Marathi.
-- Multi-provider resilient execution with streaming responses and contextual suggestions.
+- **Development**: SQLite stored locally in `instance/spaceloop_dev.db`. Automatically configured when `DATABASE_URL` is unset.
+- **Production**: PostgreSQL configured via `DATABASE_URL`. Handles standard connection pooling and automatically normalizes legacy `postgres://` URLs to `postgresql://` for SQLAlchemy 2.0.
+- **Initialization Command**:
+  ```bash
+  python -m flask --app backend.run:app init-db
+  ```
+- **Seeding Command (Development)**:
+  ```bash
+  python -m flask --app backend.run:app seed-db
+  ```
 
 ---
 
-## Quick Start
+## Environment Variables
 
-### Prerequisites
-- Python 3.11+
-- Node.js 20+
-- SQLite (development) or PostgreSQL (production)
+Copy `.env.example` to `.env` and set values appropriate for your environment:
 
-### Setup & Installation
 ```bash
-# Clone the repository
-git clone https://github.com/aarya-m-codes/SpaceLoop.git
-cd SpaceLoop
-
-# Setup Python environment
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Setup Frontend dependencies
-npm install
-
-# Copy environment template
 cp .env.example .env
 ```
 
-### Running Tests
-```bash
-# Run full 137 test suite
-make test
+Key variables:
+- `DATABASE_URL`: Connection string (SQLite in dev, PostgreSQL in prod).
+- `SECRET_KEY`: Random 32+ character key for sessions and cryptography.
+- `JWT_SECRET_KEY`: Random 32+ character key for JWT token signing.
+- `CORS_ORIGINS`: Allowed origins (e.g. `http://localhost:3000,http://127.0.0.1:3000`).
+- `FLASK_ENV`: `development` or `production`.
+- `PORT`: HTTP port (defaults to 5000).
 
-# Or directly via unittest
-python -m unittest discover -s tests -p "test_*.py"
+---
+
+## Local Development Workflow
+
+### 1. Install Dependencies
+
+```bash
+# Python backend dependencies
+pip install -r backend/requirements.txt
+
+# Frontend dependencies
+cd frontend
+npm ci
+cd ..
 ```
 
-### Building & Running
-```bash
-# Build frontend
-npm run build
+### 2. Initialize Development Database
 
-# Start backend server
-python app.py
+```bash
+python -m flask --app backend.run:app init-db
+python -m flask --app backend.run:app seed-db
 ```
 
-Visit `http://localhost:5000` to interact with SpaceLoop.
+### 3. Run Development Servers
+
+**Backend:**
+```bash
+python backend/run.py
+```
+Backend runs on `http://localhost:5000`.
+
+**Frontend:**
+```bash
+cd frontend
+npm run dev
+```
+Frontend development server runs on `http://localhost:3000` and automatically proxies `/api` and `/uploads` requests to the backend.
+
+---
+
+## Testing
+
+Run the full automated test suite with pytest:
+
+```bash
+python -m pytest
+```
+
+Run specific test modules:
+```bash
+# Core API & journey tests
+python -m pytest tests/integration/test_end_to_end_journeys.py
+
+# Production single-service simulation tests
+python -m pytest tests/test_production_simulation.py
+```
+
+---
+
+## Production Build & Single-Service Hosting
+
+The backend is configured to serve the production frontend SPA build directly alongside all REST APIs, enabling deployment on a single Web Service without requiring separate frontend hosting.
+
+### Build Production Frontend:
+```bash
+npm run build --prefix frontend
+```
+Builds the optimized production bundle to `frontend/dist/`.
+
+### Start Production Backend:
+```bash
+gunicorn --bind 0.0.0.0:5000 --workers 4 --threads 2 --timeout 120 backend.run:app
+```
+
+The server serves:
+- `GET /` $\to$ `frontend/dist/index.html`
+- `GET /<asset>` $\to$ static JS, CSS, and image assets from `frontend/dist/`
+- `GET /<client-route>` $\to$ SPA fallback routing (returns `index.html` so browser refreshes do not 404)
+- `GET /health` and `GET /api/v1/health` $\to$ platform health and database status
+- `ALL /api/...` $\to$ Flask REST API endpoints
+
+---
+
+## Deployment to Render
+
+Deploy as **one Render Web Service** connected to a **Render PostgreSQL** instance:
+
+### 1. Render Web Service Settings
+- **Environment**: Python
+- **Build Command**:
+  ```bash
+  pip install -r backend/requirements.txt && npm ci --prefix frontend && npm run build --prefix frontend
+  ```
+- **Start Command**:
+  ```bash
+  gunicorn --bind 0.0.0.0:$PORT --workers 4 --threads 2 --timeout 120 backend.run:app
+  ```
+
+### 2. Render Environment Variables
+Add the following in the Render Dashboard:
+- `DATABASE_URL`: Set to the Render PostgreSQL Internal Database URL.
+- `SECRET_KEY`: Strong random secret key.
+- `JWT_SECRET_KEY`: Strong random JWT signing key.
+- `FLASK_ENV`: `production`
+- `PYTHON_VERSION`: `3.11` (or `3.12` / `3.13`)
+
+### 3. Initialize Database on Render
+Run this one-time command via the Render Shell or one-off Job:
+```bash
+python -m flask --app backend.run:app init-db
+```
 
 ---
 
 ## License
+
 MIT License - see [LICENSE](LICENSE) for details.
