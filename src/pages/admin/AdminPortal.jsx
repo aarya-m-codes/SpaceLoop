@@ -53,12 +53,12 @@ export const AdminPortal = () => {
     );
   }
 
-  // Navigation Items required for Admin Portal
+  // Exact navigation items required for Admin Portal
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'users', label: 'Users', icon: Users },
-    { id: 'hosts', label: 'Hosts', icon: Building2 },
     { id: 'seekers', label: 'Seekers', icon: UserCheck },
+    { id: 'hosts', label: 'Hosts', icon: Building2 },
     { id: 'spaces', label: 'Spaces', icon: Building2 },
     { id: 'approvals', label: 'Space Approvals', icon: CheckCircle2 },
     { id: 'bookings', label: 'Bookings', icon: Calendar },
@@ -66,8 +66,8 @@ export const AdminPortal = () => {
     { id: 'disputes', label: 'Disputes', icon: AlertOctagon },
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'fraud', label: 'Fraud / Risk', icon: ShieldAlert },
-    { id: 'reviews', label: 'Reviews', icon: Star },
     { id: 'verification', label: 'Verification', icon: ShieldCheck },
+    { id: 'reviews', label: 'Reviews', icon: Star },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'audit', label: 'Activity / Audit', icon: Activity },
     { id: 'settings', label: 'Settings', icon: Sliders },
@@ -82,33 +82,47 @@ export const AdminPortal = () => {
     },
   ];
 
-  // Map admin portal tabs to AdminDashboard internal tab
-  const getInternalTab = () => {
+  // Map admin portal tabs to AdminDashboard internal tab and pre-filters
+  const getTabConfig = () => {
     switch (activeTab) {
       case 'dashboard':
-        return 'overview';
+        return { tab: 'overview', roleFilter: '', statusFilter: '' };
       case 'users':
-      case 'hosts':
+        return { tab: 'users', roleFilter: '', statusFilter: '' };
       case 'seekers':
-        return 'users';
+        return { tab: 'users', roleFilter: 'seeker', statusFilter: '' };
+      case 'hosts':
+        return { tab: 'users', roleFilter: 'host', statusFilter: '' };
       case 'spaces':
+        return { tab: 'spaces', roleFilter: '', statusFilter: '' };
       case 'approvals':
-        return 'spaces';
+        return { tab: 'spaces', roleFilter: '', statusFilter: 'pending' };
       case 'bookings':
-        return 'bookings';
+        return { tab: 'bookings', roleFilter: '', statusFilter: '' };
       case 'payments':
-        return 'financials';
+        return { tab: 'financials', roleFilter: '', statusFilter: '' };
       case 'disputes':
-        return 'disputes';
+        return { tab: 'disputes', roleFilter: '', statusFilter: '' };
       case 'fraud':
-        return 'fraud';
+        return { tab: 'fraud', roleFilter: '', statusFilter: '' };
+      case 'verification':
+        return { tab: 'trust', roleFilter: '', statusFilter: '' };
+      case 'reports':
       case 'audit':
       case 'activity':
-        return 'audit';
+        return { tab: 'audit', roleFilter: '', statusFilter: '' };
+      case 'reviews':
+        return { tab: 'spaces', roleFilter: '', statusFilter: '' };
+      case 'notifications':
+        return { tab: 'audit', roleFilter: '', statusFilter: '' };
+      case 'settings':
+        return { tab: 'overview', roleFilter: '', statusFilter: '' };
       default:
-        return 'overview';
+        return { tab: 'overview', roleFilter: '', statusFilter: '' };
     }
   };
+
+  const config = getTabConfig();
 
   return (
     <PortalLayout
@@ -119,8 +133,12 @@ export const AdminPortal = () => {
       onTabChange={handleTabChange}
     >
       <div className="space-y-6">
-        {/* Render AdminDashboard with active view */}
-        <AdminDashboard initialTab={getInternalTab()} />
+        {/* Render AdminDashboard with active view and filters */}
+        <AdminDashboard
+          initialTab={config.tab}
+          initialRoleFilter={config.roleFilter}
+          initialSpaceStatusFilter={config.statusFilter}
+        />
       </div>
     </PortalLayout>
   );

@@ -15,6 +15,8 @@ import {
   Shield,
   ChevronRight,
   ExternalLink,
+  Search,
+  PlusCircle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../hooks/useTheme';
@@ -126,6 +128,43 @@ export const PortalLayout = ({
                 <span>{badgeConfig.label}</span>
               </div>
             </div>
+
+            {/* Center: Search input for Seeker / + Add Space for Host */}
+            {role === 'seeker' && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const q = e.target.searchQuery?.value;
+                  if (q) {
+                    navigate(`/explore?search=${encodeURIComponent(q)}`);
+                  } else {
+                    onTabChange?.('explore');
+                  }
+                }}
+                className="hidden md:flex items-center relative max-w-xs w-full mx-4"
+              >
+                <Search className="w-4 h-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  name="searchQuery"
+                  type="text"
+                  placeholder="Search spaces, cities, amenities..."
+                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-surface-elevated border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:border-primary transition-colors"
+                />
+              </form>
+            )}
+
+            {role === 'host' && (
+              <div className="hidden sm:flex items-center mx-3">
+                <button
+                  type="button"
+                  onClick={() => onTabChange?.('new-space')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-semibold shadow-sm hover:bg-primary-hover transition-colors"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>+ Add Space</span>
+                </button>
+              </div>
+            )}
 
             {/* Right: Role Switcher, Notifications, Theme Toggle, Profile & Logout */}
             <div className="flex items-center gap-2 sm:gap-2.5">

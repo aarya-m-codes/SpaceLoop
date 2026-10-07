@@ -359,6 +359,15 @@ export const Navbar = () => {
                       </div>
 
                       <Link
+                        to={activeRole === 'host' ? '/host' : (activeRole === 'admin' ? '/admin' : '/seeker')}
+                        onClick={() => setProfileDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors font-medium"
+                      >
+                        <Layers className="w-4 h-4 text-primary" />
+                        <span>{activeRole === 'host' ? 'Host Dashboard' : (activeRole === 'admin' ? 'Admin Dashboard' : 'Seeker Dashboard')}</span>
+                      </Link>
+
+                      <Link
                         to="/seeker?tab=profile"
                         onClick={() => setProfileDropdownOpen(false)}
                         className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors"
