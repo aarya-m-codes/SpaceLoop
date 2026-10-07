@@ -523,7 +523,7 @@ class BookingsTestCase(unittest.TestCase):
 
     def test_check_in_and_complete_lifecycle(self):
         """Verify full lifecycle: pending -> confirmed -> active (check-in) -> completed."""
-        start = utc_now() + timedelta(days=9)
+        start = utc_now() + timedelta(minutes=5)
         end = start + timedelta(hours=3)
 
         create_res = self.client.post(

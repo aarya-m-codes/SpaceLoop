@@ -6,11 +6,12 @@ from typing import Any
 from sqlalchemy import func
 
 from backend.core.database import db
+from backend.core.geo import is_within_geofence
 from backend.modules.auth.permissions import ROLE_ADMIN, normalize_role
 from backend.modules.auth.service import record_audit_log
 from backend.modules.bookings.concurrency import ConcurrencyManager
 from backend.modules.bookings.pricing import PricingEngine
-from models import Booking, EscrowTransaction, Space, User, utc_now
+from models import AccessLog, Booking, EscrowTransaction, Space, User, utc_now
 
 logger = logging.getLogger("spaceloop.bookings.service")
 
@@ -419,8 +420,11 @@ class BookingService:
         lng: float | None = None,
         photos: list[str] | None = None,
         arrival_pin: str | None = None,
+        qr_token: str | None = None,
+        override_geofence: bool = False,
+        override_temporal: bool = False,
     ) -> tuple[dict[str, Any] | None, str | None, int]:
-        """Transition booking to active session with check-in timestamp and GPS."""
+        """Transition booking to active session with temporal check, credential verification, and 50m GPS geofence."""
         booking = db.session.get(Booking, booking_id)
         if not booking:
             return None, "Booking not found.", 404
@@ -436,14 +440,126 @@ class BookingService:
         if current_status not in ["confirmed"]:
             return None, f"Cannot check in to booking with status '{booking.status}'. Must be confirmed.", 400
 
+        now = utc_now()
+
+        # 1. Temporal Guard: Allowed only starting 15 minutes before booking start
+        b_start = booking.start_time
+        if b_start and b_start.tzinfo is None:
+            b_start = b_start.replace(tzinfo=timezone.utc)
+
+        b_end = booking.end_time
+        if b_end and b_end.tzinfo is None:
+            b_end = b_end.replace(tzinfo=timezone.utc)
+
+        if not is_admin and not override_temporal and b_start:
+            earliest_check_in = b_start - timedelta(minutes=15)
+            if now < earliest_check_in:
+                try:
+                    denied_time = AccessLog(
+                        booking_id=booking.id,
+                        user_id=current_user.id,
+                        check_in_time=now,
+                        status="DENIED_TIME",
+                        failure_reason="Check-in attempted earlier than 15 minutes prior to booking start time.",
+                    )
+                    db.session.add(denied_time)
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+                return None, "Check-in window opens 15 minutes prior to booking start time.", 400
+
+            if b_end and now > b_end:
+                try:
+                    expired_log = AccessLog(
+                        booking_id=booking.id,
+                        user_id=current_user.id,
+                        check_in_time=now,
+                        status="EXPIRED",
+                        failure_reason="Booking timeframe has already ended.",
+                    )
+                    db.session.add(expired_log)
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+                return None, "Booking timeframe has already ended.", 400
+
+        # 2. Credential Verification: PIN or QR
         if arrival_pin and booking.arrival_pin:
             if str(arrival_pin).strip() != str(booking.arrival_pin).strip():
+                try:
+                    denied_cred = AccessLog(
+                        booking_id=booking.id,
+                        user_id=current_user.id,
+                        check_in_time=now,
+                        status="DENIED_CREDENTIAL",
+                        failure_reason="Invalid arrival PIN.",
+                    )
+                    db.session.add(denied_cred)
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
                 return None, "Invalid arrival PIN.", 400
+
+        if qr_token:
+            valid_qr = False
+            if booking.space and booking.space.room_qr_token and str(qr_token).strip() == str(booking.space.room_qr_token).strip():
+                valid_qr = True
+            elif booking.access_code and str(qr_token).strip() == str(booking.access_code).strip():
+                valid_qr = True
+            elif booking.arrival_pin and str(qr_token).strip() == str(booking.arrival_pin).strip():
+                valid_qr = True
+
+            if not valid_qr and not is_admin:
+                try:
+                    denied_qr = AccessLog(
+                        booking_id=booking.id,
+                        user_id=current_user.id,
+                        check_in_time=now,
+                        status="DENIED_CREDENTIAL",
+                        failure_reason="Invalid physical QR access token.",
+                    )
+                    db.session.add(denied_qr)
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+                return None, "Invalid physical QR access token.", 400
+
+        # 3. 50-meter GPS Geofence Check
+        calculated_distance = None
+        if lat is not None and lng is not None and booking.space and booking.space.latitude is not None and booking.space.longitude is not None:
+            try:
+                radius = float(booking.space.geofence_radius or 50.0)
+                is_inside, calculated_distance = is_within_geofence(
+                    user_lat=float(lat),
+                    user_lon=float(lng),
+                    target_lat=float(booking.space.latitude),
+                    target_lon=float(booking.space.longitude),
+                    radius_meters=radius,
+                )
+                if not is_inside and not override_geofence and not is_admin:
+                    try:
+                        denied_geo = AccessLog(
+                            booking_id=booking.id,
+                            user_id=current_user.id,
+                            check_in_time=now,
+                            check_in_lat=float(lat),
+                            check_in_lng=float(lng),
+                            distance_meters=round(calculated_distance, 1),
+                            status="DENIED_LOCATION",
+                            failure_reason=f"User is {round(calculated_distance, 1)}m away, outside {radius}m geofence.",
+                        )
+                        db.session.add(denied_geo)
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+                    return None, f"Location verification failed: You are {round(calculated_distance, 1)}m away from the space (within {radius}m required).", 403
+            except ValueError:
+                pass
 
         try:
             booking.status = "active"
             booking.session_state = "checked_in"
-            booking.check_in_time = utc_now()
+            booking.check_in_time = now
 
             if lat is not None:
                 booking.check_in_lat = float(lat)
@@ -455,6 +571,16 @@ class BookingService:
                 current_photos.extend(photos)
                 booking.inspection_photos = current_photos
 
+            access_log = AccessLog(
+                booking_id=booking.id,
+                user_id=current_user.id,
+                check_in_time=now,
+                check_in_lat=float(lat) if lat is not None else None,
+                check_in_lng=float(lng) if lng is not None else None,
+                distance_meters=round(calculated_distance, 1) if calculated_distance is not None else 0.0,
+                status="GRANTED",
+            )
+            db.session.add(access_log)
             db.session.commit()
 
             record_audit_log(
@@ -503,6 +629,10 @@ class BookingService:
                 current_photos = list(booking.inspection_photos or [])
                 current_photos.extend(photos)
                 booking.inspection_photos = current_photos
+
+            latest_log = AccessLog.query.filter_by(booking_id=booking.id, status="GRANTED").order_by(AccessLog.created_at.desc()).first()
+            if latest_log:
+                latest_log.check_out_time = booking.check_out_time
 
             db.session.commit()
 

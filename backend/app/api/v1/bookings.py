@@ -177,6 +177,9 @@ def check_in_booking(booking_id: int):
     lng = payload.get("longitude", payload.get("lng"))
     photos = payload.get("inspection_photos", payload.get("photos"))
     arrival_pin = payload.get("arrival_pin", payload.get("pin"))
+    qr_token = payload.get("qr_token", payload.get("qr"))
+    override_geofence = bool(payload.get("override_geofence", False))
+    override_temporal = bool(payload.get("override_temporal", False))
 
     result, err, status = BookingService.check_in_booking(
         booking_id=booking_id,
@@ -185,6 +188,9 @@ def check_in_booking(booking_id: int):
         lng=lng,
         photos=photos,
         arrival_pin=arrival_pin,
+        qr_token=qr_token,
+        override_geofence=override_geofence,
+        override_temporal=override_temporal,
     )
 
     if err or not result:
