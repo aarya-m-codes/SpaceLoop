@@ -146,10 +146,37 @@ class ProductionAadhaarVerificationAdapter(BaseAadhaarVerificationAdapter):
             return MockAadhaarVerificationAdapter().verify_aadhaar(raw_aadhaar, context)
 
         # In production with API credentials configured:
-        return AadhaarVerificationResult(
-            is_verified=True,
-            aadhaar_hash=token_hash,
-            masked_aadhaar=masked,
-            verification_mode="external_live",
-            external_verified=True,
-        )
+        try:
+            import requests
+            resp = requests.post(
+                self.api_url,
+                json={"aadhaar_number": clean},
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                timeout=5.0,
+            )
+            if resp.status_code == 200:
+                return AadhaarVerificationResult(
+                    is_verified=True,
+                    aadhaar_hash=token_hash,
+                    masked_aadhaar=masked,
+                    verification_mode="external_live",
+                    external_verified=True,
+                )
+            else:
+                return AadhaarVerificationResult(
+                    is_verified=False,
+                    aadhaar_hash=token_hash,
+                    masked_aadhaar=masked,
+                    verification_mode="external_live",
+                    external_verified=False,
+                    error=f"Aadhaar verification provider returned HTTP {resp.status_code}.",
+                )
+        except Exception as exc:
+            return AadhaarVerificationResult(
+                is_verified=False,
+                aadhaar_hash=token_hash,
+                masked_aadhaar=masked,
+                verification_mode="external_live",
+                external_verified=False,
+                error=f"External Aadhaar service communication error: {exc}",
+            )

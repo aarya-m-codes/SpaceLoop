@@ -7,13 +7,41 @@ Endpoints:
 """
 
 import logging
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request
 
+from backend.modules.auth.session import resolve_authenticated_user
 from backend.modules.verification.service import VerificationService
 
 logger = logging.getLogger("spaceloop.api.verification")
 
 verification_bp = Blueprint("verification", __name__)
+
+
+def _resolve_target_user_id(payload: dict) -> int | None:
+    """Resolve target user securely to prevent IDOR vulnerabilities.
+    - Authenticated regular users can only verify themselves.
+    - Authenticated admins can specify target user_id.
+    - In TESTING mode, user_id can be passed directly to facilitate unit testing.
+    """
+    current_user = getattr(g, "current_user", None) or resolve_authenticated_user()
+    is_testing = bool(current_app and current_app.config.get("TESTING"))
+
+    if current_user:
+        is_admin = getattr(current_user, "role", "").lower() == "admin"
+        if is_admin and payload.get("user_id"):
+            try:
+                return int(payload.get("user_id"))
+            except (ValueError, TypeError):
+                return current_user.id
+        return current_user.id
+
+    if is_testing and payload.get("user_id"):
+        try:
+            return int(payload.get("user_id"))
+        except (ValueError, TypeError):
+            return None
+
+    return None
 
 
 @verification_bp.route("/student", methods=["POST"])
@@ -40,15 +68,11 @@ def verify_student():
             },
         }), 400
 
-    # Resolve user
-    user_id = payload.get("user_id")
-    current_user = getattr(g, "current_user", None)
-    if not user_id and current_user:
-        user_id = current_user.id
+    target_user_id = _resolve_target_user_id(payload)
 
     try:
         result = VerificationService.verify_student(
-            user_id=user_id,
+            user_id=target_user_id,
             student_id=student_id,
             university_email=university_email,
             context=payload,
@@ -114,14 +138,11 @@ def verify_host():
             },
         }), 400
 
-    user_id = payload.get("user_id")
-    current_user = getattr(g, "current_user", None)
-    if not user_id and current_user:
-        user_id = current_user.id
+    target_user_id = _resolve_target_user_id(payload)
 
     try:
         result = VerificationService.verify_host(
-            user_id=user_id,
+            user_id=target_user_id,
             discom_consumer_no=discom_consumer_no,
             discom_provider=discom_provider,
             upi_vpa=upi_vpa,
@@ -186,14 +207,11 @@ def verify_aadhaar():
             },
         }), 400
 
-    user_id = payload.get("user_id")
-    current_user = getattr(g, "current_user", None)
-    if not user_id and current_user:
-        user_id = current_user.id
+    target_user_id = _resolve_target_user_id(payload)
 
     try:
         result = VerificationService.verify_aadhaar(
-            user_id=user_id,
+            user_id=target_user_id,
             raw_aadhaar=str(aadhaar_number),
             context=payload,
         )

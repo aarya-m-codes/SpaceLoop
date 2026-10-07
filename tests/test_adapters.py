@@ -335,7 +335,7 @@ class ExternalAdaptersTestCase(unittest.TestCase):
         self.assertEqual(data["student_id_token"], expected_hash)
 
         with self.app.app_context():
-            u = User.query.get(self.user_id)
+            u = db.session.get(User, self.user_id)
             self.assertTrue(u.is_student_verified)
             self.assertEqual(u.student_discount_rate, 0.15)
             self.assertEqual(u.student_id_hash, expected_hash)
@@ -386,7 +386,7 @@ class ExternalAdaptersTestCase(unittest.TestCase):
         self.assertEqual(data["verification_mode"], "mock")
 
         with self.app.app_context():
-            u = User.query.get(self.user_id)
+            u = db.session.get(User, self.user_id)
             self.assertEqual(u.aadhaar_hash, expected_hash)
             self.assertEqual(u.kyc_status, "VERIFIED")
             # Raw Aadhaar is never saved in database
@@ -432,7 +432,7 @@ class ExternalAdaptersTestCase(unittest.TestCase):
         self.assertEqual(data["discom_consumer_token"], expected_consumer_hash)
 
         with self.app.app_context():
-            h = User.query.get(self.host_user_id)
+            h = db.session.get(User, self.host_user_id)
             self.assertTrue(h.is_host_verified)
             self.assertEqual(h.discom_provider, "Adani Electricity Mumbai")
             self.assertEqual(h.discom_consumer_hash, expected_consumer_hash)

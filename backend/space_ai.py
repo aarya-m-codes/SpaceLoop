@@ -98,6 +98,8 @@ class SpaceAIAdapter:
             "ai_power_access": power,
             "recommended_uses": uses,
             "provider": "deterministic-fallback",
+            "is_sensor_verified": False,
+            "measurement_disclaimer": "Environmental metrics are architectural typology estimates, not on-site IoT sensor verified readings.",
         }
 
     @staticmethod

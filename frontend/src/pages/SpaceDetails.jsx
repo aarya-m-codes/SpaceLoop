@@ -247,16 +247,28 @@ export const SpaceDetails = () => {
               </div>
               <div>
                 <h4 className="font-bold text-sm text-text-primary">
-                  {space.host?.full_name || 'Verified SpaceLoop Host'}
+                  {space.host?.full_name || 'SpaceLoop Host'}
                 </h4>
                 <div className="flex flex-wrap items-center gap-2 mt-1">
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3" />
-                    <span>DISCOM Utility Verified</span>
-                  </span>
-                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                    Aadhaar Tokenized
-                  </span>
+                  {space.host?.is_host_verified ? (
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" />
+                      <span>DISCOM Utility Verified</span>
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-text-muted bg-surface border border-border px-2 py-0.5 rounded-full">
+                      Utility Verification Pending
+                    </span>
+                  )}
+                  {space.host?.is_verified ? (
+                    <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                      Aadhaar Tokenized
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-text-muted bg-surface border border-border px-2 py-0.5 rounded-full">
+                      Identity Pending
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

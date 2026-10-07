@@ -134,11 +134,39 @@ class ProductionDiscomVerificationAdapter(BaseDiscomVerificationAdapter):
             return MockDiscomVerificationAdapter().verify_discom_account(consumer_number, provider, context)
 
         # In live production environment with valid API key:
-        return DiscomVerificationResult(
-            is_verified=True,
-            consumer_number_hash=hash_token,
-            provider=provider,
-            verification_mode="external_live",
-            external_verified=True,
-            consumer_name="Host Utility Account",
-        )
+        try:
+            import requests
+            resp = requests.post(
+                self.api_url,
+                json={"consumer_number": clean_num, "provider": provider},
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                timeout=5.0,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return DiscomVerificationResult(
+                    is_verified=True,
+                    consumer_number_hash=hash_token,
+                    provider=provider,
+                    verification_mode="external_live",
+                    external_verified=True,
+                    consumer_name=data.get("name", "Host Utility Account"),
+                )
+            else:
+                return DiscomVerificationResult(
+                    is_verified=False,
+                    consumer_number_hash=hash_token,
+                    provider=provider,
+                    verification_mode="external_live",
+                    external_verified=False,
+                    error=f"DISCOM verification provider returned HTTP {resp.status_code}.",
+                )
+        except Exception as exc:
+            return DiscomVerificationResult(
+                is_verified=False,
+                consumer_number_hash=hash_token,
+                provider=provider,
+                verification_mode="external_live",
+                external_verified=False,
+                error=f"External DISCOM service communication error: {exc}",
+            )

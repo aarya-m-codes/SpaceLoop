@@ -44,7 +44,7 @@ class FraudEngineService:
         db.session.flush()
 
         # 2. Extract features & score
-        user = User.query.get(user_id) if user_id else None
+        user = db.session.get(User, user_id) if user_id else None
         extracted = FeatureExtractor.extract_features(
             user=user,
             user_id=user_id,
@@ -106,7 +106,7 @@ class FraudEngineService:
         ip_address = data.get("ip_address")
         device_fingerprint = data.get("device_fingerprint")
 
-        user = User.query.get(user_id) if user_id else None
+        user = db.session.get(User, user_id) if user_id else None
 
         extracted = FeatureExtractor.extract_features(
             user=user,

@@ -129,7 +129,7 @@ class VerificationService:
 
         # Verification succeeded: apply to user record if user_id is provided
         if user_id:
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             if user:
                 user.is_student_verified = True
                 user.student_discount_rate = result.discount_rate  # 0.15
@@ -175,7 +175,7 @@ class VerificationService:
             }
 
         if user_id:
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             if user:
                 user.aadhaar_hash = result.aadhaar_hash
                 user.kyc_status = "VERIFIED"
@@ -215,7 +215,7 @@ class VerificationService:
         if not clean_vpa:
             raise ValueError("UPI VPA is required.")
 
-        user = User.query.get(user_id) if user_id else None
+        user = db.session.get(User, user_id) if user_id else None
         expected_name = user.full_name if user else "Host Property"
 
         # 1. DISCOM Verification

@@ -142,7 +142,7 @@ def forgot_password():
 
     msg, raw_token = AuthService.request_password_reset(email)
     payload = {"message": msg}
-    if not is_production() and raw_token:
+    if current_app.config.get("TESTING") and raw_token:
         payload["dev_reset_token"] = raw_token
 
     return jsonify({
@@ -258,7 +258,7 @@ def resend_verification():
 
     msg, raw_token = AuthService.resend_verification_email(email)
     payload = {"message": msg}
-    if not is_production() and raw_token:
+    if current_app.config.get("TESTING") and raw_token:
         payload["dev_verification_token"] = raw_token
 
     return jsonify({
