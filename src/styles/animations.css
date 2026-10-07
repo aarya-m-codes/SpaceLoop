@@ -1,0 +1,150 @@
+/* ==========================================================================
+   SpaceLoop Animation Foundation
+   Polished, restrained, high-performance animation tokens & utilities
+   ========================================================================== */
+
+/* 1. Global Interactive Classes */
+
+/* Subtle Card Lift & Elevation */
+.card-lift {
+  transition: transform var(--duration-normal) var(--ease-natural),
+              box-shadow var(--duration-normal) var(--ease-natural),
+              border-color var(--duration-normal) var(--ease-natural);
+  will-change: transform, box-shadow;
+}
+
+.card-lift:hover {
+  transform: translateY(-4px) scale(1.008);
+  box-shadow: var(--shadow-hover);
+}
+
+/* Subtle Interactive Button Press */
+.btn-press {
+  transition: transform var(--duration-fast) var(--ease-natural),
+              background-color var(--duration-fast) var(--ease-natural),
+              box-shadow var(--duration-fast) var(--ease-natural),
+              opacity var(--duration-fast) var(--ease-natural);
+  will-change: transform;
+}
+
+.btn-press:hover {
+  transform: translateY(-1px);
+}
+
+.btn-press:active {
+  transform: translateY(1px) scale(0.985);
+}
+
+/* Restrained Image Hover Zoom */
+.img-zoom-container {
+  overflow: hidden;
+}
+
+.img-zoom {
+  transition: transform 500ms var(--ease-natural);
+  will-change: transform;
+}
+
+.img-zoom-container:hover .img-zoom {
+  transform: scale(1.045);
+}
+
+/* Image Fade-In (Gentle loading, no harsh flash) */
+.img-fade-in {
+  opacity: 0;
+  transition: opacity 350ms var(--ease-smooth);
+}
+
+.img-fade-in.loaded {
+  opacity: 1;
+}
+
+/* Nav Item Feedback */
+.nav-link {
+  position: relative;
+  transition: color var(--duration-fast) var(--ease-natural);
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: var(--color-primary);
+  border-radius: 9999px;
+  transition: width var(--duration-normal) var(--ease-natural);
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+  width: 100%;
+}
+
+/* Ambient Subtle Motion (Natural breathing, strictly restrained) */
+@keyframes ambientBreathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.95;
+  }
+  50% {
+    transform: scale(1.018);
+    opacity: 1;
+  }
+}
+
+.ambient-breathe {
+  animation: ambientBreathe 12s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* Skeleton Shimmer Loading */
+@keyframes shimmerWave {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface) 0%,
+    var(--color-surface-elevated) 50%,
+    var(--color-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmerWave 1.8s ease-in-out infinite;
+}
+
+/* Reduced Motion Support (Accessibility Rule 9) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .card-lift:hover {
+    transform: none !important;
+  }
+
+  .btn-press:hover,
+  .btn-press:active {
+    transform: none !important;
+  }
+
+  .img-zoom-container:hover .img-zoom {
+    transform: none !important;
+  }
+
+  .ambient-breathe {
+    animation: none !important;
+  }
+}
