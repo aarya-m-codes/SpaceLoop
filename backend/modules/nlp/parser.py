@@ -37,11 +37,13 @@ class QueryParser:
         # 2. Extract date
         extracted_date = cls.extract_date(normalized)
 
-        # 3. Extract time
-        extracted_time = cls.extract_time(normalized)
+        # 3. Extract time & time range
+        range_start, range_end, range_dur = cls.extract_time_range(normalized)
+        extracted_time = range_start or cls.extract_time(normalized)
+        extracted_end_time = range_end
 
         # 4. Extract duration in hours
-        duration_hours = cls.extract_duration(normalized)
+        duration_hours = range_dur or cls.extract_duration(normalized)
 
         # 5. Extract budget
         budget = cls.extract_budget(normalized)
@@ -58,21 +60,65 @@ class QueryParser:
         # 9. Extract use case
         use_case = cls.extract_use_case(normalized)
 
+        # 10. Extract noise preference
+        noise_pref = cls.extract_noise_preference(normalized)
+        if noise_pref == "quiet" and "quiet" not in amenities:
+            amenities.append("quiet")
+
+        # 11. Extract privacy
+        privacy = cls.extract_privacy(normalized)
+
+        # 12. Extract landmark & radius
+        landmark = cls.extract_landmark(normalized)
+        radius = cls.extract_radius(normalized)
+        is_near_me = bool(re.search(r"(?:\b|\s|^)(near me|nearby|around me|pas me|javal)(?:\b|\s|$|[,\.\?!])", normalized))
+
+        # 13. Extract keywords
+        keywords = cls.extract_keywords(normalized)
+
+        # 14. Build semantic query
+        semantic_query = cls.build_semantic_query(
+            normalized=normalized,
+            space_type=space_type,
+            amenities=amenities,
+            use_case=use_case,
+            noise_pref=noise_pref,
+            city=loc_data.get("city"),
+        )
+
+        location_display = loc_data.get("neighborhood") or loc_data.get("city")
+        if landmark:
+            location_display = f"{landmark} ({location_display})" if location_display else landmark
+
         return {
             "raw_query": query,
             "normalized_query": normalized,
+            "intent": "search",
             "city": loc_data.get("city"),
             "neighborhood": loc_data.get("neighborhood"),
+            "landmark": landmark,
+            "is_near_me": is_near_me,
+            "location": location_display,
             "latitude": loc_data.get("lat"),
             "longitude": loc_data.get("lng"),
+            "radius": radius,
+            "radius_km": radius,
             "date": extracted_date,
             "time": extracted_time,
+            "start_time": extracted_time,
+            "end_time": extracted_end_time,
+            "duration": duration_hours,
             "duration_hours": duration_hours,
             "budget": budget,
             "capacity": capacity,
             "space_type": space_type,
             "amenities": amenities,
+            "purpose": use_case,
             "use_case": use_case,
+            "noise_preference": noise_pref,
+            "privacy": privacy,
+            "keywords": keywords,
+            "semantic_query": semantic_query,
         }
 
     @staticmethod
@@ -80,18 +126,32 @@ class QueryParser:
         return {
             "raw_query": "",
             "normalized_query": "",
+            "intent": "search",
             "city": None,
             "neighborhood": None,
+            "landmark": None,
+            "is_near_me": False,
+            "location": None,
             "latitude": None,
             "longitude": None,
+            "radius": None,
+            "radius_km": None,
             "date": None,
             "time": None,
+            "start_time": None,
+            "end_time": None,
+            "duration": None,
             "duration_hours": None,
             "budget": None,
             "capacity": None,
             "space_type": None,
             "amenities": [],
+            "purpose": None,
             "use_case": None,
+            "noise_preference": None,
+            "privacy": None,
+            "keywords": [],
+            "semantic_query": "",
         }
 
     @staticmethod
@@ -281,10 +341,12 @@ class QueryParser:
         if p2:
             return int(p2.group(1))
 
-        # Word numbers: "char log", "panch vyakti", "don jan", "team of six"
+        # Word numbers: "char log", "panch vyakti", "don jan", "team of six", "group of five"
         for word, val in NUMBER_WORDS.items():
-            pattern = rf"(?:\b|\s|^)(?:team of|for\s+)?{re.escape(word)}\s*(?:people|persons|members|pax|seats|log|logo|lok|vyakti|jan|लोग|लोक|व्यक्ती)(?:\b|\s|$|[,\.\?!])"
+            pattern = rf"(?:\b|\s|^)(?:(?:team|group)\s+of\s+|for\s+)?{re.escape(word)}\s*(?:people|persons|members|pax|seats|log|logo|lok|vyakti|jan|लोग|लोक|व्यक्ती)(?:\b|\s|$|[,\.\?!])"
             if re.search(pattern, text):
+                return val
+            if re.search(rf"(?:\b|\s|^)(?:team|group)\s+of\s+{re.escape(word)}(?:\b|\s|$|[,\.\?!])", text):
                 return val
 
         return None
@@ -321,3 +383,161 @@ class QueryParser:
                 if re.search(pattern, text):
                     return uc_key
         return None
+
+    @classmethod
+    def extract_time_range(cls, text: str) -> tuple[str | None, str | None, float | None]:
+        """Extract start_time, end_time, and duration_hours from time range expressions.
+
+        Supports:
+        - 'from 2 to 6 PM', '2 to 6 pm', '2pm to 6pm', 'from 14:00 to 18:00', '2:00 to 6:00 pm'
+        - '10 am to 1 pm', '10:00 am - 1:00 pm'
+        - '2 se 6 baje', '२ ते ६ वाजता'
+        """
+        range_match = re.search(
+            r"(?:\bfrom\s+|\bbetween\s+)?(\d{1,2}(?::\d{2})?)\s*(am|pm)?\s*(?:to|-|till|until|se|te|ते|से)\s*(\d{1,2}(?::\d{2})?)\s*(am|pm)?\s*(?:baje|vajta|वाजता)?(?:\b|\s|$|[,\.\?!])",
+            text,
+            re.IGNORECASE,
+        )
+        if range_match:
+            t1_str, ampm1, t2_str, ampm2 = range_match.groups()
+            ampm1 = ampm1.lower() if ampm1 else None
+            ampm2 = ampm2.lower() if ampm2 else None
+
+            def parse_parts(s: str) -> tuple[int, int]:
+                parts = s.split(":")
+                return int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
+
+            orig_h1, m1 = parse_parts(t1_str)
+            orig_h2, m2 = parse_parts(t2_str)
+
+            h1, h2 = orig_h1, orig_h2
+
+            # Determine AM/PM for h2
+            if ampm2 == "pm" and h2 < 12:
+                h2 += 12
+            elif ampm2 == "am" and h2 == 12:
+                h2 = 0
+            elif not ampm2 and 1 <= h2 <= 7:
+                h2 += 12
+
+            # Determine AM/PM for h1
+            if ampm1:
+                if ampm1 == "pm" and h1 < 12:
+                    h1 += 12
+                elif ampm1 == "am" and h1 == 12:
+                    h1 = 0
+            else:
+                if ampm2 == "pm":
+                    if orig_h1 < orig_h2 and h1 < 12:
+                        h1 += 12
+                    elif orig_h1 >= orig_h2 and orig_h1 >= 12:
+                        pass
+                elif ampm2 == "am":
+                    if h1 == 12:
+                        h1 = 0
+                else:
+                    if 1 <= orig_h1 <= 7:
+                        h1 += 12
+
+            start_str = f"{h1:02d}:{m1:02d}"
+            end_str = f"{h2:02d}:{m2:02d}"
+            duration = max(0.5, (h2 * 60 + m2 - (h1 * 60 + m1)) / 60.0)
+            return start_str, end_str, duration
+
+        return None, None, None
+
+    @classmethod
+    def extract_noise_preference(cls, text: str) -> str | None:
+        """Extract noise/acoustic preference from query."""
+        if re.search(
+            r"(?:\b|\s|^)(quiet|silent|peaceful|shant|शांत|low noise|soundproof|soundproofing|whisper|calm|deep work|focused work|noise-free|quiet zone|silence)(?:\b|\s|$|[,\.\?!])",
+            text,
+        ):
+            return "quiet"
+        if re.search(
+            r"(?:\b|\s|^)(lively|social|energetic|active|vibrant|party|event|networking)(?:\b|\s|$|[,\.\?!])",
+            text,
+        ):
+            return "lively"
+        if re.search(
+            r"(?:\b|\s|^)(moderate|medium noise|open floor|normal)(?:\b|\s|$|[,\.\?!])",
+            text,
+        ):
+            return "moderate"
+        return None
+
+    @classmethod
+    def extract_privacy(cls, text: str) -> str | None:
+        """Extract privacy preference from query."""
+        if re.search(
+            r"(?:\b|\s|^)(private|private room|private cabin|private workspace|cabin|enclosed|kamra|kholi|single room|private office)(?:\b|\s|$|[,\.\?!])",
+            text,
+        ):
+            return "private"
+        if re.search(
+            r"(?:\b|\s|^)(shared|open desk|hot desk|coworking|open space|community)(?:\b|\s|$|[,\.\?!])",
+            text,
+        ):
+            return "shared"
+        return None
+
+    @classmethod
+    def extract_landmark(cls, text: str) -> str | None:
+        """Extract landmark references such as campus, university, metro, etc."""
+        m = re.search(
+            r"(?:\b|\s|^)(?:near|close to|around|by|javal|pas)?\s*(?:the\s+)?(campus|university|college|metro|station|airport|tech park|it park)(?:\b|\s|$|[,\.\?!])",
+            text,
+        )
+        if m:
+            return m.group(1).lower()
+        return None
+
+    @classmethod
+    def extract_radius(cls, text: str) -> float | None:
+        """Extract radius constraint in kilometers."""
+        m = re.search(
+            r"(?:within|under|in|radius\s+of)?\s*(\d+(?:\.\d+)?)\s*(?:km|kms|kilometers|किलोमीटर)(?:\b|\s|$|[,\.\?!])",
+            text,
+        )
+        if m:
+            return float(m.group(1))
+        return None
+
+    @classmethod
+    def extract_keywords(cls, text: str) -> list[str]:
+        """Tokenize and return informative query keywords."""
+        stopwords = {
+            "a", "an", "the", "in", "on", "at", "for", "with", "and", "or",
+            "to", "from", "of", "by", "is", "it", "me", "i", "need", "want",
+            "find", "somewhere", "place", "space", "under", "below",
+            "mein", "ko", "ke", "ka", "ki", "se", "par", "hai", "chahiye",
+            "madhe", "yethe", "javal", "sathi", "ani", "sobat", "pahije", "aahe",
+        }
+        tokens = re.findall(r"\w+", text.lower())
+        return [t for t in tokens if len(t) > 1 and t not in stopwords]
+
+    @classmethod
+    def build_semantic_query(
+        cls,
+        normalized: str,
+        space_type: str | None,
+        amenities: list[str],
+        use_case: str | None,
+        noise_pref: str | None,
+        city: str | None,
+    ) -> str:
+        """Synthesize normalized semantic query text for embedding representation."""
+        if not normalized:
+            return ""
+        # Clean query for embedding
+        cleaned = re.sub(r"[^\w\s\-\u0900-\u097F]", " ", normalized)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        parts = [cleaned]
+        if space_type and space_type not in cleaned:
+            parts.append(space_type)
+        if noise_pref and noise_pref not in cleaned:
+            parts.append(f"{noise_pref} noise")
+        if use_case and use_case not in cleaned:
+            parts.append(use_case)
+        return " ".join(parts)
+

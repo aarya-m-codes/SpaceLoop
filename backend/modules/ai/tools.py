@@ -76,14 +76,17 @@ class LoopBotTools:
                 hours=duration_hours or 2.0,
                 location=loc_str or None,
                 limit=limit,
+                capacity=capacity,
+                space_type=space_type,
                 require_available=False,
             )
-            items = results.get("results", [])
+            items = results.get("results", []) or results.get("items", [])
             return {
                 "success": True,
                 "count": len(items),
                 "spaces": items[:limit],
                 "search_query": search_query,
+                "parsed_constraints": results.get("parsed_constraints", {}),
             }
         except Exception as exc:
             logger.warning(f"DiscoveryPipeline failed in tool: {exc}. Using SpaceService fallback.")

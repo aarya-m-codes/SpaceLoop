@@ -131,6 +131,7 @@ class Space(db.Model):
     bookings = relationship("Booking", back_populates="space", cascade="all, delete-orphan")
     reviews = relationship("Review", back_populates="space", cascade="all, delete-orphan")
     inquiries = relationship("SpaceInquiry", back_populates="space", cascade="all, delete-orphan")
+    embedding = relationship("SpaceEmbedding", back_populates="space", uselist=False, cascade="all, delete-orphan")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -671,3 +672,32 @@ class Notification(db.Model):
 
     # Relationships
     user = relationship("User", back_populates="notifications", foreign_keys=[user_id])
+
+
+class SpaceEmbedding(db.Model):
+    """Persisted vector embeddings for SpaceLoop spaces with versioning and rebuild support."""
+    __tablename__ = "space_embeddings"
+
+    id = db.Column(Integer, primary_key=True)
+    space_id = db.Column(Integer, ForeignKey("spaces.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    embedding = db.Column(JSON, nullable=False)  # List of floats
+    embedding_model = db.Column(String(50), nullable=False, default="text-embedding-004")
+    embedding_version = db.Column(String(20), nullable=False, default="v1")
+    content_hash = db.Column(String(64), nullable=True, index=True)
+    created_at = db.Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at = db.Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+    # Relationships
+    space = relationship("Space", back_populates="embedding")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "space_id": self.space_id,
+            "embedding_model": self.embedding_model,
+            "embedding_version": self.embedding_version,
+            "content_hash": self.content_hash,
+            "dimension": len(self.embedding) if self.embedding else 0,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }

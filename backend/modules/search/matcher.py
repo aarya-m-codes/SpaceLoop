@@ -128,6 +128,12 @@ class AIMatcher:
         else:
             parts.append(f"It is available at ₹{price:g}/hr.")
 
+        # Capacity
+        user_cap = constraints.get("capacity")
+        space_cap = best.get("capacity")
+        if user_cap and space_cap:
+            parts.append(f"Fits your group of {user_cap} (Capacity: {space_cap}).")
+
         # Amenities / Environment
         amenities = best.get("amenities") or []
         noise = best.get("ai_noise_level")
@@ -135,6 +141,10 @@ class AIMatcher:
             parts.append(f"It features verified quiet acoustics ({noise}) and key amenities ({', '.join(amenities[:3])}).")
         elif amenities:
             parts.append(f"It provides essential amenities including {', '.join(amenities[:3])}.")
+
+        # Availability
+        if best.get("is_available") is False:
+            parts.append("Note: currently occupied for requested time slot.")
 
         # Trust score
         trust_val = breakdown.get("s_trust", 1.0)
