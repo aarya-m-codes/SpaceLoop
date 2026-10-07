@@ -330,6 +330,264 @@ class LoopBotTestCase(unittest.TestCase):
             self.assertIsInstance(data["suggested_actions"], list)
             self.assertIn("response", data)
 
+    # =========================================================================
+    # 10. Native LoopBot v1 API Endpoints
+    # =========================================================================
+
+    def test_loopbot_v1_api_endpoints(self):
+        """Verify POST /api/v1/loopbot/chat and session reset endpoint."""
+        res = self.client.post(
+            "/api/v1/loopbot/chat",
+            json={"message": "I need a desk in Bengaluru"},
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data["success"])
+        self.assertIn("message", data)
+        self.assertIn("type", data)
+        self.assertIn("sources", data)
+        self.assertIn("conversation_id", data)
+
+        # Test session reset
+        cid = data["conversation_id"]
+        res_reset = self.client.post(
+            "/api/v1/loopbot/conversation/reset",
+            json={"conversation_id": cid},
+        )
+        self.assertEqual(res_reset.status_code, 200)
+        self.assertTrue(res_reset.get_json()["success"])
+
+    # =========================================================================
+    # 11. RAG Relevance Cutoff Threshold (>= 0.45)
+    # =========================================================================
+
+    def test_rag_relevance_cutoff_threshold(self):
+        """Verify authoritative knowledge matching meets the 0.45 relevance cutoff."""
+        # Relevant query should meet >= 0.45 cutoff
+        results = RAGService.search_knowledge(
+            query="Section 52 Indian Easements Act leave and license",
+            top_k=2,
+            threshold=0.45,
+        )
+        self.assertGreaterEqual(len(results), 1)
+        self.assertGreaterEqual(results[0]["score"], 0.45)
+        self.assertEqual(results[0]["domain"], "trust_safety")
+
+        # Absurd or unrelated query under high cutoff returns empty or filtered
+        unrelated_results = RAGService.search_knowledge(
+            query="astronomy planetary orbital mechanics telescope galaxy",
+            threshold=0.85,
+        )
+        self.assertEqual(len(unrelated_results), 0)
+
+    # =========================================================================
+    # 12. Consequential Action State Machine: Booking Creation
+    # =========================================================================
+
+    def test_consequential_booking_creation_confirmation_flow(self):
+        """Verify booking creation requires explicit confirmation before mutating database."""
+        from datetime import datetime, timedelta, timezone
+        from backend.modules.ai.tools import LoopBotTools
+        from models import Space, User
+
+        host = User(email="host_c1@test.com", password_hash="hash", full_name="Host C1", role="host")
+        guest = User(email="guest_c1@test.com", password_hash="hash", full_name="Guest C1", role="seeker")
+        db.session.add_all([host, guest])
+        db.session.flush()
+
+        space = Space(
+            host_id=host.id,
+            title="Desk C1 Koramangala",
+            space_type="desk",
+            address_line1="123 100ft Road",
+            city="Bengaluru",
+            state="Karnataka",
+            pincode="560038",
+            price_per_hour=300.0,
+            minimum_hours=1,
+            capacity=2,
+            is_active=True,
+            is_approved=True,
+            latitude=12.9352,
+            longitude=77.6245,
+        )
+        db.session.add(space)
+        db.session.commit()
+
+        conv_id = "test-conv-consequential-book"
+        start_time = (datetime.now(timezone.utc) + timedelta(days=2)).replace(hour=11, minute=0, second=0, microsecond=0).isoformat()
+        end_time = (datetime.now(timezone.utc) + timedelta(days=2)).replace(hour=13, minute=0, second=0, microsecond=0).isoformat()
+
+        # Step 1: Initial booking request -> Returns confirmation_required
+        res1 = LoopBotOrchestrator.process_message(
+            message=f"I want to book space {space.id} for 2 hours",
+            conversation_id=conv_id,
+            user=guest,
+        )
+        self.assertEqual(res1["type"], "confirmation_required")
+        self.assertIn("confirm", res1["response"].lower())
+
+        # Step 2: Affirmative confirmation -> Executes booking and returns arrival PIN
+        res2 = LoopBotOrchestrator.process_message(
+            message="Yes, please confirm and proceed",
+            conversation_id=conv_id,
+            user=guest,
+        )
+        self.assertEqual(res2["type"], "booking_status")
+        booking_data = res2["data"].get("booking")
+        self.assertIsNotNone(booking_data)
+        self.assertEqual(booking_data["space_id"], space.id)
+        self.assertIsNotNone(booking_data.get("arrival_pin"))
+
+    # =========================================================================
+    # 13. Safety Rule: Isolated 'Yes' Without Pending Action Never Mutates State
+    # =========================================================================
+
+    def test_isolated_yes_without_pending_action(self):
+        """Verify an isolated 'yes' without a pending action never triggers an action."""
+        conv_id = "test-conv-isolated-yes"
+        res = LoopBotOrchestrator.process_message(
+            message="yes confirm",
+            conversation_id=conv_id,
+        )
+        # Should not crash and should not execute any mutation
+        self.assertNotEqual(res["type"], "booking_status")
+        self.assertIn("SpaceLoop", res["response"])
+
+    # =========================================================================
+    # 14. Consequential Action State Machine: Cancellation & Exact Refund
+    # =========================================================================
+
+    def test_consequential_cancellation_confirmation_and_abort_flow(self):
+        """Verify cancellation shows exact 5% fee retention & deposit refund, and respects 'no' to abort."""
+        from datetime import datetime, timedelta, timezone
+        from backend.modules.bookings.service import BookingService
+        from models import Space, User
+
+        host = User(email="host_c2@test.com", password_hash="hash", full_name="Host C2", role="host")
+        guest = User(email="guest_c2@test.com", password_hash="hash", full_name="Guest C2", role="seeker")
+        db.session.add_all([host, guest])
+        db.session.flush()
+
+        space = Space(
+            host_id=host.id,
+            title="Desk C2 Indiranagar",
+            space_type="desk",
+            address_line1="456 CMH Road",
+            city="Bengaluru",
+            state="Karnataka",
+            pincode="560038",
+            price_per_hour=400.0,
+            minimum_hours=1,
+            capacity=2,
+            is_active=True,
+            is_approved=True,
+            latitude=12.9784,
+            longitude=77.6408,
+        )
+        db.session.add(space)
+        db.session.commit()
+
+        start_time = (datetime.now(timezone.utc) + timedelta(days=2)).isoformat()
+        end_time = (datetime.now(timezone.utc) + timedelta(days=2, hours=2)).isoformat()
+        booking_res, _, _ = BookingService.create_booking(
+            guest_user=guest,
+            payload={"space_id": space.id, "start_time": start_time, "end_time": end_time, "guest_count": 1},
+        )
+        booking_id = booking_res["id"]
+
+        conv_id = "test-conv-consequential-cancel"
+
+        # Step 1: Cancellation request -> Returns confirmation_required showing refund breakdown
+        res1 = LoopBotOrchestrator.process_message(
+            message=f"I want to cancel booking {booking_id}",
+            conversation_id=conv_id,
+            user=guest,
+        )
+        self.assertEqual(res1["type"], "confirmation_required")
+        preview = res1["data"].get("payload", {})
+        self.assertEqual(preview.get("booking_id"), booking_id)
+        # Subtotal: 2h * ₹400 = ₹800. 5% platform fee = ₹40. Refund = ₹800 + ₹100 deposit = ₹900.
+        self.assertEqual(preview.get("retained_platform_fee"), 40.0)
+        self.assertEqual(preview.get("refund_amount"), 900.0)
+
+        # Step 2: User says "No, don't cancel" -> Pending action cleared, booking remains pending
+        res2 = LoopBotOrchestrator.process_message(
+            message="No, cancel request and keep it",
+            conversation_id=conv_id,
+            user=guest,
+        )
+        self.assertEqual(res2["type"], "message")
+        self.assertIn("cancelled", res2["response"].lower())
+
+    # =========================================================================
+    # 15. Controlled Tools Layer Verification
+    # =========================================================================
+
+    def test_controlled_tools_layer(self):
+        """Verify controlled tools execute safely against existing SpaceLoop domain services."""
+        from datetime import datetime, timedelta, timezone
+        from backend.modules.ai.tools import LoopBotTools
+        from models import Space, User
+
+        host = User(email="host_t@test.com", password_hash="hash", full_name="Host T", role="host", trust_score=95.0)
+        guest = User(email="guest_t@test.com", password_hash="hash", full_name="Guest T", role="seeker", trust_score=90.0)
+        db.session.add_all([host, guest])
+        db.session.flush()
+
+        space = Space(
+            host_id=host.id,
+            title="Acoustic Studio Indiranagar",
+            space_type="studio",
+            address_line1="789 Indiranagar 12th Main",
+            city="Bengaluru",
+            state="Karnataka",
+            pincode="560038",
+            price_per_hour=500.0,
+            minimum_hours=1,
+            capacity=4,
+            is_active=True,
+            is_approved=True,
+            latitude=12.9784,
+            longitude=77.6408,
+            amenities=["wifi", "soundproof", "ac"],
+        )
+        db.session.add(space)
+        db.session.commit()
+
+        # 1. Tool: search_spaces
+        search_res = LoopBotTools.search_spaces(query="soundproof studio", limit=2)
+        self.assertTrue(search_res["success"])
+        self.assertIsInstance(search_res["spaces"], list)
+
+        # 2. Tool: get_space
+        space_res = LoopBotTools.get_space(space.id)
+        self.assertTrue(space_res["success"])
+        self.assertEqual(space_res["space"]["id"], space.id)
+
+        # 3. Tool: check_availability
+        avail_res = LoopBotTools.check_availability(space.id, duration_hours=2.0)
+        self.assertTrue(avail_res["success"])
+        self.assertTrue(avail_res["available"])
+        self.assertEqual(avail_res["pricing"]["subtotal"], 1000.0)
+        self.assertEqual(avail_res["pricing"]["platform_fee"], 50.0)
+        self.assertEqual(avail_res["pricing"]["escrow_deposit"], 100.0)
+        self.assertEqual(avail_res["pricing"]["final_amount"], 1150.0)
+
+        # 4. Tool: get_trust_status
+        trust_res = LoopBotTools.get_trust_status("USER", host.id, current_user=guest)
+        self.assertTrue(trust_res["success"])
+
+        # 5. Tool: create_support_request
+        support_res = LoopBotTools.create_support_request(
+            subject="Access assistance required",
+            message="Cannot reach host phone",
+            current_user=guest,
+        )
+        self.assertTrue(support_res["success"])
+        self.assertIn("TICK-", support_res["ticket_id"])
+
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -36,6 +36,10 @@ def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) ->
     return haversine_distance_meters(lat1, lon1, lat2, lon2) / 1000.0
 
 
+# Standard alias for meters distance
+haversine_distance = haversine_distance_meters
+
+
 def is_within_geofence(
     user_lat: float,
     user_lon: float,

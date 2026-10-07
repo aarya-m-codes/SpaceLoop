@@ -296,9 +296,21 @@ export const escrowApi = {
 // ==========================================
 export const aiApi = {
   chat: (payload) =>
-    request('/api/ai/chat', {
+    request('/api/v1/loopbot/chat', {
       method: 'POST',
       body: JSON.stringify(payload),
+    }),
+
+  loopbotChat: (payload) =>
+    request('/api/v1/loopbot/chat', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  resetConversation: (conversationId) =>
+    request('/api/v1/loopbot/conversation/reset', {
+      method: 'POST',
+      body: JSON.stringify({ conversation_id: conversationId }),
     }),
 
   conciergeChat: (payload) =>

@@ -14,7 +14,17 @@ import {
   ShieldCheck,
   ChevronDown,
   Info,
+  Key,
+  QrCode,
+  MapPin,
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+  ExternalLink,
+  Copy,
+  Check,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { aiApi } from '../../services/api';
 
 const LANGUAGES = [
@@ -25,21 +35,24 @@ const LANGUAGES = [
 ];
 
 const DEFAULT_SUGGESTED_ACTIONS = [
-  'Find study desks near Bangalore under ₹200',
+  'Find quiet desks in Bengaluru under ₹400',
   'How does the ₹100 refundable escrow work?',
-  'What is the cancellation policy?',
-  'How do I verify as a student for 15% discount?',
+  'What is the cancellation policy (5% fee)?',
+  'What is Section 52 Leave and License?',
+  'How does 50m GPS & PIN check-in work?',
 ];
 
 export const LoopBot = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
       id: 'init-1',
       sender: 'bot',
-      text: 'Namaste! I am LoopBot, your SpaceLoop concierge. How can I help you find, book, or verify architectural spaces today?',
-      intent: 'GREETING',
-      sources: ['SpaceLoop Guidebook', 'Trust & Safety Policies'],
+      text: 'Namaste! I am LoopBot, your SpaceLoop AI concierge. How can I help you find verified physical spaces, calculate micro-escrow quotes, or assist with PIN check-in today?',
+      intent: 'GENERAL',
+      type: 'message',
+      sources: ['SpaceLoop Platform Specifications', 'Section 52 Legal Framework'],
       suggested_actions: DEFAULT_SUGGESTED_ACTIONS,
       timestamp: new Date(),
     },
@@ -48,6 +61,7 @@ export const LoopBot = () => {
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState(() => `conv_${Date.now()}`);
+  const [copiedCode, setCopiedCode] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -61,6 +75,12 @@ export const LoopBot = () => {
       inputRef.current?.focus();
     }
   }, [isOpen, messages]);
+
+  const copyToClipboard = (text, id) => {
+    navigator.clipboard?.writeText(text);
+    setCopiedCode(id);
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
 
   const handleSend = async (textToSend) => {
     const query = (textToSend || input).trim();
@@ -78,7 +98,7 @@ export const LoopBot = () => {
     setLoading(true);
 
     try {
-      // Connect to real backend endpoint POST /api/ai/chat
+      // Connect to native backend endpoint POST /api/v1/loopbot/chat
       const response = await aiApi.chat({
         message: query,
         language: selectedLanguage,
@@ -92,27 +112,32 @@ export const LoopBot = () => {
       const botMessage = {
         id: `bot-${Date.now()}`,
         sender: 'bot',
-        text: response.response || response.message || 'I have processed your request.',
-        intent: response.intent || 'GENERAL_QUERY',
-        sources: response.sources || [],
-        suggested_actions: response.suggested_actions || [],
+        text: response.message || response.response || 'I have processed your request.',
+        intent: response.intent || response.standard_intent || 'GENERAL',
+        type: response.type || 'message',
+        data: response.data || {},
+        sources: (response.sources || []).map((s) => s.title || s.domain || s),
+        suggested_actions: (response.suggested_actions || []).map((a) =>
+          typeof a === 'string' ? a : a.label
+        ),
         timestamp: new Date(),
       };
 
       setMessages((prev) => [...prev, botMessage]);
     } catch (err) {
-      console.warn('AI chat error:', err);
-      // Graceful fallback according to specification
+      console.warn('LoopBot AI chat error:', err);
+      // Graceful fallback grounded in SpaceLoop platform rules
       const fallbackMessage = {
         id: `bot-fallback-${Date.now()}`,
         sender: 'bot',
         text:
-          "I'm currently answering from our verified policy knowledge base: SpaceLoop spaces can be booked hourly with an instant 4-digit PIN. Every reservation holds a 100% refundable ₹100 escrow deposit and a 5% platform fee. All check-ins are verified within 100m geofencing.",
+          'SpaceLoop operates on deterministic platform rules: Spaces can be booked hourly with an instant 4-digit arrival PIN. Every reservation holds a refundable ₹100 escrow deposit and a 5% platform fee. All check-ins require 50m GPS geofencing and the 15-minute start window.',
         intent: 'POLICY_FALLBACK',
+        type: 'message',
         sources: ['Internal SpaceLoop Knowledge Base'],
         suggested_actions: [
-          'Explore Spaces',
-          'Review Escrow Terms',
+          'Find quiet desks in Bengaluru under ₹400',
+          'How does the ₹100 refundable escrow work?',
           'Contact Support',
         ],
         timestamp: new Date(),
@@ -130,19 +155,312 @@ export const LoopBot = () => {
     }
   };
 
-  const resetConversation = () => {
-    setConversationId(`conv_${Date.now()}`);
+  const resetConversation = async () => {
+    try {
+      await aiApi.resetConversation(conversationId);
+    } catch (e) {
+      // ignore
+    }
+    const freshId = `conv_${Date.now()}`;
+    setConversationId(freshId);
     setMessages([
       {
         id: 'init-fresh',
         sender: 'bot',
-        text: 'Session reset! What architectural space or booking inquiry can I assist you with?',
-        intent: 'GREETING',
+        text: 'Session reset! What architectural space, booking inquiry, or access question can I assist you with?',
+        intent: 'GENERAL',
+        type: 'message',
         sources: [],
         suggested_actions: DEFAULT_SUGGESTED_ACTIONS,
         timestamp: new Date(),
       },
     ]);
+  };
+
+  // =========================================================================
+  // Renderers for Interactive Payload Cards
+  // =========================================================================
+
+  const renderCardContent = (msg) => {
+    const { type, data } = msg;
+    if (!data) return null;
+
+    // 1. Space Results List
+    if (type === 'space_results' && data.spaces && data.spaces.length > 0) {
+      return (
+        <div className="space-y-2 mt-2 pt-1 border-t border-border/50">
+          <div className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">
+            Verified Physical Spaces ({data.count || data.spaces.length})
+          </div>
+          <div className="space-y-2">
+            {data.spaces.slice(0, 3).map((sp) => (
+              <div
+                key={sp.id}
+                className="p-2.5 rounded-xl bg-surface border border-border hover:border-primary/40 transition-all flex flex-col gap-1.5"
+              >
+                <div className="flex justify-between items-start gap-2">
+                  <div>
+                    <h4 className="font-bold text-xs text-text-primary line-clamp-1">
+                      {sp.title}
+                    </h4>
+                    <p className="text-[11px] text-text-muted flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-primary shrink-0" />
+                      {sp.neighborhood ? `${sp.neighborhood}, ` : ''}
+                      {sp.city}
+                    </p>
+                  </div>
+                  <span className="font-extrabold text-xs text-primary shrink-0">
+                    ₹{sp.price_per_hour}/hr
+                  </span>
+                </div>
+                {sp.amenities && (
+                  <div className="flex flex-wrap gap-1">
+                    {(Array.isArray(sp.amenities) ? sp.amenities : []).slice(0, 3).map((am, i) => (
+                      <span
+                        key={i}
+                        className="px-1.5 py-0.5 rounded text-[9px] bg-surface-elevated text-text-muted border border-border"
+                      >
+                        {am}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleSend(`Book space ${sp.id} for 2 hours`)}
+                    className="flex-1 py-1 px-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-[11px] font-semibold transition-colors"
+                  >
+                    Book via LoopBot
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOpen(false);
+                      navigate(`/spaces/${sp.id}`);
+                    }}
+                    className="p-1 rounded-lg border border-border hover:bg-surface-elevated text-text-muted hover:text-text-primary text-[11px]"
+                    title="View Space Details"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // 2. Booking Preview / Authoritative Pricing Quote
+    if (type === 'booking_preview' && data.pricing) {
+      const p = data.pricing;
+      return (
+        <div className="mt-2.5 p-3 rounded-2xl bg-surface border border-primary/20 space-y-2">
+          <div className="flex items-center justify-between text-xs font-bold text-text-primary">
+            <span>Authoritative Price Quote</span>
+            <span className="text-emerald-500 text-[10px] bg-emerald-500/10 px-1.5 py-0.5 rounded">
+              Verified
+            </span>
+          </div>
+          <div className="space-y-1 text-[11px] text-text-secondary">
+            <div className="flex justify-between">
+              <span>Rental Subtotal ({data.duration_hours || 2}h):</span>
+              <span className="font-semibold text-text-primary">₹{p.subtotal?.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Platform Fee (5%):</span>
+              <span>₹{p.platform_fee?.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Refundable Escrow Deposit:</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                ₹{p.escrow_deposit?.toFixed(2)}
+              </span>
+            </div>
+            <div className="pt-1.5 border-t border-border flex justify-between font-bold text-xs text-text-primary">
+              <span>Total Payable:</span>
+              <span className="text-primary text-sm">₹{p.final_amount?.toFixed(2)}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleSend(`Book space ${data.space?.id || data.space_id} for 2 hours`)}
+            className="w-full py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-all mt-1"
+          >
+            Request Reservation
+          </button>
+        </div>
+      );
+    }
+
+    // 3. Consequential Action Confirmation Gate (Explicit Yes/No)
+    if (type === 'confirmation_required') {
+      const isCreate = data.action === 'create_booking';
+      return (
+        <div className="mt-2.5 p-3.5 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 space-y-2.5">
+          <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold text-xs">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>Explicit Confirmation Required</span>
+          </div>
+          <p className="text-xs text-text-primary leading-relaxed font-medium">
+            {data.action_summary}
+          </p>
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => handleSend('Yes, please confirm and proceed')}
+              className="flex-1 py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition-all"
+            >
+              <Check className="w-3.5 h-3.5" />
+              Yes, Confirm
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSend('No, cancel request and keep it')}
+              className="flex-1 py-1.5 px-3 rounded-xl bg-surface-elevated hover:bg-rose-500/10 border border-border text-text-secondary hover:text-rose-500 font-semibold text-xs flex items-center justify-center gap-1 transition-all"
+            >
+              <X className="w-3.5 h-3.5" />
+              Cancel
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // 4. Booking Status / Confirmed Session Card
+    if (type === 'booking_status' && data.booking) {
+      const b = data.booking;
+      return (
+        <div className="mt-2.5 p-3.5 rounded-2xl bg-surface border border-emerald-500/30 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-xs text-text-primary">
+              Booking #{b.id} Confirmed
+            </span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+              {b.status?.toUpperCase()}
+            </span>
+          </div>
+          {b.arrival_pin && (
+            <div className="p-2.5 rounded-xl bg-surface-elevated border border-border flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-text-muted uppercase tracking-wider block">
+                  Arrival PIN (Door Lock)
+                </span>
+                <span className="font-mono text-base font-extrabold text-primary tracking-widest">
+                  {b.arrival_pin}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => copyToClipboard(b.arrival_pin, `pin-${b.id}`)}
+                className="p-1.5 rounded-lg border border-border text-text-muted hover:text-text-primary hover:bg-surface"
+                title="Copy PIN"
+              >
+                {copiedCode === `pin-${b.id}` ? (
+                  <Check className="w-4 h-4 text-emerald-500" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen(false);
+              navigate(`/bookings/${b.id}`);
+            }}
+            className="w-full py-1.5 text-center text-xs font-semibold text-primary hover:underline"
+          >
+            View Reservation Details →
+          </button>
+        </div>
+      );
+    }
+
+    // 5. Access Status (PIN, 50m Geofence, 15m Temporal Window)
+    if (type === 'access_status') {
+      const temporal = data.temporal_guard || {};
+      const geofence = data.geofence || {};
+      return (
+        <div className="mt-2.5 p-3 rounded-2xl bg-surface border border-border space-y-2.5">
+          <div className="flex items-center justify-between text-xs font-bold text-text-primary">
+            <span className="flex items-center gap-1.5">
+              <Key className="w-4 h-4 text-primary" />
+              Physical Access Status
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
+              {data.session_state || 'not_started'}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div className="p-2 rounded-xl bg-surface-elevated border border-border">
+              <span className="text-[10px] text-text-muted block">Arrival PIN</span>
+              <span className="font-mono font-bold text-sm text-text-primary">
+                {data.arrival_pin || 'Pending'}
+              </span>
+            </div>
+            <div className="p-2 rounded-xl bg-surface-elevated border border-border">
+              <span className="text-[10px] text-text-muted block">50m Geofence</span>
+              <span
+                className={`font-semibold text-xs ${
+                  geofence.within_geofence
+                    ? 'text-emerald-500'
+                    : 'text-text-secondary'
+                }`}
+              >
+                {geofence.within_geofence ? 'Inside Range' : 'Max 50m'}
+              </span>
+            </div>
+          </div>
+          <div className="text-[11px] text-text-muted flex items-center gap-1.5 bg-surface-elevated p-2 rounded-xl border border-border">
+            <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
+            <span>
+              15-Min Guard:{' '}
+              {temporal.eligible ? (
+                <strong className="text-emerald-500">Active (Unlocked)</strong>
+              ) : (
+                'Locked until 15 mins prior'
+              )}
+            </span>
+          </div>
+        </div>
+      );
+    }
+
+    // 6. Escrow Status & Double-Entry Ledger
+    if (type === 'escrow_status' && data.escrow) {
+      const e = data.escrow;
+      return (
+        <div className="mt-2.5 p-3 rounded-2xl bg-surface border border-border space-y-2 text-[11px]">
+          <div className="flex items-center justify-between font-bold text-xs text-text-primary">
+            <span className="flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-500" />
+              Micro-Escrow Ledger
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
+              {e.status || 'HELD'}
+            </span>
+          </div>
+          <div className="space-y-1 text-text-secondary">
+            <div className="flex justify-between">
+              <span>Security Deposit (Refundable):</span>
+              <span className="font-bold text-emerald-600">₹{e.deposit_amount || 100.0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Platform Fee (5%):</span>
+              <span>₹{e.platform_fee || 0.0}</span>
+            </div>
+          </div>
+          <p className="text-[10px] text-text-muted pt-1 border-t border-border">
+            Protected by SpaceLoop double-entry micro-escrow. Deposit released upon checkout.
+          </p>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -187,22 +505,22 @@ export const LoopBot = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-20 right-4 sm:right-6 z-50 w-[95vw] sm:w-[420px] h-[600px] max-h-[85vh] flex flex-col rounded-3xl bg-surface border border-border shadow-2xl overflow-hidden backdrop-blur-xl"
+            className="fixed bottom-20 right-4 sm:right-6 z-50 w-[95vw] sm:w-[440px] h-[620px] max-h-[85vh] flex flex-col rounded-3xl bg-surface border border-border shadow-2xl overflow-hidden backdrop-blur-xl"
           >
             {/* Header */}
-            <div className="px-5 py-4 bg-surface-elevated border-b border-border flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-                  <Bot className="w-5 h-5" />
+            <div className="px-5 py-3.5 bg-surface-elevated border-b border-border flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                  <Bot className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-sm text-text-primary">LoopBot</h3>
                     <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                      LIVE
+                      LIVE CONCIERGE
                     </span>
                   </div>
-                  <p className="text-[11px] text-text-muted">SpaceLoop Marketplace Concierge</p>
+                  <p className="text-[10px] text-text-muted">India's Workspace AI Assistant</p>
                 </div>
               </div>
 
@@ -253,7 +571,7 @@ export const LoopBot = () => {
                     </div>
                   )}
 
-                  <div className={`max-w-[82%] space-y-2`}>
+                  <div className="max-w-[85%] space-y-2">
                     <div
                       className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
                         msg.sender === 'user'
@@ -262,14 +580,19 @@ export const LoopBot = () => {
                       }`}
                     >
                       <p className="whitespace-pre-line">{msg.text}</p>
+                      {/* Rich Cards Attached to Message */}
+                      {renderCardContent(msg)}
                     </div>
 
                     {/* Sources Badge */}
                     {msg.sources && msg.sources.length > 0 && (
-                      <div className="flex flex-wrap gap-1 text-[10px] text-text-muted">
-                        <span className="font-semibold text-text-secondary">Sources:</span>
+                      <div className="flex flex-wrap gap-1 text-[10px] text-text-muted px-1">
+                        <span className="font-semibold text-text-secondary">RAG Grounded:</span>
                         {msg.sources.map((src, i) => (
-                          <span key={i} className="px-1.5 py-0.5 rounded bg-surface-elevated border border-border">
+                          <span
+                            key={i}
+                            className="px-1.5 py-0.5 rounded bg-surface-elevated border border-border"
+                          >
                             {src}
                           </span>
                         ))}
@@ -278,7 +601,7 @@ export const LoopBot = () => {
 
                     {/* Suggested Actions Chips */}
                     {msg.suggested_actions && msg.suggested_actions.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pt-1">
+                      <div className="flex flex-wrap gap-1.5 pt-1 px-1">
                         {msg.suggested_actions.map((action, idx) => (
                           <button
                             key={idx}
@@ -331,7 +654,7 @@ export const LoopBot = () => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={`Ask in ${LANGUAGES.find((l) => l.code === selectedLanguage)?.label || 'English'}...`}
+                  placeholder={`Ask LoopBot in ${LANGUAGES.find((l) => l.code === selectedLanguage)?.label || 'English'}...`}
                   className="flex-1 px-3.5 py-2.5 text-xs sm:text-sm bg-surface border border-border rounded-xl focus:outline-none focus:border-primary text-text-primary placeholder:text-text-muted"
                   disabled={loading}
                 />
@@ -345,8 +668,8 @@ export const LoopBot = () => {
                 </button>
               </form>
               <div className="mt-1.5 flex items-center justify-between text-[10px] text-text-muted px-1">
-                <span>RAG Verified • Privacy Protected</span>
-                <span>SpaceLoop v1.0</span>
+                <span>Section 52 & Escrow Protected</span>
+                <span>SpaceLoop LoopBot v1.0</span>
               </div>
             </div>
           </motion.div>

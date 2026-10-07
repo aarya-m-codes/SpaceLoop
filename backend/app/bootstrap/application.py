@@ -347,6 +347,7 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     from backend.app.api.v1.bookings import bookings_bp
     from backend.app.api.v1.escrow import escrow_bp
     from backend.app.api.v1.fraud import fraud_bp
+    from backend.app.api.v1.loopbot import handle_loopbot_chat_request, loopbot_bp
     from backend.app.api.v1.spaces import spaces_bp
     from backend.app.api.v1.trust_safety import trust_safety_bp
     from backend.app.api.v1.verification import verification_bp
@@ -365,6 +366,10 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     app.register_blueprint(escrow_bp, url_prefix="/api/v1/escrow", name="escrow_v1")
     app.register_blueprint(ai_bp, url_prefix="/api/ai")
     app.register_blueprint(ai_bp, url_prefix="/api/v1/ai", name="ai_v1")
+    app.register_blueprint(loopbot_bp, url_prefix="/api/v1/loopbot")
+    app.register_blueprint(loopbot_bp, url_prefix="/api/loopbot", name="loopbot_legacy")
+    app.register_blueprint(loopbot_bp, url_prefix="/api/v1/loop", name="loop_v1")
+    app.register_blueprint(loopbot_bp, url_prefix="/api/loop", name="loop_legacy")
     app.register_blueprint(trust_safety_bp, url_prefix="/api/v1/trust-safety")
     app.register_blueprint(trust_safety_bp, url_prefix="/api/trust-safety", name="trust_safety_legacy")
     app.register_blueprint(fraud_bp, url_prefix="/api/fraud")

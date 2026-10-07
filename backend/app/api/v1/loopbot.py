@@ -1,18 +1,17 @@
-"""REST API endpoints for SpaceLoop LoopBot Conversational Concierge & AI Services."""
+"""REST API endpoints for SpaceLoop LoopBot Native AI Concierge."""
 
 from typing import Any
 from flask import Blueprint, g, jsonify, request
 
 from backend.modules.ai.loopbot_orchestrator import LoopBotOrchestrator
 
-ai_bp = Blueprint("ai", __name__)
+loopbot_bp = Blueprint("loopbot", __name__)
 
 
-def _handle_chat_request():
-    """Common handler for conversational LoopBot queries."""
+def handle_loopbot_chat_request():
+    """Handle conversational chat requests for LoopBot with full structured payload."""
     payload: dict[str, Any] = request.get_json(silent=True) or {}
 
-    # Extract message from various common field names
     message = (
         payload.get("message")
         or payload.get("query")
@@ -35,7 +34,6 @@ def _handle_chat_request():
         user=current_user,
     )
 
-    # Standard format fulfilling both top-level and data-wrapped contracts
     response_payload = {
         "success": True,
         "data": result.get("data", {}),
@@ -55,25 +53,18 @@ def _handle_chat_request():
     return jsonify(response_payload), 200
 
 
-@ai_bp.route("/chat", methods=["POST"])
-def ai_chat():
-    """Primary conversational chat endpoint for LoopBot."""
-    return _handle_chat_request()
+@loopbot_bp.route("/chat", methods=["POST"])
+def loopbot_chat():
+    """Primary chat endpoint for LoopBot."""
+    return handle_loopbot_chat_request()
 
 
-@ai_bp.route("/assistant", methods=["POST"])
-def ai_assistant():
-    """Assistant query endpoint."""
-    return _handle_chat_request()
-
-
-@ai_bp.route("/concierge/chat", methods=["POST"])
-def concierge_chat():
-    """Concierge chat endpoint."""
-    return _handle_chat_request()
-
-
-@ai_bp.route("/nlp/dispatch", methods=["POST"])
-def nlp_dispatch():
-    """NLP message dispatcher for intent classification and entity-assisted routing."""
-    return _handle_chat_request()
+@loopbot_bp.route("/conversation/reset", methods=["POST"])
+def loopbot_reset():
+    """Reset a conversation session."""
+    payload = request.get_json(silent=True) or {}
+    cid = payload.get("conversation_id")
+    if cid:
+        from backend.modules.ai.context_manager import ConversationManager
+        ConversationManager.reset_session(cid)
+    return jsonify({"success": True, "message": "Conversation session reset."}), 200
