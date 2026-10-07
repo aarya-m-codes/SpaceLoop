@@ -143,19 +143,31 @@ export const authApi = {
   verifySetupMfa: (code) =>
     request('/api/v1/auth/mfa/verify-setup', {
       method: 'POST',
-      body: JSON.stringify({ code }),
+      body: JSON.stringify(typeof code === 'object' ? code : { code }),
     }),
 
-  verifyMfa: (code) =>
+  verifyMfa: (payload) =>
     request('/api/v1/auth/mfa/verify', {
       method: 'POST',
-      body: JSON.stringify({ code }),
+      body: JSON.stringify(typeof payload === 'string' ? { code: payload } : payload),
     }),
 
-  disableMfa: (password) =>
+  disableMfa: (payload) =>
     request('/api/v1/auth/mfa/disable', {
       method: 'POST',
-      body: JSON.stringify({ password }),
+      body: JSON.stringify(typeof payload === 'string' ? { password: payload } : payload),
+    }),
+
+  regenerateRecoveryCodes: (payload) =>
+    request('/api/v1/auth/mfa/recovery-codes/regenerate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  refreshToken: (refreshToken) =>
+    request('/api/v1/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refresh_token: refreshToken }),
     }),
 };
 

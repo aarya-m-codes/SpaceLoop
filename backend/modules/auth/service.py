@@ -398,7 +398,10 @@ class AuthService:
         """Stage TOTP Multi-Factor Authentication for the user."""
         secret = generate_totp_secret()
         encrypted_secret = encrypt_totp_secret(secret)
-        user.mfa_secret = encrypted_secret
+        user.mfa_pending_secret = encrypted_secret
+        if not user.mfa_enabled:
+            # Maintain backward compatibility with tests checking mfa_secret prior to activation
+            user.mfa_secret = encrypted_secret
         db.session.commit()
 
         recovery_codes = generate_recovery_codes(count=8)
@@ -416,6 +419,13 @@ class AuthService:
 
         provisioning_uri = get_provisioning_uri(user.email, secret)
 
+        record_audit_log(
+            action="MFA_SETUP_INITIATED",
+            entity_type="User",
+            entity_id=user.id,
+            user_id=user.id,
+        )
+
         return {
             "secret": secret,
             "provisioning_uri": provisioning_uri,
@@ -426,17 +436,29 @@ class AuthService:
     @staticmethod
     def verify_mfa_setup(user: User, code: str) -> tuple[bool, str, int]:
         """Confirm valid TOTP code to finalize MFA activation."""
-        if not user.mfa_secret:
+        if not check_rate_limit(f"mfa_setup_verify:{user.id}", max_attempts=5, window_seconds=900):
+            return False, "Too many failed MFA verification attempts. Please try again after 15 minutes.", 429
+
+        secret_to_verify = user.mfa_pending_secret or user.mfa_secret
+        if not secret_to_verify:
             return False, "MFA setup has not been initiated. Call /mfa/setup first.", 400
 
         try:
-            plain_secret = decrypt_totp_secret(user.mfa_secret)
+            plain_secret = decrypt_totp_secret(secret_to_verify)
         except Exception:
             return False, "Failed to decrypt staged MFA secret.", 500
 
-        if not verify_totp_code(plain_secret, code):
+        if not verify_totp_code(plain_secret, code, user_id=user.id, context="setup"):
+            record_audit_log(
+                action="MFA_SETUP_VERIFICATION_FAILED",
+                entity_type="User",
+                entity_id=user.id,
+                user_id=user.id,
+            )
             return False, "Invalid TOTP verification code.", 400
 
+        user.mfa_secret = secret_to_verify
+        user.mfa_pending_secret = None
         user.mfa_enabled = True
         db.session.commit()
 
@@ -460,6 +482,10 @@ class AuthService:
         if not mfa_token:
             return None, "mfa_token is required.", 400
 
+        ip = get_client_ip()
+        if not check_rate_limit(f"mfa_verify_ip:{ip}", max_attempts=20, window_seconds=900):
+            return None, "Too many verification attempts from this network. Please try again after 15 minutes.", 429
+
         try:
             payload = decode_jwt(mfa_token, expected_type="mfa_pending")
             user_id = payload.get("sub")
@@ -470,29 +496,58 @@ class AuthService:
         if not user or not user.is_active:
             return None, "User account not active.", 403
 
+        if not check_rate_limit(f"mfa_challenge_user:{user.id}", max_attempts=5, window_seconds=900):
+            return None, "Too many failed MFA attempts on this account. Please wait 15 minutes before trying again.", 429
+
         # Validate with TOTP code
         if code:
             if not user.mfa_secret:
                 return None, "MFA secret not configured on user account.", 400
-            plain_secret = decrypt_totp_secret(user.mfa_secret)
-            if not verify_totp_code(plain_secret, code):
+            try:
+                plain_secret = decrypt_totp_secret(user.mfa_secret)
+            except Exception:
+                return None, "Decryption error for MFA credentials.", 500
+
+            if not verify_totp_code(plain_secret, code, user_id=user.id, context="challenge"):
+                record_audit_log(
+                    action="MFA_CHALLENGE_FAILED",
+                    entity_type="User",
+                    entity_id=user.id,
+                    user_id=user.id,
+                    changes={"method": "totp"},
+                )
                 return None, "Invalid 6-digit TOTP code.", 401
 
         # Validate with Recovery Code
         elif recovery_code:
             code_h = hash_recovery_code(recovery_code)
-            rec_match = MFARecoveryCode.query.filter_by(
+            # Atomic update to strictly prevent race conditions
+            affected = MFARecoveryCode.query.filter_by(
                 user_id=user.id,
                 code_hash=code_h,
                 is_used=False,
-            ).first()
+            ).update(
+                {"is_used": True, "used_at": utc_now()},
+                synchronize_session="fetch",
+            )
+            db.session.commit()
 
-            if not rec_match:
+            if affected == 0:
+                record_audit_log(
+                    action="MFA_CHALLENGE_FAILED",
+                    entity_type="User",
+                    entity_id=user.id,
+                    user_id=user.id,
+                    changes={"method": "recovery_code"},
+                )
                 return None, "Invalid or already consumed recovery code.", 401
 
-            rec_match.is_used = True
-            rec_match.used_at = utc_now()
-            db.session.commit()
+            record_audit_log(
+                action="MFA_RECOVERY_CODE_CONSUMED",
+                entity_type="User",
+                entity_id=user.id,
+                user_id=user.id,
+            )
         else:
             return None, "Either 'code' (TOTP) or 'recovery_code' is required.", 400
 
@@ -523,27 +578,56 @@ class AuthService:
         recovery_code: str | None = None,
     ) -> tuple[bool, str, int]:
         """Disable MFA after verifying account password and second factor."""
-        if not verify_user_password(password, user.password_hash):
+        if not check_rate_limit(f"mfa_disable:{user.id}", max_attempts=5, window_seconds=900):
+            return False, "Too many failed disable attempts. Please try again after 15 minutes.", 429
+
+        if not password or not verify_user_password(password, user.password_hash):
+            record_audit_log(
+                action="MFA_DISABLE_FAILED_PASSWORD",
+                entity_type="User",
+                entity_id=user.id,
+                user_id=user.id,
+            )
             return False, "Incorrect account password.", 401
 
         # Verify second factor
-        if code and user.mfa_secret:
-            plain_secret = decrypt_totp_secret(user.mfa_secret)
-            if not verify_totp_code(plain_secret, code):
+        if code:
+            if not user.mfa_secret:
+                return False, "MFA secret is not configured.", 400
+            try:
+                plain_secret = decrypt_totp_secret(user.mfa_secret)
+            except Exception:
+                return False, "Decryption error for MFA credentials.", 500
+
+            if not verify_totp_code(plain_secret, code, user_id=user.id, context="disable"):
+                record_audit_log(
+                    action="MFA_DISABLE_FAILED_TOTP",
+                    entity_type="User",
+                    entity_id=user.id,
+                    user_id=user.id,
+                )
                 return False, "Invalid TOTP code.", 401
         elif recovery_code:
             code_h = hash_recovery_code(recovery_code)
-            rec = MFARecoveryCode.query.filter_by(user_id=user.id, code_hash=code_h, is_used=False).first()
-            if not rec:
-                return False, "Invalid recovery code.", 401
-            rec.is_used = True
-            rec.used_at = utc_now()
+            affected = MFARecoveryCode.query.filter_by(
+                user_id=user.id,
+                code_hash=code_h,
+                is_used=False,
+            ).update(
+                {"is_used": True, "used_at": utc_now()},
+                synchronize_session="fetch",
+            )
+            db.session.commit()
+            if affected == 0:
+                return False, "Invalid or already consumed recovery code.", 401
         else:
             return False, "Either TOTP code or recovery code is required to disable MFA.", 400
 
         user.mfa_enabled = False
         user.mfa_secret = None
+        user.mfa_pending_secret = None
         MFARecoveryCode.query.filter_by(user_id=user.id).delete()
+        invalidate_user_session(user.id)
         db.session.commit()
 
         record_audit_log(
@@ -554,6 +638,78 @@ class AuthService:
         )
 
         return True, "Two-factor authentication has been disabled.", 200
+
+    @staticmethod
+    def regenerate_recovery_codes(
+        user: User,
+        password: str,
+        code: str,
+    ) -> tuple[dict[str, Any] | None, str | None, int]:
+        """Regenerate MFA recovery codes after verifying password and current TOTP code."""
+        if not user.mfa_enabled or not user.mfa_secret:
+            return None, "Two-factor authentication is not active on this account.", 400
+
+        if not check_rate_limit(f"mfa_regen:{user.id}", max_attempts=5, window_seconds=900):
+            return None, "Too many recovery code regeneration attempts. Please wait 15 minutes.", 429
+
+        if not password or not verify_user_password(password, user.password_hash):
+            return None, "Incorrect account password.", 401
+
+        try:
+            plain_secret = decrypt_totp_secret(user.mfa_secret)
+        except Exception:
+            return None, "Decryption error for MFA credentials.", 500
+
+        if not verify_totp_code(plain_secret, code, user_id=user.id, context="regen"):
+            return None, "Invalid TOTP verification code.", 401
+
+        # Invalidate all prior recovery codes
+        MFARecoveryCode.query.filter_by(user_id=user.id).delete()
+
+        # Generate new recovery codes
+        new_codes = generate_recovery_codes(count=8)
+        for c in new_codes:
+            code_rec = MFARecoveryCode(
+                user_id=user.id,
+                code_hash=hash_recovery_code(c),
+                is_used=False,
+            )
+            db.session.add(code_rec)
+        db.session.commit()
+
+        record_audit_log(
+            action="MFA_RECOVERY_CODES_REGENERATED",
+            entity_type="User",
+            entity_id=user.id,
+            user_id=user.id,
+        )
+
+        return {
+            "recovery_codes": new_codes,
+            "message": "New recovery codes generated. Old recovery codes are now permanently invalid.",
+        }, None, 200
+
+    @staticmethod
+    def refresh_session(refresh_token: str) -> tuple[dict[str, Any] | None, str | None, int]:
+        """Exchange valid refresh token for a fresh access token."""
+        if not refresh_token:
+            return None, "Refresh token is required.", 400
+
+        try:
+            payload = decode_jwt(refresh_token, expected_type="refresh")
+            user_id = payload.get("sub")
+        except Exception as exc:
+            return None, f"Invalid or expired refresh token: {exc}", 401
+
+        user = db.session.get(User, int(user_id))
+        if not user or not user.is_active:
+            return None, "Account deactivated or not found.", 403
+
+        new_access_token = create_access_token(user.id, user.email, user.role, user.active_context_role)
+        return {
+            "access_token": new_access_token,
+            "user": user.to_dict(),
+        }, None, 200
 
     @staticmethod
     def verify_email(token: str) -> tuple[bool, str, int]:

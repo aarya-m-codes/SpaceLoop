@@ -18,8 +18,8 @@ class ProductionSimulationTestCase(unittest.TestCase):
         self.app = app
         self.client = self.app.test_client()
         with self.app.app_context():
-            from backend.core.database import db
-            db.create_all()
+            from backend.core.database import init_db
+            init_db(self.app)
 
     def test_root_serves_frontend_spa_index_html(self):
         """Verify GET / with text/html serves frontend/dist/index.html."""

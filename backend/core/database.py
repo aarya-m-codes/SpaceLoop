@@ -43,6 +43,18 @@ def init_db(app: Flask) -> None:
         # Import models to ensure all metadata is registered with SQLAlchemy
         import models  # noqa: F401
         db.create_all()
+
+        # Automatic schema migration for existing SQLite persistent databases
+        try:
+            with db.engine.connect() as conn:
+                if db.engine.dialect.name == "sqlite":
+                    cols = [row[1] for row in conn.execute(text("PRAGMA table_info(users)")).fetchall()]
+                    if cols and "mfa_pending_secret" not in cols:
+                        conn.execute(text("ALTER TABLE users ADD COLUMN mfa_pending_secret VARCHAR(255)"))
+                        conn.commit()
+        except Exception as exc:
+            logger.debug(f"SQLite schema migration notice: {exc}")
+
         logger.info("Database schemas initialized successfully.")
 
 

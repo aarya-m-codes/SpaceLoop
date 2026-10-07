@@ -250,6 +250,50 @@ def mfa_disable():
     }), 200
 
 
+@auth_bp.route("/mfa/recovery-codes/regenerate", methods=["POST"])
+@require_auth
+def mfa_regenerate_recovery_codes():
+    """Regenerate backup recovery codes after strong re-authentication."""
+    data: dict[str, Any] = request.get_json(silent=True) or {}
+    password = data.get("password", "")
+    code = data.get("code", "")
+
+    result, err, status = AuthService.regenerate_recovery_codes(
+        user=g.current_user,
+        password=password,
+        code=code,
+    )
+
+    if err or not result:
+        return jsonify({"success": False, "error": {"code": "RECOVERY_REGEN_FAILED", "message": err}}), status
+
+    return jsonify({
+        "success": True,
+        "data": result,
+        "message": "Recovery codes regenerated successfully.",
+    }), 200
+
+
+@auth_bp.route("/refresh", methods=["POST"])
+def refresh_token_endpoint():
+    """Exchange valid refresh token for a fresh Bearer access token."""
+    data: dict[str, Any] = request.get_json(silent=True) or {}
+    token = data.get("refresh_token") or request.headers.get("Authorization", "").replace("Bearer ", "").strip()
+
+    result, err, status = AuthService.refresh_session(token)
+    if err or not result:
+        return jsonify({"success": False, "error": {"code": "REFRESH_FAILED", "message": err}}), status
+
+    response = make_response(jsonify({
+        "success": True,
+        "data": result,
+        "message": "Token refreshed successfully.",
+    }), 200)
+
+    set_auth_cookies(response, result["access_token"], is_secure=is_production())
+    return response
+
+
 @auth_bp.route("/resend-verification", methods=["POST"])
 def resend_verification():
     """Resend email verification token."""

@@ -191,5 +191,55 @@ def require_permission(*required_permissions: str) -> Callable:
 
 
 def require_admin(f: Callable) -> Callable:
-    """Decorator requiring the authenticated user to hold the ADMIN role."""
-    return require_role(ROLE_ADMIN)(f)
+    """Decorator requiring the authenticated user to hold the ADMIN role and satisfy MFA policy."""
+    @wraps(f)
+    def decorated(*args: Any, **kwargs: Any) -> Any:
+        current_user = getattr(g, "current_user", None)
+        if not current_user:
+            return (
+                jsonify({
+                    "success": False,
+                    "error": {
+                        "code": "UNAUTHORIZED",
+                        "message": "Authentication required. Please log in or provide a valid access token.",
+                    },
+                }),
+                401,
+            )
+
+        user_role = normalize_role(current_user.role)
+        active_role = normalize_role(current_user.active_context_role or user_role)
+        if user_role != ROLE_ADMIN and active_role != ROLE_ADMIN:
+            return (
+                jsonify({
+                    "success": False,
+                    "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Access forbidden. Administrator privileges required.",
+                    },
+                }),
+                403,
+            )
+
+        # Enforce server-side MFA for privileged accounts when MFA_ENFORCE_ADMIN is enabled
+        from flask import current_app
+        mfa_enforce = False
+        try:
+            mfa_enforce = bool(current_app and current_app.config.get("MFA_ENFORCE_ADMIN"))
+        except RuntimeError:
+            pass
+
+        if mfa_enforce and not current_user.mfa_enabled:
+            return (
+                jsonify({
+                    "success": False,
+                    "error": {
+                        "code": "MFA_REQUIRED_FOR_ADMIN",
+                        "message": "Privileged access requires Multi-Factor Authentication (MFA) to be enabled.",
+                    },
+                }),
+                403,
+            )
+
+        return f(*args, **kwargs)
+    return decorated

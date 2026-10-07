@@ -9,10 +9,16 @@ from cryptography.fernet import Fernet
 from flask import current_app
 
 
+from backend.core.cache import cache
+
+
 def _get_fernet() -> Fernet:
-    """Instantiate a Fernet cipher derived from the application SECRET_KEY."""
+    """Instantiate a Fernet cipher derived from MFA_ENCRYPTION_KEY or application SECRET_KEY."""
     try:
-        secret = current_app.config.get("SECRET_KEY", "spaceloop-mfa-fallback-secret")
+        secret = (
+            current_app.config.get("MFA_ENCRYPTION_KEY")
+            or current_app.config.get("SECRET_KEY", "spaceloop-mfa-fallback-secret")
+        )
     except RuntimeError:
         secret = "spaceloop-mfa-fallback-secret"
     key_bytes = hashlib.sha256(secret.encode("utf-8") if isinstance(secret, str) else secret).digest()
@@ -61,18 +67,39 @@ def generate_totp_code(secret_b32: str, for_time: int | None = None) -> str:
     return f"{truncated:06d}"
 
 
-def verify_totp_code(secret_b32: str, code: str, window: int = 1) -> bool:
-    """Verify submitted TOTP code allowing for clock drift of +/- window steps (default: 30s drift)."""
-    if not code or len(code.strip()) != 6:
+def verify_totp_code(
+    secret_b32: str,
+    code: str,
+    window: int = 1,
+    user_id: int | str | None = None,
+    context: str = "general",
+) -> bool:
+    """Verify submitted TOTP code allowing for clock drift of +/- window steps (default: 30s drift).
+    
+    If user_id is provided, automatically enforces single-use replay protection across the drift window.
+    """
+    if not code or not isinstance(code, str):
         return False
 
     clean_code = code.strip()
+    if len(clean_code) != 6 or not clean_code.isdigit():
+        return False
+
+    # Check replay cache if user_id is tracked
+    if user_id is not None:
+        replay_key = f"totp_replayed:{context}:{user_id}:{clean_code}"
+        if cache.has(replay_key):
+            return False
+
     now = int(time.time())
 
     for step in range(-window, window + 1):
         test_time = now + (step * 30)
         expected_code = generate_totp_code(secret_b32, for_time=test_time)
         if hmac.compare_digest(expected_code, clean_code):
+            # Code is mathematically valid; mark it as used to prevent replay
+            if user_id is not None:
+                cache.set(f"totp_replayed:{context}:{user_id}:{clean_code}", True, ttl=90)
             return True
 
     return False

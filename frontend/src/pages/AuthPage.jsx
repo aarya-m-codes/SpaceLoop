@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   Building2,
   Sparkles,
+  KeyRound,
+  RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -26,7 +28,13 @@ export const AuthPage = () => {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState('');
 
-  const { login, register } = useAuth();
+  // MFA Challenge State
+  const [mfaChallenge, setMfaChallenge] = useState(null); // { mfaToken }
+  const [mfaCode, setMfaCode] = useState('');
+  const [useRecoveryCode, setUseRecoveryCode] = useState(false);
+  const [recoveryCodeInput, setRecoveryCodeInput] = useState('');
+
+  const { login, register, verifyMfaLogin } = useAuth();
   const { success, error: toastError } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -39,6 +47,12 @@ export const AuthPage = () => {
 
     try {
       const result = await login(loginEmail, loginPassword);
+      if (result?.mfaRequired) {
+        setMfaChallenge({ mfaToken: result.mfaToken });
+        setFormError('');
+        return;
+      }
+
       success('Signed in successfully!');
 
       // Exact Role Detection from Authenticated Backend Data
@@ -83,12 +97,62 @@ export const AuthPage = () => {
     }
   };
 
+  const handleMfaSubmit = async (e) => {
+    e.preventDefault();
+    setFormError('');
+    setLoading(true);
+
+    try {
+      const result = await verifyMfaLogin({
+        mfaToken: mfaChallenge.mfaToken,
+        code: useRecoveryCode ? undefined : mfaCode,
+        recoveryCode: useRecoveryCode ? recoveryCodeInput : undefined,
+      });
+
+      success('Two-factor authentication verified! Welcome back.');
+      const rawRole =
+        result?.activeRole ||
+        result?.user?.active_role ||
+        result?.user?.role ||
+        (result?.user?.is_admin ? 'admin' : '');
+      const userRole = String(rawRole).toLowerCase() === 'guest' ? 'seeker' : String(rawRole).toLowerCase();
+
+      if (location.state?.from) {
+        navigate(location.state.from);
+      } else if (userRole === 'admin' || result?.user?.is_admin) {
+        navigate('/admin');
+      } else if (userRole === 'host') {
+        navigate('/host');
+      } else {
+        navigate('/seeker');
+      }
+    } catch (err) {
+      let msg = 'MFA verification failed. Please check your code.';
+      if (err) {
+        if (typeof err === 'string' && err.trim()) {
+          msg = err.trim();
+        } else if (typeof err.message === 'string' && err.message !== '[object Object]' && err.message.trim()) {
+          msg = err.message.trim();
+        } else if (err.data?.error?.message) {
+          msg = err.data.error.message;
+        } else if (typeof err.data?.error === 'string') {
+          msg = err.data.error;
+        } else if (typeof err.data?.message === 'string') {
+          msg = err.data.message;
+        }
+      }
+      setFormError(msg);
+      toastError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDemoLogin = async (targetRole) => {
     setIsLogin(true);
     let targetEmail = 'seeker.rohit@spaceloop.in';
     const targetPassword = 'SpaceLoopDemo123!';
     let demoRole = 'seeker';
-
     if (targetRole === 'host') {
       targetEmail = 'host.arjun@spaceloop.in';
       demoRole = 'host';
@@ -152,58 +216,164 @@ export const AuthPage = () => {
   return (
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-surface border border-border rounded-3xl p-6 sm:p-10 shadow-xl backdrop-blur-md">
-        {/* Header */}
-        <div className="text-center">
-          <div className="inline-flex w-12 h-12 rounded-2xl bg-primary/10 text-primary items-center justify-center mb-3">
-            <Building2 className="w-6 h-6" />
+        {mfaChallenge ? (
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="inline-flex w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 items-center justify-center mb-3">
+                <KeyRound className="w-6 h-6" />
+              </div>
+              <h2 className="text-2xl font-extrabold text-text-primary tracking-tight">
+                Two-Factor Authentication
+              </h2>
+              <p className="mt-2 text-xs sm:text-sm text-text-secondary">
+                {useRecoveryCode
+                  ? 'Enter an emergency 10-character backup recovery code'
+                  : 'Enter the 6-digit verification code from your authenticator app'}
+              </p>
+            </div>
+
+            {formError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-medium">
+                {formError}
+              </div>
+            )}
+
+            <form onSubmit={handleMfaSubmit} className="space-y-4">
+              {!useRecoveryCode ? (
+                <div>
+                  <label className="block text-xs font-semibold text-text-secondary mb-1">
+                    6-Digit Authenticator Code
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]{6}"
+                      maxLength={6}
+                      autoFocus
+                      required
+                      value={mfaCode}
+                      onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="e.g. 481920"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-center font-mono text-lg tracking-widest focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-semibold text-text-secondary mb-1">
+                    Emergency Backup Recovery Code
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      autoFocus
+                      required
+                      value={recoveryCodeInput}
+                      onChange={(e) => setRecoveryCodeInput(e.target.value.toUpperCase())}
+                      placeholder="e.g. 7K9P2-X4M8Q"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface-elevated border border-border text-text-primary text-center font-mono text-sm tracking-wider focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                disabled={loading || (!useRecoveryCode && mfaCode.length !== 6) || (useRecoveryCode && !recoveryCodeInput.trim())}
+                className="w-full flex items-center justify-center gap-2"
+              >
+                <span>{loading ? 'Verifying Code...' : 'Verify & Continue'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+
+              <div className="flex flex-col gap-2 pt-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUseRecoveryCode(!useRecoveryCode);
+                    setFormError('');
+                  }}
+                  className="text-xs text-primary hover:underline font-semibold"
+                >
+                  {useRecoveryCode
+                    ? 'Use 6-digit authenticator code instead'
+                    : 'Lost access? Use emergency backup recovery code'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMfaChallenge(null);
+                    setMfaCode('');
+                    setRecoveryCodeInput('');
+                    setFormError('');
+                  }}
+                  className="text-xs text-text-muted hover:text-text-primary transition-colors flex items-center justify-center gap-1"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Back to Sign In</span>
+                </button>
+              </div>
+            </form>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-text-primary tracking-tight">
-            {isLogin ? 'Welcome back to SpaceLoop' : 'Create your SpaceLoop account'}
-          </h2>
-          <p className="mt-2 text-xs sm:text-sm text-text-secondary">
-            {isLogin
-              ? 'Access verified architectural workspaces with keyless entry'
-              : 'Join India’s premier peer-to-peer physical space network'}
-          </p>
-        </div>
+        ) : (
+          <>
+            {/* Header */}
+            <div className="text-center">
+              <div className="inline-flex w-12 h-12 rounded-2xl bg-primary/10 text-primary items-center justify-center mb-3">
+                <Building2 className="w-6 h-6" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-text-primary tracking-tight">
+                {isLogin ? 'Welcome back to SpaceLoop' : 'Create your SpaceLoop account'}
+              </h2>
+              <p className="mt-2 text-xs sm:text-sm text-text-secondary">
+                {isLogin
+                  ? 'Access verified architectural workspaces with keyless entry'
+                  : 'Join India’s premier peer-to-peer physical space network'}
+              </p>
+            </div>
 
-        {/* Tab Toggle */}
-        <div className="grid grid-cols-2 p-1 rounded-xl bg-surface-elevated border border-border text-xs font-semibold">
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(true);
-              setFormError('');
-            }}
-            className={`py-2 rounded-lg transition-all ${
-              isLogin ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(false);
-              setFormError('');
-            }}
-            className={`py-2 rounded-lg transition-all ${
-              !isLogin ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'
-            }`}
-          >
-            Create Account
-          </button>
-        </div>
+            {/* Tab Toggle */}
+            <div className="grid grid-cols-2 p-1 rounded-xl bg-surface-elevated border border-border text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLogin(true);
+                  setFormError('');
+                }}
+                className={`py-2 rounded-lg transition-all ${
+                  isLogin ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLogin(false);
+                  setFormError('');
+                }}
+                className={`py-2 rounded-lg transition-all ${
+                  !isLogin ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                Create Account
+              </button>
+            </div>
 
-        {/* Form Error Notice */}
-        {formError && (
-          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-medium">
-            {formError}
-          </div>
-        )}
+            {/* Form Error Notice */}
+            {formError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-medium">
+                {formError}
+              </div>
+            )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <>
               <div>
@@ -340,6 +510,8 @@ export const AuthPage = () => {
             </button>
           </div>
         </div>
+        </>
+      )}
       </div>
     </div>
   );

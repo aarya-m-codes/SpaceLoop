@@ -73,6 +73,15 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authApi.login({ email, password });
       const payload = response?.data || response;
+
+      if (payload?.mfa_required) {
+        return {
+          mfaRequired: true,
+          mfaToken: payload.mfa_token,
+          message: payload.message || 'Two-factor authentication required.',
+        };
+      }
+
       const authToken = payload?.access_token || payload?.token || response?.access_token || response?.token;
       const userData = payload?.user || (payload?.id ? payload : null);
       const backendRole =
@@ -101,6 +110,42 @@ export const AuthProvider = ({ children }) => {
           ? err.message
           : 'Authentication failed.';
       setError(msg);
+      throw err;
+    }
+  };
+
+  // MFA Challenge Verification handler
+  const verifyMfaLogin = async ({ mfaToken, code, recoveryCode }) => {
+    setError(null);
+    try {
+      const res = await authApi.verifyMfa({
+        mfa_token: mfaToken,
+        code: code ? code.trim() : undefined,
+        recovery_code: recoveryCode ? recoveryCode.trim() : undefined,
+      });
+      const payload = res?.data || res;
+      const authToken = payload?.access_token || payload?.token || res?.access_token || res?.token;
+      const userData = payload?.user || (payload?.id ? payload : null);
+      const backendRole =
+        payload?.active_role ||
+        userData?.active_context_role ||
+        userData?.active_role ||
+        userData?.role ||
+        'seeker';
+      const currentRole = normalizeRole(backendRole);
+
+      if (authToken) {
+        localStorage.setItem('spaceloop_token', authToken);
+        setToken(authToken);
+      }
+      localStorage.setItem('spaceloop_active_role', currentRole);
+      setActiveRole(currentRole);
+      if (userData) {
+        setUser(userData);
+      }
+      return { success: true, user: userData, activeRole: currentRole, token: authToken };
+    } catch (err) {
+      setError(err.message || 'MFA verification failed');
       throw err;
     }
   };
@@ -233,6 +278,7 @@ export const AuthProvider = ({ children }) => {
     isHost,
     isAdmin,
     login,
+    verifyMfaLogin,
     register,
     logout,
     switchContext,

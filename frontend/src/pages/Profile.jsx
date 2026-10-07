@@ -13,6 +13,9 @@ import {
   Sparkles,
   CreditCard,
   Hash,
+  Copy,
+  Check,
+  RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -38,11 +41,19 @@ export const Profile = () => {
   const [hostUpiVpa, setHostUpiVpa] = useState('');
   const [verifyingHost, setVerifyingHost] = useState(false);
 
-  // MFA Setup State
+  // MFA State
   const [mfaData, setMfaData] = useState(null);
   const [mfaOtp, setMfaOtp] = useState('');
   const [settingUpMfa, setSettingUpMfa] = useState(false);
   const [mfaPassword, setMfaPassword] = useState('');
+  const [mfaDisableOtp, setMfaDisableOtp] = useState('');
+  const [activeRecoveryCodes, setActiveRecoveryCodes] = useState(null);
+  const [copiedCodes, setCopiedCodes] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
+  const [regenModalOpen, setRegenModalOpen] = useState(false);
+  const [regenPassword, setRegenPassword] = useState('');
+  const [regenOtp, setRegenOtp] = useState('');
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   // Handle Student Verification
   const handleStudentVerify = async (e) => {
@@ -102,7 +113,8 @@ export const Profile = () => {
     setSettingUpMfa(true);
     try {
       const res = await authApi.setupMfa();
-      setMfaData(res);
+      const payload = res?.data || res;
+      setMfaData(payload);
     } catch (err) {
       toastError(err.message || 'MFA setup initialization failed.');
     } finally {
@@ -115,23 +127,54 @@ export const Profile = () => {
     try {
       await authApi.verifySetupMfa(mfaOtp);
       success('Two-factor authentication (MFA) successfully enabled!');
+      if (mfaData?.recovery_codes) {
+        setActiveRecoveryCodes(mfaData.recovery_codes);
+      }
       setMfaData(null);
       setMfaOtp('');
       await refreshUser();
     } catch (err) {
-      toastError(err.message || 'Invalid 6-digit TOTP code.');
+      toastError(err.message || 'Invalid 6-digit TOTP code. Please check and try again.');
     }
   };
 
   const disableMfa = async (e) => {
     e.preventDefault();
     try {
-      await authApi.disableMfa(mfaPassword);
+      await authApi.disableMfa({
+        password: mfaPassword,
+        code: mfaDisableOtp,
+      });
       success('MFA disabled on your account.');
       setMfaPassword('');
+      setMfaDisableOtp('');
       await refreshUser();
     } catch (err) {
-      toastError(err.message || 'Password incorrect.');
+      toastError(err.message || 'MFA disablement failed. Verify your password and 6-digit TOTP code.');
+    }
+  };
+
+  const handleRegenerateRecoveryCodes = async (e) => {
+    e.preventDefault();
+    setIsRegenerating(true);
+    try {
+      const res = await authApi.regenerateRecoveryCodes({
+        password: regenPassword,
+        code: regenOtp,
+      });
+      const payload = res?.data || res;
+      const codes = payload?.recovery_codes;
+      if (codes) {
+        setActiveRecoveryCodes(codes);
+        success('New emergency recovery codes generated! Old codes are now invalid.');
+        setRegenModalOpen(false);
+        setRegenPassword('');
+        setRegenOtp('');
+      }
+    } catch (err) {
+      toastError(err.message || 'Failed to regenerate recovery codes. Verify password and code.');
+    } finally {
+      setIsRegenerating(false);
     }
   };
 
@@ -454,6 +497,45 @@ export const Profile = () => {
             )}
           </div>
 
+          {/* Emergency Recovery Codes Display Modal/Banner */}
+          {activeRecoveryCodes && (
+            <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-amber-500 font-bold text-xs">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Save Your Emergency Backup Recovery Codes</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(activeRecoveryCodes.join('\n'));
+                    setCopiedCodes(true);
+                    setTimeout(() => setCopiedCodes(false), 2000);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-surface border border-border text-[11px] font-semibold text-text-primary hover:bg-surface-elevated flex items-center gap-1.5 transition-colors"
+                >
+                  {copiedCodes ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-text-muted" />}
+                  <span>{copiedCodes ? 'Copied All!' : 'Copy All Codes'}</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-text-secondary leading-relaxed">
+                Save these one-time codes in your password manager or safe storage. Each code can be used exactly once to log in if you lose access to your authenticator app.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-xs text-text-primary font-bold">
+                {activeRecoveryCodes.map((c, i) => (
+                  <div key={i} className="p-2 rounded-xl bg-surface border border-border text-center select-all">
+                    {c}
+                  </div>
+                ))}
+              </div>
+              <div className="pt-1">
+                <Button variant="outline" size="sm" onClick={() => setActiveRecoveryCodes(null)} className="w-full">
+                  I have saved my backup recovery codes safely
+                </Button>
+              </div>
+            </div>
+          )}
+
           {!user?.mfa_enabled && !mfaData && (
             <Button variant="outline" size="sm" onClick={startMfaSetup} disabled={settingUpMfa}>
               {settingUpMfa ? 'Generating TOTP Secret...' : 'Set Up Two-Factor Authentication'}
@@ -461,44 +543,151 @@ export const Profile = () => {
           )}
 
           {mfaData && (
-            <form onSubmit={confirmMfaSetup} className="p-4 rounded-2xl bg-surface-elevated border border-border space-y-3">
-              <p className="text-xs text-text-secondary">
-                Enter this secret code in your authenticator app (Google Authenticator / 1Password) or scan the key:
-              </p>
-              <div className="p-2.5 bg-surface border border-border rounded-xl font-mono text-xs font-bold text-primary select-all text-center">
-                {mfaData.secret || mfaData.provisioning_uri}
+            <div className="p-5 rounded-2xl bg-surface-elevated border border-border space-y-4">
+              <div>
+                <h4 className="font-bold text-xs text-text-primary">Step 1: Add to Your Authenticator App</h4>
+                <p className="text-[11px] text-text-secondary mt-0.5">
+                  Scan this QR code with Google Authenticator, 1Password, or Authy, or copy the manual key:
+                </p>
               </div>
-              <div className="flex gap-2">
+
+              <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-xl bg-surface border border-border">
+                {mfaData.provisioning_uri && (
+                  <div className="p-2 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(mfaData.provisioning_uri)}`}
+                      alt="TOTP Provisioning QR"
+                      className="w-28 h-28"
+                    />
+                  </div>
+                )}
+                <div className="space-y-2 flex-1 w-full text-center sm:text-left">
+                  <div className="text-[11px] font-semibold text-text-secondary">Manual Setup Key:</div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 p-2 bg-surface-elevated border border-border rounded-xl font-mono text-xs font-bold text-primary select-all text-center sm:text-left break-all">
+                      {mfaData.secret}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(mfaData.secret);
+                        setCopiedKey(true);
+                        setTimeout(() => setCopiedKey(false), 2000);
+                      }}
+                      className="p-2 rounded-xl bg-surface-elevated border border-border hover:bg-surface text-text-secondary hover:text-text-primary"
+                      title="Copy Key"
+                    >
+                      {copiedKey ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-xs text-text-primary">Step 2: Enter Verification Code</h4>
+                <p className="text-[11px] text-text-secondary mt-0.5">
+                  Enter the 6-digit code currently shown in your authenticator app to finalize enrollment:
+                </p>
+              </div>
+
+              <form onSubmit={confirmMfaSetup} className="flex gap-2">
                 <input
                   type="text"
                   maxLength={6}
                   required
                   value={mfaOtp}
                   onChange={(e) => setMfaOtp(e.target.value.trim())}
-                  placeholder="Enter 6-digit TOTP"
-                  className="flex-1 px-3 py-2 text-xs rounded-xl bg-surface border border-border text-text-primary text-center font-mono"
+                  placeholder="6-digit code"
+                  className="flex-1 px-3 py-2 text-xs rounded-xl bg-surface border border-border text-text-primary text-center font-mono tracking-widest text-sm"
                 />
                 <Button type="submit" variant="primary" size="sm">
-                  Confirm & Enable
+                  Confirm & Enable MFA
                 </Button>
-              </div>
-            </form>
+                <Button type="button" variant="outline" size="sm" onClick={() => setMfaData(null)}>
+                  Cancel
+                </Button>
+              </form>
+            </div>
           )}
 
           {user?.mfa_enabled && (
-            <form onSubmit={disableMfa} className="flex gap-2 max-w-sm">
-              <input
-                type="password"
-                required
-                value={mfaPassword}
-                onChange={(e) => setMfaPassword(e.target.value)}
-                placeholder="Enter password to disable"
-                className="flex-1 px-3 py-2 text-xs rounded-xl bg-surface-elevated border border-border text-text-primary"
-              />
-              <Button type="submit" variant="outline" size="sm" className="text-rose-500">
-                Disable MFA
-              </Button>
-            </form>
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRegenModalOpen(!regenModalOpen)}
+                  className="flex items-center gap-1.5"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Regenerate Backup Recovery Codes</span>
+                </Button>
+              </div>
+
+              {regenModalOpen && (
+                <form onSubmit={handleRegenerateRecoveryCodes} className="p-4 rounded-2xl bg-surface-elevated border border-border space-y-3 max-w-md">
+                  <p className="text-xs text-text-secondary">
+                    Re-authenticate with your password and current 6-digit TOTP code to generate new recovery codes:
+                  </p>
+                  <div className="space-y-2">
+                    <input
+                      type="password"
+                      required
+                      value={regenPassword}
+                      onChange={(e) => setRegenPassword(e.target.value)}
+                      placeholder="Account Password"
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-surface border border-border text-text-primary"
+                    />
+                    <input
+                      type="text"
+                      maxLength={6}
+                      required
+                      value={regenOtp}
+                      onChange={(e) => setRegenOtp(e.target.value.trim())}
+                      placeholder="Current 6-Digit TOTP"
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-surface border border-border text-text-primary font-mono"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="submit" variant="primary" size="sm" disabled={isRegenerating}>
+                      {isRegenerating ? 'Generating...' : 'Generate New Codes'}
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setRegenModalOpen(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              )}
+
+              <div className="pt-2 border-t border-border">
+                <p className="text-xs font-semibold text-text-secondary mb-2">
+                  Disable Two-Factor Authentication (Requires Password + Current TOTP):
+                </p>
+                <form onSubmit={disableMfa} className="flex flex-col sm:flex-row gap-2 max-w-lg">
+                  <input
+                    type="password"
+                    required
+                    value={mfaPassword}
+                    onChange={(e) => setMfaPassword(e.target.value)}
+                    placeholder="Account Password"
+                    className="flex-1 px-3 py-2 text-xs rounded-xl bg-surface-elevated border border-border text-text-primary"
+                  />
+                  <input
+                    type="text"
+                    maxLength={6}
+                    required
+                    value={mfaDisableOtp}
+                    onChange={(e) => setMfaDisableOtp(e.target.value.trim())}
+                    placeholder="6-Digit TOTP"
+                    className="w-32 px-3 py-2 text-xs rounded-xl bg-surface-elevated border border-border text-text-primary font-mono text-center"
+                  />
+                  <Button type="submit" variant="outline" size="sm" className="text-rose-500 hover:bg-rose-500/10">
+                    Disable MFA
+                  </Button>
+                </form>
+              </div>
+            </div>
           )}
         </div>
       </div>

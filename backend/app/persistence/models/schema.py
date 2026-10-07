@@ -36,6 +36,7 @@ class User(db.Model):
     kyc_document_type = db.Column(String(50), nullable=True)
     mfa_enabled = db.Column(Boolean, default=False, nullable=False)
     mfa_secret = db.Column(String(255), nullable=True)  # Fernet encrypted TOTP secret
+    mfa_pending_secret = db.Column(String(255), nullable=True)  # Staged encrypted secret prior to possession verification
     active_context_role = db.Column(String(20), nullable=True)  # Active persona: seeker or host
     trust_score = db.Column(Float, default=100.0, nullable=False)  # 0 to 100 rating-derived trust score
     is_student_verified = db.Column(Boolean, default=False, nullable=False)
