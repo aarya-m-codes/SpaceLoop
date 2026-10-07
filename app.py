@@ -252,7 +252,17 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
 
     # Register API blueprints
     from backend.app.api.v1.auth import auth_bp
+    from backend.app.api.v1.spaces import spaces_bp
+    from backend.modules.spaces.photo_service import UPLOAD_FOLDER
+    from flask import send_from_directory
+
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
+    app.register_blueprint(spaces_bp, url_prefix="/api/spaces")
+    app.register_blueprint(spaces_bp, url_prefix="/api/v1/spaces", name="spaces_v1")
+
+    @app.route("/uploads/<path:filename>", methods=["GET"])
+    def uploaded_file(filename):
+        return send_from_directory(UPLOAD_FOLDER, filename)
 
     # Register error handlers and core routes
     register_error_handlers(app)

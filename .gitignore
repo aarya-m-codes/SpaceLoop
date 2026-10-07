@@ -32,6 +32,7 @@ ENV/
 *.sqlite
 *.sqlite3
 instance/
+uploads/
 
 # Pytest / Testing
 .pytest_cache/

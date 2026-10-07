@@ -37,6 +37,7 @@ class User(db.Model):
     mfa_enabled = db.Column(Boolean, default=False, nullable=False)
     mfa_secret = db.Column(String(255), nullable=True)  # Fernet encrypted TOTP secret
     active_context_role = db.Column(String(20), nullable=True)  # Active persona: seeker or host
+    trust_score = db.Column(Float, default=100.0, nullable=False)  # 0 to 100 rating-derived trust score
     created_at = db.Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = db.Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
@@ -65,6 +66,7 @@ class User(db.Model):
             "is_verified": self.is_verified,
             "kyc_status": self.kyc_status,
             "mfa_enabled": self.mfa_enabled,
+            "trust_score": round(self.trust_score or 100.0, 1),
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -77,9 +79,12 @@ class Space(db.Model):
     host_id = db.Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title = db.Column(String(200), nullable=False, index=True)
     description = db.Column(Text, nullable=True)
+    category = db.Column(String(50), default="commercial", nullable=False, index=True)
     space_type = db.Column(String(50), nullable=False, index=True)  # desk, room, studio, commercial, etc.
+    location = db.Column(String(255), nullable=True)
     address_line1 = db.Column(String(255), nullable=False)
     address_line2 = db.Column(String(255), nullable=True)
+    neighborhood = db.Column(String(100), nullable=True, index=True)
     city = db.Column(String(100), nullable=False, index=True)
     state = db.Column(String(100), nullable=False)
     pincode = db.Column(String(20), nullable=False, index=True)
@@ -88,11 +93,23 @@ class Space(db.Model):
     longitude = db.Column(Float, nullable=False, index=True)
     price_per_hour = db.Column(Float, nullable=False, default=0.0)
     price_per_day = db.Column(Float, nullable=False, default=0.0)
+    minimum_hours = db.Column(Integer, default=1, nullable=False)
+    sqft = db.Column(Float, default=0.0, nullable=False)
     capacity = db.Column(Integer, nullable=False, default=1)
     amenities = db.Column(JSON, nullable=False, default=list)
     rules = db.Column(Text, nullable=True)
+    images = db.Column(JSON, nullable=False, default=list)
+    room_qr_token = db.Column(String(64), unique=True, nullable=True, index=True)
+    geofence_radius = db.Column(Float, default=50.0, nullable=False)
+    physical_access_type = db.Column(String(50), default="smart_lock", nullable=False)
     is_active = db.Column(Boolean, default=True, nullable=False, index=True)
     is_approved = db.Column(Boolean, default=True, nullable=False)
+    ai_lighting = db.Column(String(100), nullable=True)
+    ai_noise_level = db.Column(String(100), nullable=True)
+    ai_power_access = db.Column(String(100), nullable=True)
+    recommended_uses = db.Column(JSON, nullable=False, default=list)
+    average_rating = db.Column(Float, default=0.0, nullable=False)
+    total_reviews = db.Column(Integer, default=0, nullable=False)
     created_at = db.Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = db.Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
@@ -108,22 +125,40 @@ class Space(db.Model):
             "host_id": self.host_id,
             "title": self.title,
             "description": self.description,
+            "category": self.category,
             "space_type": self.space_type,
+            "hourly_price": self.price_per_hour,
+            "price_per_hour": self.price_per_hour,
+            "price_per_day": self.price_per_day,
+            "minimum_hours": self.minimum_hours,
+            "location": self.location or self.address_line1,
             "address_line1": self.address_line1,
             "address_line2": self.address_line2,
+            "neighborhood": self.neighborhood,
             "city": self.city,
             "state": self.state,
             "pincode": self.pincode,
             "country": self.country,
             "latitude": self.latitude,
             "longitude": self.longitude,
-            "price_per_hour": self.price_per_hour,
-            "price_per_day": self.price_per_day,
+            "sqft": self.sqft,
             "capacity": self.capacity,
-            "amenities": self.amenities,
+            "max_capacity": self.capacity,
+            "amenities": self.amenities or [],
             "rules": self.rules,
+            "images": self.images or [],
+            "room_qr_token": self.room_qr_token,
+            "geofence_radius": self.geofence_radius,
+            "physical_access_type": self.physical_access_type,
+            "active_status": self.is_active,
             "is_active": self.is_active,
             "is_approved": self.is_approved,
+            "ai_lighting": self.ai_lighting,
+            "ai_noise_level": self.ai_noise_level,
+            "ai_power_access": self.ai_power_access,
+            "recommended_uses": self.recommended_uses or [],
+            "average_rating": round(self.average_rating or 0.0, 2),
+            "total_reviews": self.total_reviews or 0,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -417,6 +452,20 @@ class Review(db.Model):
     space = relationship("Space", back_populates="reviews", foreign_keys=[space_id])
     booking = relationship("Booking", back_populates="review", foreign_keys=[booking_id])
     guest = relationship("User", back_populates="reviews", foreign_keys=[guest_id])
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "space_id": self.space_id,
+            "booking_id": self.booking_id,
+            "guest_id": self.guest_id,
+            "guest_name": self.guest.full_name if self.guest else "SpaceLoop Guest",
+            "rating": self.rating,
+            "comment": self.comment,
+            "is_verified_stay": self.is_verified_stay,
+            "host_response": self.host_response,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
 
 
 class Notification(db.Model):
