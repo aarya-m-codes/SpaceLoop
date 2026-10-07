@@ -4,6 +4,7 @@ import { AnimatePresence } from 'framer-motion';
 import { Navbar } from '../components/common/Navbar';
 import { Footer } from '../components/common/Footer';
 import { PageTransition } from '../components/common/PageTransition';
+import { LoopBot } from '../components/ai/LoopBot';
 
 export const MainLayout = () => {
   const location = useLocation();
@@ -21,6 +22,9 @@ export const MainLayout = () => {
         </AnimatePresence>
       </main>
       <Footer />
+
+      {/* Persistent SpaceLoop Concierge AI */}
+      <LoopBot />
     </div>
   );
 };

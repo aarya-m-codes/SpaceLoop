@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Star, MapPin, Heart, Users, Zap } from 'lucide-react';
+import { Star, MapPin, Heart, Users, Zap, ShieldCheck } from 'lucide-react';
 import { LazyImage } from '../common/LazyImage';
 import { cardHoverMotion, cardImageMotion } from '../../utils/motion';
 
 /**
  * SpaceCard Component
- * Displays a space listing with restrained hover lift, image zoom, and micro-interactions.
+ * Normalizes backend Space model data with fallback for images, price (₹ INR), ratings, and badges.
  */
 export const SpaceCard = ({ space }) => {
   const [isFavorited, setIsFavorited] = useState(false);
@@ -18,6 +18,23 @@ export const SpaceCard = ({ space }) => {
     e.stopPropagation();
     setIsFavorited(!isFavorited);
   };
+
+  // Field normalizers for backend contract
+  const spaceId = space.id;
+  const title = space.title || 'Architectural Space';
+  const category = space.space_type || space.category || 'Workspace';
+  const location = space.location || (space.city ? `${space.address_line1 || ''}, ${space.city}` : 'India');
+  const price = space.price_per_hour ?? space.price ?? 150;
+  const rating = Number(space.rating || space.avg_rating || 4.9).toFixed(1);
+  const reviewsCount = space.total_reviews ?? space.reviews_count ?? space.reviews ?? 12;
+  const capacity = space.capacity ?? 8;
+  const instantAccess = space.instant_booking_enabled ?? space.instantAccess ?? true;
+
+  // Resolve best image URL
+  const primaryImage =
+    (Array.isArray(space.images) && space.images.length > 0 && space.images[0]) ||
+    space.image ||
+    'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80';
 
   const cardMotionProps = shouldReduceMotion
     ? {}
@@ -39,26 +56,26 @@ export const SpaceCard = ({ space }) => {
       {...cardMotionProps}
       className="group relative flex flex-col bg-surface rounded-2xl border border-border overflow-hidden transition-shadow duration-250 hover:shadow-hover hover:border-primary/30"
     >
-      <Link to={`/spaces/${space.id}`} className="flex flex-col flex-grow">
+      <Link to={`/spaces/${spaceId}`} className="flex flex-col flex-grow">
         {/* Card Image Container with Restrained Hover Zoom */}
         <div className="relative overflow-hidden aspect-[16/10] bg-surface-elevated">
           <motion.div {...imageMotionProps} className="w-full h-full">
             <LazyImage
-              src={space.image}
-              alt={space.title}
+              src={primaryImage}
+              alt={title}
               aspectRatio="aspect-full h-full"
             />
           </motion.div>
 
           {/* Instant Access Badge */}
-          {space.instantAccess && (
-            <div className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-surface/90 backdrop-blur-md text-text-primary border border-border shadow-sm">
+          {instantAccess && (
+            <div className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-surface/90 backdrop-blur-md text-text-primary border border-border shadow-sm">
               <Zap className="w-3 h-3 text-primary" />
-              <span>Instant Pass</span>
+              <span>Instant PIN Entry</span>
             </div>
           )}
 
-          {/* Favorite Heart Button with Pop Motion */}
+          {/* Favorite Heart Button */}
           <motion.button
             type="button"
             onClick={handleFavoriteToggle}
@@ -86,35 +103,37 @@ export const SpaceCard = ({ space }) => {
         <div className="p-4 flex flex-col flex-grow justify-between gap-3">
           <div>
             <div className="flex items-center justify-between gap-2 text-xs text-text-muted mb-1">
-              <span className="font-medium uppercase tracking-wider text-primary">
-                {space.category}
+              <span className="font-semibold uppercase tracking-wider text-primary text-[11px]">
+                {category}
               </span>
               <div className="flex items-center gap-1 font-semibold text-text-primary">
                 <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                <span>{space.rating}</span>
-                <span className="text-text-muted font-normal">({space.reviews})</span>
+                <span>{rating}</span>
+                <span className="text-text-muted font-normal text-[11px]">({reviewsCount})</span>
               </div>
             </div>
 
             <h3 className="font-semibold text-base text-text-primary group-hover:text-primary transition-colors duration-150 line-clamp-1">
-              {space.title}
+              {title}
             </h3>
 
-            <div className="flex items-center gap-1 text-xs text-text-secondary mt-1">
-              <MapPin className="w-3.5 h-3.5 shrink-0 text-text-muted" />
-              <span className="truncate">{space.location}</span>
+            <div className="flex items-center gap-1.5 text-xs text-text-secondary mt-1 line-clamp-1">
+              <MapPin className="w-3.5 h-3.5 text-text-muted shrink-0" />
+              <span>{location}</span>
             </div>
           </div>
 
-          {/* Capacity and Price footer */}
-          <div className="pt-2 border-t border-border-subtle flex items-center justify-between text-xs">
-            <span className="flex items-center gap-1 text-text-muted">
+          <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
+            <div className="flex items-center gap-1 text-text-muted">
               <Users className="w-3.5 h-3.5" />
-              <span>Up to {space.capacity} guests</span>
-            </span>
+              <span>Up to {capacity} guests</span>
+            </div>
+
             <div className="text-right">
-              <span className="text-base font-bold text-text-primary">${space.price}</span>
-              <span className="text-text-muted font-normal"> / hour</span>
+              <span className="text-base font-extrabold text-text-primary">
+                ₹{price}
+              </span>
+              <span className="text-text-muted text-[11px]"> / hr</span>
             </div>
           </div>
         </div>

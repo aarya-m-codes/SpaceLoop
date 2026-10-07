@@ -28,6 +28,7 @@ import { SpaceCard } from '../components/spaces/SpaceCard';
 import { ScrollReveal } from '../components/common/ScrollReveal';
 import { Button } from '../components/common/Button';
 import { SPACES_DATA } from '../utils/constants';
+import { spacesApi, aiApi } from '../services/api';
 
 export const LandingPage = () => {
   const navigate = useNavigate();
@@ -36,7 +37,19 @@ export const LandingPage = () => {
   const [selectedType, setSelectedType] = useState('all');
   const [loopBotPrompt, setLoopBotPrompt] = useState('');
   const [loopBotResponse, setLoopBotResponse] = useState(null);
+  const [loopBotLoading, setLoopBotLoading] = useState(false);
+  const [liveSpaces, setLiveSpaces] = useState(SPACES_DATA);
   const [windowHeight, setWindowHeight] = useState(800);
+
+  useEffect(() => {
+    // Fetch live spaces from backend
+    spacesApi.getSpaces().then((res) => {
+      const list = res?.spaces || (Array.isArray(res) ? res : []);
+      if (list.length > 0) {
+        setLiveSpaces(list);
+      }
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     setWindowHeight(window.innerHeight || 800);
@@ -115,14 +128,27 @@ export const LandingPage = () => {
     navigate(`/explore?location=${encodeURIComponent(locationQuery)}&type=${selectedType}`);
   };
 
-  const handleLoopBotSubmit = (e) => {
+  const handleLoopBotSubmit = async (e) => {
     e.preventDefault();
     if (!loopBotPrompt.trim()) return;
-    setLoopBotResponse({
-      query: loopBotPrompt,
-      recommended: SPACES_DATA[0],
-      reason: 'Matched: 1Gbps WiFi, panoramic natural light, rooftop breakout lounge, and instant pass entry.',
-    });
+    setLoopBotLoading(true);
+    try {
+      const res = await aiApi.chat({ message: loopBotPrompt });
+      setLoopBotResponse({
+        query: loopBotPrompt,
+        recommended: liveSpaces[0] || SPACES_DATA[0],
+        reason: res.response || 'Matched architectural workspace based on your requirements.',
+        sources: res.sources || [],
+      });
+    } catch (err) {
+      setLoopBotResponse({
+        query: loopBotPrompt,
+        recommended: liveSpaces[0] || SPACES_DATA[0],
+        reason: 'Matched: 1Gbps WiFi, panoramic natural light, rooftop breakout lounge, and instant pass entry.',
+      });
+    } finally {
+      setLoopBotLoading(false);
+    }
   };
 
   return (
@@ -321,7 +347,7 @@ export const LandingPage = () => {
 
           {/* Space Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {SPACES_DATA.slice(0, 6).map((space, index) => (
+            {liveSpaces.slice(0, 6).map((space, index) => (
               <ScrollReveal key={space.id} delay={index % 3}>
                 <SpaceCard space={space} />
               </ScrollReveal>

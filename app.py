@@ -2,7 +2,7 @@ import logging
 import os
 from datetime import datetime, timezone
 from typing import Any
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory, abort
 from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -180,12 +180,28 @@ def register_system_routes(app: Flask) -> None:
 
     @app.route("/", methods=["GET"])
     def root():
+        dist_index = os.path.join(app.root_path, "dist", "index.html")
+        if "text/html" in request.headers.get("Accept", "") and os.path.exists(dist_index):
+            return send_from_directory(os.path.join(app.root_path, "dist"), "index.html")
         return jsonify({
             "name": "SpaceLoop API",
             "tagline": "Peer-to-peer physical space marketplace for India",
             "documentation": "/api/v1/health",
             "version": "1.0.0",
         })
+
+    @app.route("/<path:path>", methods=["GET"])
+    def serve_frontend_assets(path):
+        if path.startswith("api/") or path.startswith("uploads/") or path == "health":
+            abort(404)
+        dist_dir = os.path.join(app.root_path, "dist")
+        file_path = os.path.join(dist_dir, path)
+        if os.path.exists(file_path):
+            return send_from_directory(dist_dir, path)
+        index_file = os.path.join(dist_dir, "index.html")
+        if os.path.exists(index_file):
+            return send_from_directory(dist_dir, "index.html")
+        abort(404)
 
 
 def register_cli_commands(app: Flask) -> None:
