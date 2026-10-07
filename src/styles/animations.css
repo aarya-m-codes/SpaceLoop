@@ -1,11 +1,102 @@
 /* ==========================================================================
-   SpaceLoop Animation Foundation
-   Polished, restrained, high-performance animation tokens & utilities
+   SpaceLoop Animation Foundation & Environmental Motion
+   Calm, natural, premium environmental breeze & sky animations
    ========================================================================== */
 
-/* 1. Global Interactive Classes */
+/* Cloud Drifting Animations (Different speeds for natural depth) */
+@keyframes driftCloudsBack {
+  0% {
+    transform: translateX(-30%);
+  }
+  100% {
+    transform: translateX(110%);
+  }
+}
 
-/* Subtle Card Lift & Elevation */
+@keyframes driftCloudsMid {
+  0% {
+    transform: translateX(-40%);
+  }
+  100% {
+    transform: translateX(115%);
+  }
+}
+
+@keyframes driftCloudsFore {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+.cloud-layer-back {
+  animation: driftCloudsBack 75s linear infinite;
+  will-change: transform;
+}
+
+.cloud-layer-mid {
+  animation: driftCloudsMid 50s linear infinite;
+  will-change: transform;
+}
+
+.cloud-layer-fore {
+  animation: driftCloudsFore 35s linear infinite;
+  will-change: transform;
+}
+
+/* Gentle Foliage / Tree Breeze Sway */
+@keyframes gentleFoliageBreeze {
+  0%, 100% {
+    transform: rotate(0deg) skewX(0deg) scale(1);
+  }
+  30% {
+    transform: rotate(-0.9deg) skewX(-0.6deg) scale(1.003);
+  }
+  70% {
+    transform: rotate(0.8deg) skewX(0.5deg) scale(0.998);
+  }
+}
+
+.foliage-breeze {
+  transform-origin: bottom center;
+  animation: gentleFoliageBreeze 7s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Subtle Sun / Horizon Glow Pulse */
+@keyframes naturalSunPulse {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.06);
+  }
+}
+
+.sun-ambient-pulse {
+  animation: naturalSunPulse 9s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+/* Scroll Cue Bounce */
+@keyframes gentleScrollBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}
+
+.scroll-indicator-bounce {
+  animation: gentleScrollBounce 2.4s ease-in-out infinite;
+}
+
+/* 1. Global Interactive Classes */
 .card-lift {
   transition: transform var(--duration-normal) var(--ease-natural),
               box-shadow var(--duration-normal) var(--ease-natural),
@@ -18,7 +109,6 @@
   box-shadow: var(--shadow-hover);
 }
 
-/* Subtle Interactive Button Press */
 .btn-press {
   transition: transform var(--duration-fast) var(--ease-natural),
               background-color var(--duration-fast) var(--ease-natural),
@@ -35,7 +125,6 @@
   transform: translateY(1px) scale(0.985);
 }
 
-/* Restrained Image Hover Zoom */
 .img-zoom-container {
   overflow: hidden;
 }
@@ -49,7 +138,6 @@
   transform: scale(1.045);
 }
 
-/* Image Fade-In (Gentle loading, no harsh flash) */
 .img-fade-in {
   opacity: 0;
   transition: opacity 350ms var(--ease-smooth);
@@ -57,56 +145,6 @@
 
 .img-fade-in.loaded {
   opacity: 1;
-}
-
-/* Nav Item Feedback */
-.nav-link {
-  position: relative;
-  transition: color var(--duration-fast) var(--ease-natural);
-}
-
-.nav-link::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background-color: var(--color-primary);
-  border-radius: 9999px;
-  transition: width var(--duration-normal) var(--ease-natural);
-}
-
-.nav-link:hover::after,
-.nav-link.active::after {
-  width: 100%;
-}
-
-/* Ambient Subtle Motion (Natural breathing, strictly restrained) */
-@keyframes ambientBreathe {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.95;
-  }
-  50% {
-    transform: scale(1.018);
-    opacity: 1;
-  }
-}
-
-.ambient-breathe {
-  animation: ambientBreathe 12s ease-in-out infinite;
-  will-change: transform, opacity;
-}
-
-/* Skeleton Shimmer Loading */
-@keyframes shimmerWave {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
 }
 
 .skeleton-shimmer {
@@ -120,7 +158,16 @@
   animation: shimmerWave 1.8s ease-in-out infinite;
 }
 
-/* Reduced Motion Support (Accessibility Rule 9) */
+@keyframes shimmerWave {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Reduced Motion Accessibility */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -131,20 +178,16 @@
     scroll-behavior: auto !important;
   }
 
-  .card-lift:hover {
-    transform: none !important;
-  }
-
+  .cloud-layer-back,
+  .cloud-layer-mid,
+  .cloud-layer-fore,
+  .foliage-breeze,
+  .sun-ambient-pulse,
+  .scroll-indicator-bounce,
+  .card-lift:hover,
   .btn-press:hover,
   .btn-press:active {
-    transform: none !important;
-  }
-
-  .img-zoom-container:hover .img-zoom {
-    transform: none !important;
-  }
-
-  .ambient-breathe {
     animation: none !important;
+    transform: none !important;
   }
 }
