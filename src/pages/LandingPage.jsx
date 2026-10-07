@@ -103,23 +103,33 @@ export const LandingPage = () => {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full relative">
+      
       {/* ==========================================================================
-          1. THE FIRST IMPRESSION: FULLSCREEN LIVING ENVIRONMENTAL HERO
-             Uses the user-provided architectural images (Light Sunset / Dark Twilight)
-             with slow drifting clouds, gentle foliage breeze, and ONLY:
-             "SPACELOOP"
-             "Find a space , make it yours"
+          SLIDE 1: FULLSCREEN LIVING ENVIRONMENTAL HERO
+          Pinned / Sticky at top with edge-to-edge full viewport coverage.
          ========================================================================== */}
-      <HeroLivingEnvironment />
+      <div className="sticky top-0 h-screen w-full overflow-hidden z-0">
+        <HeroLivingEnvironment />
+      </div>
 
       {/* ==========================================================================
-          2. USER SCROLLS DOWN INTO THE SPACELOOP CONTENT
+          SLIDE 2: THE SPACELOOP PLATFORM CONTENT
+          Slides upward over the hero like turning a page / changing a slide.
+          Features elegant curved deck header and elevation shadow.
+          This effect appears ONLY HERE at the hero transition.
          ========================================================================== */}
-      <div id="spaceloop-content" className="w-full">
-        
-        {/* Search Bar Widget (Appears seamlessly after scrolling past the first visual) */}
-        <section className="py-10 bg-surface border-b border-border">
+      <div
+        id="spaceloop-content"
+        className="relative z-10 w-full bg-background rounded-t-[36px] sm:rounded-t-[54px] shadow-[0_-30px_70px_rgba(0,0,0,0.65)] border-t border-border-subtle overflow-hidden transition-all duration-300"
+      >
+        {/* Subtle slide handle / pill indicator on top */}
+        <div className="w-full flex justify-center pt-3 pb-1">
+          <div className="w-12 h-1.5 rounded-full bg-border opacity-70" />
+        </div>
+
+        {/* Search Bar Widget (Reveals as part of Slide 2) */}
+        <section className="py-8 bg-surface border-b border-border">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <ScrollReveal delay={0}>
               <form
@@ -184,7 +194,7 @@ export const LandingPage = () => {
         </section>
 
         {/* ==========================================================================
-            3. WHAT SPACELOOP IS
+            WHAT SPACELOOP IS
            ========================================================================== */}
         <section className="py-16 sm:py-20 bg-background transition-colors">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -226,7 +236,7 @@ export const LandingPage = () => {
         </section>
 
         {/* ==========================================================================
-            4. EXPLORE SPACES (Space Discovery & Curated Listings)
+            EXPLORE SPACES (Space Discovery)
            ========================================================================== */}
         <section className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
@@ -278,7 +288,7 @@ export const LandingPage = () => {
             </ScrollReveal>
           </div>
 
-          {/* Distinct Space Cards Grid */}
+          {/* Space Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {SPACES_DATA.slice(0, 6).map((space, index) => (
               <ScrollReveal key={space.id} delay={index % 3}>
@@ -289,7 +299,7 @@ export const LandingPage = () => {
         </section>
 
         {/* ==========================================================================
-            5. KEY FEATURES
+            KEY FEATURES
            ========================================================================== */}
         <section className="py-16 sm:py-24 bg-surface border-y border-border transition-colors">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -333,7 +343,7 @@ export const LandingPage = () => {
         </section>
 
         {/* ==========================================================================
-            6. HOW SPACELOOP WORKS
+            HOW SPACELOOP WORKS
            ========================================================================== */}
         <section id="how-it-works" className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-14">
@@ -378,7 +388,7 @@ export const LandingPage = () => {
         </section>
 
         {/* ==========================================================================
-            7. AI SMART MATCHING & LOOPBOT
+            AI SMART MATCHING & LOOPBOT
            ========================================================================== */}
         <section className="py-16 sm:py-24 bg-surface-elevated border-y border-border transition-colors">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -482,7 +492,7 @@ export const LandingPage = () => {
         </section>
 
         {/* ==========================================================================
-            8. TRUST & SAFETY FEATURES
+            TRUST & SAFETY
            ========================================================================== */}
         <section className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-14">
@@ -536,7 +546,7 @@ export const LandingPage = () => {
         </section>
 
         {/* ==========================================================================
-            9. HOST AND SEEKER BENEFITS
+            HOST AND SEEKER BENEFITS
            ========================================================================== */}
         <section className="py-16 sm:py-24 bg-surface border-y border-border transition-colors">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -634,7 +644,7 @@ export const LandingPage = () => {
         </section>
 
         {/* ==========================================================================
-            10. FINAL CTA
+            FINAL CTA
            ========================================================================== */}
         <section className="py-20 sm:py-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal delay={0}>

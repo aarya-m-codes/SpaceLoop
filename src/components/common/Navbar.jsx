@@ -11,6 +11,8 @@ export const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
+  const isLanding = location.pathname === '/';
+
   const navLinks = [
     { name: 'Explore', path: '/explore', icon: Compass },
     { name: 'How It Works', path: '/#how-it-works' },
@@ -24,7 +26,16 @@ export const Navbar = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full glass-panel border-b border-border transition-colors duration-250">
+    <motion.header
+      initial={isLanding ? { opacity: 0, y: -48 } : { opacity: 1, y: 0 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        delay: isLanding ? 1.9 : 0,
+        duration: 0.6,
+        ease: [0.16, 1, 0.3, 1],
+      }}
+      className="fixed top-0 left-0 right-0 z-50 w-full glass-panel border-b border-border transition-colors duration-250"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
@@ -176,7 +187,7 @@ export const Navbar = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </header>
+    </motion.header>
   );
 };
 
