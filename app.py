@@ -257,6 +257,7 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     from backend.app.api.v1.fraud import fraud_bp
     from backend.app.api.v1.spaces import spaces_bp
     from backend.app.api.v1.trust_safety import trust_safety_bp
+    from backend.app.api.v1.verification import verification_bp
     from backend.modules.spaces.photo_service import UPLOAD_FOLDER
     from flask import send_from_directory
 
@@ -275,6 +276,8 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     app.register_blueprint(trust_safety_bp, url_prefix="/api/trust-safety", name="trust_safety_legacy")
     app.register_blueprint(fraud_bp, url_prefix="/api/fraud")
     app.register_blueprint(fraud_bp, url_prefix="/api/v1/fraud", name="fraud_v1")
+    app.register_blueprint(verification_bp, url_prefix="/api/verify")
+    app.register_blueprint(verification_bp, url_prefix="/api/v1/verify", name="verify_v1")
 
     # Direct routes for LoopBot conversational endpoints
     app.add_url_rule("/api/assistant", "api_assistant", _handle_chat_request, methods=["POST"])

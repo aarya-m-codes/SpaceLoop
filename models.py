@@ -38,6 +38,15 @@ class User(db.Model):
     mfa_secret = db.Column(String(255), nullable=True)  # Fernet encrypted TOTP secret
     active_context_role = db.Column(String(20), nullable=True)  # Active persona: seeker or host
     trust_score = db.Column(Float, default=100.0, nullable=False)  # 0 to 100 rating-derived trust score
+    is_student_verified = db.Column(Boolean, default=False, nullable=False)
+    student_discount_rate = db.Column(Float, default=0.0, nullable=False)
+    student_id_hash = db.Column(String(64), nullable=True, index=True)
+    university_email = db.Column(String(255), nullable=True)
+    aadhaar_hash = db.Column(String(64), nullable=True, index=True)
+    is_host_verified = db.Column(Boolean, default=False, nullable=False)
+    discom_consumer_hash = db.Column(String(64), nullable=True, index=True)
+    discom_provider = db.Column(String(100), nullable=True)
+    upi_vpa = db.Column(String(100), nullable=True)
     created_at = db.Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = db.Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
@@ -67,6 +76,10 @@ class User(db.Model):
             "kyc_status": self.kyc_status,
             "mfa_enabled": self.mfa_enabled,
             "trust_score": round(self.trust_score or 100.0, 1),
+            "is_student_verified": self.is_student_verified,
+            "student_discount_rate": self.student_discount_rate,
+            "is_host_verified": self.is_host_verified,
+            "upi_vpa": self.upi_vpa,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -558,10 +571,24 @@ class EmailLog(db.Model):
     recipient_email = db.Column(String(255), nullable=False, index=True)
     template_name = db.Column(String(100), nullable=False)
     subject = db.Column(String(255), nullable=False)
+    body = db.Column(Text, nullable=True)
     status = db.Column(String(20), default="QUEUED", nullable=False, index=True)  # QUEUED, SENT, FAILED
     error_message = db.Column(Text, nullable=True)
     sent_at = db.Column(DateTime(timezone=True), nullable=True)
     created_at = db.Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "recipient_email": self.recipient_email,
+            "template_name": self.template_name,
+            "subject": self.subject,
+            "body": self.body,
+            "status": self.status,
+            "error_message": self.error_message,
+            "sent_at": self.sent_at.isoformat() if self.sent_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
 
 
 class SpaceInquiry(db.Model):

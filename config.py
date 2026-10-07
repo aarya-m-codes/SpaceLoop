@@ -42,6 +42,25 @@ class BaseConfig:
     PLATFORM_FEE_PERCENTAGE = float(os.getenv("PLATFORM_FEE_PERCENTAGE", "10.0"))
     GST_PERCENTAGE = float(os.getenv("GST_PERCENTAGE", "18.0"))
 
+    # AI / LLM Configuration
+    GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+    GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
+    # Email Provider Configuration (resend, brevo, smtp, memory)
+    EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "memory").lower()
+    RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+    BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
+    SMTP_HOST = os.getenv("SMTP_HOST", "localhost")
+    SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USER = os.getenv("SMTP_USER", "")
+    SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+    EMAIL_FROM_ADDRESS = os.getenv("EMAIL_FROM_ADDRESS", "no-reply@spaceloop.in")
+    EMAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "SpaceLoop Marketplace")
+
+    # Rate Limiting Storage
+    RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
+
 
 class DevelopmentConfig(BaseConfig):
     """Development environment configuration using optimized SQLite."""
