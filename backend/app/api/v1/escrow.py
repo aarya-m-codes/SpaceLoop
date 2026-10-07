@@ -164,3 +164,89 @@ def escrow_summary():
         "success": True,
         "data": result,
     }), 200
+
+
+@escrow_bp.route("/<int:booking_id>/checkout", methods=["POST"])
+@require_auth
+def checkout_settle(booking_id: int):
+    """Execute normal checkout settlement: subtotal to host, 5% fee to SpaceLoop, ₹100 deposit to seeker."""
+    payload: dict[str, Any] = request.get_json(silent=True) or {}
+    host_vpa = payload.get("host_vpa")
+    seeker_vpa = payload.get("seeker_vpa")
+
+    result, err, status = EscrowService.normal_checkout_settlement(
+        booking_id=booking_id,
+        current_user=g.current_user,
+        host_vpa=host_vpa,
+        seeker_vpa=seeker_vpa,
+    )
+
+    if err or not result:
+        return jsonify({
+            "success": False,
+            "error": {"code": "SETTLEMENT_FAILED", "message": err},
+        }), status
+
+    return jsonify({
+        "success": True,
+        "data": result,
+        "message": "Checkout settlement executed successfully.",
+    }), 200
+
+
+@escrow_bp.route("/<int:booking_id>/ledger", methods=["GET"])
+@require_auth
+def get_ledger(booking_id: int):
+    """Fetch complete immutable financial ledger transactions for a booking."""
+    result, err, status = EscrowService.get_escrow_by_booking_id(booking_id, g.current_user)
+
+    if err or not result:
+        return jsonify({
+            "success": False,
+            "error": {"code": "NOT_FOUND" if status == 404 else "FORBIDDEN", "message": err},
+        }), status
+
+    txs = result.get("ledger_transactions", [])
+    total_held = result.get("held_amount", 0.0)
+    outflows = sum(
+        tx.get("amount", 0.0)
+        for tx in txs
+        if tx.get("transaction_type") in ["release", "fee", "refund"]
+    )
+    discrepancy = round(abs(total_held - outflows), 2) if outflows > 0 else 0.0
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "booking_id": booking_id,
+            "escrow_status": result.get("escrow_status"),
+            "total_held": total_held,
+            "discrepancy": discrepancy,
+            "transactions": txs,
+            "ledger_transactions": txs,
+        },
+    }), 200
+
+
+@escrow_bp.route("/verify-vpa", methods=["POST"])
+def verify_vpa():
+    """Verify UPI Virtual Payment Address (VPA) via penny-drop adapter interface."""
+    from backend.modules.escrow.payment_adapter import get_payment_adapter
+    payload: dict[str, Any] = request.get_json(silent=True) or {}
+    vpa = payload.get("vpa", "")
+
+    adapter = get_payment_adapter()
+    result = adapter.verify_penny_drop(vpa)
+
+    if not result.is_valid:
+        return jsonify({
+            "success": False,
+            "error": {"code": "INVALID_VPA", "message": result.error_message or "Invalid UPI VPA."},
+            "data": result.to_dict(),
+        }), 400
+
+    return jsonify({
+        "success": True,
+        "data": result.to_dict(),
+        "message": "UPI VPA validated via penny-drop interface.",
+    }), 200

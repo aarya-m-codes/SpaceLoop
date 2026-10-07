@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 
 # Standard SpaceLoop commercial fee schedule
-PLATFORM_FEE_RATE = 0.10  # 10% platform facilitation fee
+PLATFORM_FEE_RATE = 0.05  # 5% platform facilitation fee
 GST_TAX_RATE = 0.18       # 18% GST on platform services (India)
 DEFAULT_ESCROW_DEPOSIT = 100.0  # ₹100 statutory security deposit
 

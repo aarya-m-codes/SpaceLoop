@@ -89,7 +89,7 @@ class BookingsTestCase(unittest.TestCase):
     # =========================================================================
 
     def test_pricing_calculation(self):
-        """Verify subtotal, 10% platform fee, ₹100 deposit, and total sum."""
+        """Verify subtotal, 5% platform fee, ₹100 deposit, and total sum."""
         start = utc_now() + timedelta(days=1)
         end = start + timedelta(hours=4)
         pricing = PricingEngine.calculate_precheck(
@@ -100,9 +100,9 @@ class BookingsTestCase(unittest.TestCase):
 
         self.assertEqual(pricing["duration_hours"], 4.0)
         self.assertEqual(pricing["subtotal"], 2000.0)         # 500 * 4
-        self.assertEqual(pricing["platform_fee"], 200.0)      # 10% of 2000
+        self.assertEqual(pricing["platform_fee"], 100.0)      # 5% of 2000
         self.assertEqual(pricing["escrow_deposit"], 100.0)    # ₹100 statutory deposit
-        self.assertEqual(pricing["final_amount"], 2300.0)     # 2000 + 200 + 100
+        self.assertEqual(pricing["final_amount"], 2200.0)     # 2000 + 100 + 100
 
     def test_precheck_endpoint_success(self):
         """Verify POST /api/bookings/precheck returns calculated amounts and availability."""
@@ -123,9 +123,9 @@ class BookingsTestCase(unittest.TestCase):
         self.assertTrue(data["is_available"])
         self.assertEqual(data["duration_hours"], 3.0)
         self.assertEqual(data["subtotal"], 1500.0)
-        self.assertEqual(data["platform_fee"], 150.0)
+        self.assertEqual(data["platform_fee"], 75.0)
         self.assertEqual(data["escrow_deposit"], 100.0)
-        self.assertEqual(data["final_amount"], 1750.0)  # 1500 + 150 + 100
+        self.assertEqual(data["final_amount"], 1675.0)  # 1500 + 75 + 100
 
     def test_precheck_validations(self):
         """Verify precheck handles non-existent space, inactive space, past dates, min hours, and slot conflicts."""
@@ -199,9 +199,9 @@ class BookingsTestCase(unittest.TestCase):
         self.assertEqual(data["escrow_status"], "held")
         self.assertEqual(data["duration_hours"], 3.0)
         self.assertEqual(data["subtotal"], 1500.0)
-        self.assertEqual(data["platform_fee"], 150.0)
+        self.assertEqual(data["platform_fee"], 75.0)
         self.assertEqual(data["escrow_deposit"], 100.0)
-        self.assertEqual(data["total_price"], 1750.0)
+        self.assertEqual(data["total_price"], 1675.0)
 
         # 4-digit arrival PIN verification
         self.assertIsNotNone(data["arrival_pin"])
@@ -212,7 +212,7 @@ class BookingsTestCase(unittest.TestCase):
         escrow = EscrowTransaction.query.filter_by(booking_id=data["id"]).first()
         self.assertIsNotNone(escrow)
         self.assertEqual(escrow.status, "HELD")
-        self.assertEqual(escrow.held_amount, 1750.0)
+        self.assertEqual(escrow.held_amount, 1675.0)
 
     def test_self_booking_prevention(self):
         """Verify hosts cannot book their own physical space listings."""
@@ -635,8 +635,8 @@ class BookingsTestCase(unittest.TestCase):
         self.assertIn("end_time", data)
         self.assertEqual(data["duration_hours"], 3.0)
         self.assertEqual(data["guest_count"], 4)
-        self.assertEqual(data["total_price"], 1750.0)
-        self.assertEqual(data["platform_fee"], 150.0)
+        self.assertEqual(data["total_price"], 1675.0)
+        self.assertEqual(data["platform_fee"], 75.0)
         self.assertEqual(data["escrow_deposit"], 100.0)
         self.assertEqual(data["status"], "pending")
         self.assertEqual(data["session_state"], "not_started")

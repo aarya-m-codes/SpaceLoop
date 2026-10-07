@@ -197,9 +197,19 @@ class Booking(db.Model):
     # Relationships
     space = relationship("Space", back_populates="bookings", foreign_keys=[space_id])
     guest = relationship("User", back_populates="bookings", foreign_keys=[guest_id])
-    escrow_transaction = relationship("EscrowTransaction", back_populates="booking", uselist=False, cascade="all, delete-orphan")
+    escrow_transactions = relationship("EscrowTransaction", back_populates="booking", cascade="all, delete-orphan", foreign_keys="EscrowTransaction.booking_id")
     access_logs = relationship("AccessLog", back_populates="booking", cascade="all, delete-orphan")
     review = relationship("Review", back_populates="booking", uselist=False)
+
+    @property
+    def escrow_transaction(self):
+        """Primary/first deposit hold transaction for backwards compatibility."""
+        if self.escrow_transactions:
+            for tx in self.escrow_transactions:
+                if (tx.transaction_type or "").lower() == "deposit_hold":
+                    return tx
+            return self.escrow_transactions[0]
+        return None
 
     @property
     def renter_id(self) -> int:
@@ -293,12 +303,19 @@ class EscrowTransaction(db.Model):
     __tablename__ = "escrow_transactions"
 
     id = db.Column(Integer, primary_key=True)
-    booking_id = db.Column(Integer, ForeignKey("bookings.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    booking_id = db.Column(Integer, ForeignKey("bookings.id", ondelete="CASCADE"), nullable=False, index=True)
     guest_id = db.Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
     host_id = db.Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
-    held_amount = db.Column(Float, nullable=False)
+    transaction_type = db.Column(String(30), default="deposit_hold", nullable=False, index=True)  # deposit_hold, release, refund, fee
+    amount = db.Column(Float, nullable=False, default=0.0)
+    held_amount = db.Column(Float, nullable=False, default=0.0)
     currency = db.Column(String(10), default="INR", nullable=False)
-    status = db.Column(String(30), default="HELD", nullable=False, index=True)  # HELD, RELEASE_SCHEDULED, RELEASED, REFUNDED, FROZEN
+    status = db.Column(String(30), default="completed", nullable=False, index=True)  # pending, completed, failed (also HELD, RELEASED, etc.)
+    payment_method = db.Column(String(50), default="mock_upi", nullable=False)
+    upi_vpa = db.Column(String(100), nullable=True)
+    reference_id = db.Column(String(100), nullable=True, index=True)
+    description = db.Column(Text, nullable=True)
+    is_mock = db.Column(Boolean, default=True, nullable=False)
     release_scheduled_at = db.Column(DateTime(timezone=True), nullable=True)
     released_at = db.Column(DateTime(timezone=True), nullable=True)
     refunded_at = db.Column(DateTime(timezone=True), nullable=True)
@@ -307,22 +324,31 @@ class EscrowTransaction(db.Model):
     updated_at = db.Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
     # Relationships
-    booking = relationship("Booking", back_populates="escrow_transaction", foreign_keys=[booking_id])
+    booking = relationship("Booking", back_populates="escrow_transactions", foreign_keys=[booking_id])
 
     def to_dict(self) -> dict[str, Any]:
+        amt = round(self.amount if self.amount is not None else (self.held_amount or 0.0), 2)
         return {
             "id": self.id,
             "booking_id": self.booking_id,
             "guest_id": self.guest_id,
             "host_id": self.host_id,
-            "held_amount": self.held_amount,
+            "transaction_type": (self.transaction_type or "deposit_hold").lower(),
+            "amount": amt,
+            "held_amount": amt,
             "currency": self.currency,
             "status": self.status,
+            "payment_method": self.payment_method,
+            "upi_vpa": self.upi_vpa,
+            "reference_id": self.reference_id,
+            "description": self.description,
+            "is_mock": self.is_mock,
             "release_scheduled_at": self.release_scheduled_at.isoformat() if self.release_scheduled_at else None,
             "released_at": self.released_at.isoformat() if self.released_at else None,
             "refunded_at": self.refunded_at.isoformat() if self.refunded_at else None,
             "dispute_reason": self.dispute_reason,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
 

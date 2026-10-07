@@ -216,17 +216,10 @@ class BookingService:
             db.session.add(booking)
             db.session.flush()
 
-            # Transactional escrow hold creation
-            escrow = EscrowTransaction(
-                booking_id=booking.id,
-                guest_id=guest_user.id,
-                host_id=space.host_id,
-                held_amount=pricing["final_amount"],
-                currency=pricing["currency"],
-                status="HELD",
-                release_scheduled_at=booking.start_time + timedelta(hours=24),
-            )
-            db.session.add(escrow)
+            # Transactional escrow hold creation via EscrowService
+            from backend.modules.escrow.service import EscrowService
+            EscrowService.hold_funds(booking)
+
             db.session.commit()
 
             record_audit_log(
@@ -330,31 +323,12 @@ class BookingService:
         if current_status != "pending":
             return None, f"Cannot reject booking in '{booking.status}' status. Only pending bookings can be rejected.", 400
 
-        try:
-            booking.status = "rejected"
-            booking.session_state = "cancelled"
-            booking.escrow_status = "refunded"
-            booking.cancellation_reason = reason or "Rejected by host."
+        from backend.modules.escrow.service import EscrowService
+        res, err, status = EscrowService.host_rejection_settlement(booking_id, current_user, reason=reason)
+        if err or not res:
+            return None, err, status
 
-            if booking.escrow_transaction and booking.escrow_transaction.status == "HELD":
-                booking.escrow_transaction.status = "REFUNDED"
-                booking.escrow_transaction.refunded_at = utc_now()
-
-            db.session.commit()
-
-            record_audit_log(
-                action="BOOKING_REJECTED",
-                entity_type="booking",
-                entity_id=booking.id,
-                user_id=current_user.id,
-                changes={"reason": booking.cancellation_reason},
-            )
-
-            return booking.to_dict(), None, 200
-        except Exception as exc:
-            db.session.rollback()
-            logger.error(f"Failed to reject booking {booking_id}: {exc}")
-            return None, "Database error rejecting booking.", 500
+        return booking.to_dict(), None, 200
 
     @classmethod
     def cancel_booking(
@@ -379,32 +353,12 @@ class BookingService:
         if current_status not in ["pending", "confirmed"]:
             return None, f"Cannot cancel booking with status '{booking.status}'.", 400
 
-        try:
-            booking.status = "cancelled"
-            booking.session_state = "cancelled"
-            booking.escrow_status = "refunded"
-            booking.cancellation_reason = reason or "Cancelled by user."
+        from backend.modules.escrow.service import EscrowService
+        res, err, status = EscrowService.cancellation_settlement(booking_id, current_user, reason=reason)
+        if err or not res:
+            return None, err, status
 
-            if booking.escrow_transaction and booking.escrow_transaction.status == "HELD":
-                booking.escrow_transaction.status = "REFUNDED"
-                booking.escrow_transaction.refunded_at = utc_now()
-
-            db.session.commit()
-
-            record_audit_log(
-                action="BOOKING_CANCELLED",
-                entity_type="booking",
-                entity_id=booking.id,
-                user_id=current_user.id,
-                changes={"reason": reason},
-            )
-
-            return booking.to_dict(), None, 200
-
-        except Exception as exc:
-            db.session.rollback()
-            logger.error(f"Failed to cancel booking {booking_id}: {exc}")
-            return None, "Database error cancelling booking.", 500
+        return booking.to_dict(), None, 200
 
     @classmethod
     def dispute_booking(

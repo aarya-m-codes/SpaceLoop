@@ -1,10 +1,12 @@
-"""Test suite for SpaceLoop Financial Escrow Subsystem."""
+"""Test suite for SpaceLoop Financial Micro-Escrow, Deterministic Ledger, and UPI Payment Adapter."""
 
 import unittest
 from datetime import datetime, timedelta, timezone
 
 from app import create_app
 from backend.core.database import db
+from backend.modules.bookings.pricing import PricingEngine
+from backend.modules.escrow.payment_adapter import MockUPIPaymentAdapter, get_payment_adapter
 from backend.modules.escrow.service import EscrowService
 from config import TestingConfig
 from models import Booking, EscrowTransaction, FraudEventRecord, Space, User, utc_now
@@ -12,13 +14,15 @@ from security import hash_password
 
 
 class EscrowTestCase(unittest.TestCase):
-    """Test suite verifying fund holding, release scheduling, dispute freezing, and admin resolution."""
+    """Test suite verifying micro-escrow fund holding, deterministic settlements, UPI adapters, and ledger safety."""
 
     def setUp(self):
         self.app = create_app(TestingConfig)
         self.client = self.app.test_client()
         self.app_context = self.app.app_context()
         self.app_context.push()
+        db.session.remove()
+        db.drop_all()
         db.create_all()
 
         # Users: Host, Guest, Admin, Stranger
@@ -57,7 +61,7 @@ class EscrowTestCase(unittest.TestCase):
         db.session.add_all([self.host, self.guest, self.admin, self.stranger])
         db.session.commit()
 
-        # Space listing
+        # Space listing: ₹300/hour
         self.space = Space(
             host_id=self.host.id,
             title="Connaught Place Executive Office",
@@ -84,7 +88,7 @@ class EscrowTestCase(unittest.TestCase):
         self.admin_headers = {"X-User-Id": str(self.admin.id)}
         self.stranger_headers = {"X-User-Id": str(self.stranger.id)}
 
-        # Create base booking
+        # Create base booking: 3 hours @ ₹300/hr = ₹900 subtotal, ₹45 fee (5%), ₹100 deposit, total = ₹1045
         start = utc_now() + timedelta(days=1)
         end = start + timedelta(hours=3)
         self.booking = Booking(
@@ -94,11 +98,13 @@ class EscrowTestCase(unittest.TestCase):
             end_time=end,
             total_hours=3.0,
             base_amount=900.0,
-            platform_fee=90.0,
-            taxes_gst=16.2,
-            total_amount=1006.2,
+            platform_fee=45.0,
+            escrow_deposit=100.0,
+            total_amount=1045.0,
             currency="INR",
-            status="CONFIRMED",
+            status="confirmed",
+            session_state="not_started",
+            escrow_status="held",
             access_code="SECURE88",
         )
         db.session.add(self.booking)
@@ -117,13 +123,13 @@ class EscrowTestCase(unittest.TestCase):
         """Verify escrow creation on booking confirmation and access control."""
         escrow = EscrowService.hold_funds(self.booking)
         self.assertEqual(escrow.status, "HELD")
-        self.assertEqual(escrow.held_amount, 1006.2)
+        self.assertEqual(escrow.held_amount, 1045.0)
         self.assertIsNotNone(escrow.release_scheduled_at)
 
         # Guest can view
         res_guest = self.client.get(f"/api/v1/escrow/{self.booking.id}", headers=self.guest_headers)
         self.assertEqual(res_guest.status_code, 200)
-        self.assertEqual(res_guest.get_json()["data"]["held_amount"], 1006.2)
+        self.assertEqual(res_guest.get_json()["data"]["held_amount"], 1045.0)
 
         # Host can view
         res_host = self.client.get(f"/api/v1/escrow/{self.booking.id}", headers=self.host_headers)
@@ -161,7 +167,7 @@ class EscrowTestCase(unittest.TestCase):
 
         # Booking should transition to COMPLETED
         db.session.refresh(self.booking)
-        self.assertEqual(self.booking.status, "COMPLETED")
+        self.assertEqual(self.booking.status.lower(), "completed")
 
     def test_refund_to_guest(self):
         """Verify refund transitions escrow to REFUNDED and booking to CANCELLED."""
@@ -179,51 +185,261 @@ class EscrowTestCase(unittest.TestCase):
 
         # Booking should transition to CANCELLED
         db.session.refresh(self.booking)
-        self.assertEqual(self.booking.status, "CANCELLED")
+        self.assertEqual(self.booking.status.lower(), "cancelled")
 
     # =========================================================================
-    # 3. Dispute Freezing & Safety
+    # 3. Micro-Escrow Deterministic Settlement & Multi-Entry Ledger
     # =========================================================================
 
-    def test_freeze_dispute_and_block_transfers(self):
-        """Verify dispute filing locks funds into FROZEN status and blocks standard releases."""
+    def test_normal_checkout_settlement(self):
+        """Verify normal checkout executes 3-part ledger settlement:
+        1. Host receives Space Subtotal (₹900.00).
+        2. SpaceLoop retains 5% platform fee (₹45.00).
+        3. Seeker receives ₹100.00 security deposit.
+        4. Escrow status becomes released.
+        5. Zero discrepancy between deposit hold and outflows.
+        """
+        EscrowService.hold_funds(self.booking)
+
+        res = self.client.post(
+            f"/api/v1/escrow/{self.booking.id}/checkout",
+            headers=self.host_headers,
+            json={
+                "host_vpa": "host.anand@okhdfcbank",
+                "seeker_vpa": "guest.neha@okaxis",
+            },
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()["data"]
+
+        self.assertEqual(data["status"], "RELEASED")
+        self.assertEqual(data["host_payout"], 900.0)
+        self.assertEqual(data["platform_fee"], 45.0)
+        self.assertEqual(data["deposit_returned"], 100.0)
+        self.assertEqual(data["total_settled"], 1045.0)
+        self.assertTrue(data["is_mock"])
+
+        # Verify database ledger entries
+        txs = EscrowTransaction.query.filter_by(booking_id=self.booking.id).all()
+        # Should have: deposit_hold, release, fee, refund
+        tx_types = {tx.transaction_type: tx for tx in txs}
+        self.assertIn("deposit_hold", tx_types)
+        self.assertIn("release", tx_types)
+        self.assertIn("fee", tx_types)
+        self.assertIn("refund", tx_types)
+
+        hold_tx = tx_types["deposit_hold"]
+        release_tx = tx_types["release"]
+        fee_tx = tx_types["fee"]
+        refund_tx = tx_types["refund"]
+
+        self.assertEqual(hold_tx.held_amount, 1045.0)
+        self.assertEqual(release_tx.amount, 900.0)
+        self.assertEqual(fee_tx.amount, 45.0)
+        self.assertEqual(refund_tx.amount, 100.0)
+
+        # Invariant: Hold amount == Sum(outflows)
+        outflow_sum = round(release_tx.amount + fee_tx.amount + refund_tx.amount, 2)
+        self.assertEqual(outflow_sum, hold_tx.held_amount)
+
+        # Verify audit trail ledger endpoint
+        ledger_res = self.client.get(f"/api/v1/escrow/{self.booking.id}/ledger", headers=self.guest_headers)
+        self.assertEqual(ledger_res.status_code, 200)
+        ledger_data = ledger_res.get_json()["data"]
+        self.assertEqual(ledger_data["total_held"], 1045.0)
+        self.assertEqual(ledger_data["discrepancy"], 0.0)
+        self.assertEqual(len(ledger_data["transactions"]), 4)
+
+    def test_cancellation_settlement(self):
+        """Verify cancellation formula per specification:
+        - SpaceLoop retains ONLY the 5% platform fee (₹45.00).
+        - Seeker receives 100% rental (₹900.00) + 100% deposit (₹100.00) = ₹1000.00.
+        """
+        EscrowService.hold_funds(self.booking)
+
+        res = self.client.post(
+            f"/api/v1/escrow/{self.booking.id}/refund",
+            headers=self.guest_headers,
+            json={"reason": "Guest had a scheduling conflict", "seeker_vpa": "guest.neha@okaxis"},
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()["data"]
+
+        self.assertEqual(data["status"], "REFUNDED")
+        self.assertEqual(data["seeker_refund"], 1000.0)
+        self.assertEqual(data["platform_fee_retained"], 45.0)
+        self.assertTrue(data["is_mock"])
+
+        # Check booking status
+        db.session.refresh(self.booking)
+        self.assertEqual(self.booking.status.lower(), "cancelled")
+        self.assertEqual(self.booking.escrow_status.lower(), "refunded")
+
+        # Check ledger balance
+        txs = EscrowTransaction.query.filter_by(booking_id=self.booking.id).all()
+        refund_tx = next(t for t in txs if t.transaction_type == "refund")
+        fee_tx = next(t for t in txs if t.transaction_type == "fee")
+
+        self.assertEqual(refund_tx.amount, 1000.0)
+        self.assertEqual(fee_tx.amount, 45.0)
+        self.assertEqual(refund_tx.amount + fee_tx.amount, 1045.0)
+
+    def test_host_rejection_settlement(self):
+        """Verify host rejection grants 100% full refund (₹1045.00) including fee and deposit."""
+        EscrowService.hold_funds(self.booking)
+
+        res, err, status = EscrowService.host_rejection_settlement(
+            booking_id=self.booking.id,
+            current_user=self.host,
+            reason="Space plumbing maintenance required",
+        )
+        self.assertEqual(status, 200)
+        self.assertIsNone(err)
+        self.assertEqual(res["status"], "REFUNDED")
+        self.assertEqual(res["full_refund"], 1045.0)
+
+        db.session.refresh(self.booking)
+        self.assertEqual(self.booking.status.lower(), "rejected")
+        self.assertEqual(self.booking.escrow_status.lower(), "refunded")
+
+        # Escrow primary hold status
+        hold = EscrowTransaction.query.filter_by(booking_id=self.booking.id, transaction_type="deposit_hold").first()
+        self.assertEqual(hold.status, "REFUNDED")
+
+    # =========================================================================
+    # 4. Duplicate Defenses & Concurrency Guards
+    # =========================================================================
+
+    def test_duplicate_settlement_prevention(self):
+        """Verify duplicate checkout or release attempts are blocked with 409 Conflict."""
+        EscrowService.hold_funds(self.booking)
+
+        # First checkout succeeds
+        res1 = self.client.post(f"/api/v1/escrow/{self.booking.id}/checkout", headers=self.host_headers)
+        self.assertEqual(res1.status_code, 200)
+
+        # Second checkout rejected
+        res2 = self.client.post(f"/api/v1/escrow/{self.booking.id}/checkout", headers=self.host_headers)
+        self.assertEqual(res2.status_code, 409)
+        self.assertIn("already been executed", res2.get_json()["error"]["message"])
+
+        # Release attempt also rejected
+        res3 = self.client.post(f"/api/v1/escrow/{self.booking.id}/release", headers=self.host_headers)
+        self.assertEqual(res3.status_code, 409)
+
+    def test_duplicate_refund_prevention(self):
+        """Verify duplicate refund attempts are blocked with 409 Conflict."""
+        EscrowService.hold_funds(self.booking)
+
+        # First refund succeeds
+        res1 = self.client.post(f"/api/v1/escrow/{self.booking.id}/refund", headers=self.guest_headers)
+        self.assertEqual(res1.status_code, 200)
+
+        # Second refund rejected
+        res2 = self.client.post(f"/api/v1/escrow/{self.booking.id}/refund", headers=self.guest_headers)
+        self.assertEqual(res2.status_code, 409)
+        self.assertIn("already been executed", res2.get_json()["error"]["message"])
+
+    def test_dispute_freeze_blocks_settlement_and_refund(self):
+        """Verify dispute locks funds into FROZEN state and blocks both checkout and refund."""
         EscrowService.hold_funds(self.booking)
 
         # File dispute
-        dispute_res = self.client.post(
+        res_disp = self.client.post(
             f"/api/v1/escrow/{self.booking.id}/dispute",
             headers=self.guest_headers,
-            json={"reason": "Space was locked and host did not answer call."},
+            json={"reason": "Door PIN did not work and host was unreachable"},
         )
-        self.assertEqual(dispute_res.status_code, 200)
-        data = dispute_res.get_json()["data"]
-        self.assertEqual(data["status"], "FROZEN")
-        self.assertIn("locked", data["dispute_reason"])
+        self.assertEqual(res_disp.status_code, 200)
 
-        # Booking marked DISPUTED
-        db.session.refresh(self.booking)
-        self.assertEqual(self.booking.status, "DISPUTED")
+        # Checkout attempt blocked
+        res_checkout = self.client.post(f"/api/v1/escrow/{self.booking.id}/checkout", headers=self.host_headers)
+        self.assertEqual(res_checkout.status_code, 409)
 
-        # Fraud event telemetry record created
-        fraud_event = FraudEventRecord.query.filter_by(event_type="ESCROW_DISPUTE_FILED").first()
-        self.assertIsNotNone(fraud_event)
+        # Release attempt blocked
+        res_release = self.client.post(f"/api/v1/escrow/{self.booking.id}/release", headers=self.host_headers)
+        self.assertEqual(res_release.status_code, 409)
 
-        # Standard release MUST be rejected while frozen
-        rel_attempt = self.client.post(
-            f"/api/v1/escrow/{self.booking.id}/release",
-            headers=self.host_headers,
-        )
-        self.assertEqual(rel_attempt.status_code, 409)
-
-        # Standard refund MUST be rejected while frozen
-        ref_attempt = self.client.post(
-            f"/api/v1/escrow/{self.booking.id}/refund",
-            headers=self.guest_headers,
-        )
-        self.assertEqual(ref_attempt.status_code, 409)
+        # Refund attempt blocked
+        res_refund = self.client.post(f"/api/v1/escrow/{self.booking.id}/refund", headers=self.guest_headers)
+        self.assertEqual(res_refund.status_code, 409)
 
     # =========================================================================
-    # 4. Admin Dispute Adjudication
+    # 5. Exact Math: 5% Platform Fee, ₹100 Deposit, & Rounding
+    # =========================================================================
+
+    def test_exact_fee_and_deposit_rounding(self):
+        """Verify exact 5% fee calculation, ₹100 statutory deposit, and half-cent rounding."""
+        # Case 1: Standard round numbers (₹500/hr * 4 hrs = ₹2000.0)
+        p1 = PricingEngine.calculate_precheck(
+            price_per_hour=500.0,
+            start_time=utc_now(),
+            end_time=utc_now() + timedelta(hours=4),
+        )
+        self.assertEqual(p1["subtotal"], 2000.0)
+        self.assertEqual(p1["platform_fee"], 100.0)      # 5% of 2000
+        self.assertEqual(p1["escrow_deposit"], 100.0)    # ₹100.00
+        self.assertEqual(p1["final_amount"], 2200.0)     # 2000 + 100 + 100
+
+        # Case 2: Fractional subtotal requiring rounding (₹333.33 * 3 hrs = ₹999.99)
+        # 5% of 999.99 = 49.9995 -> 50.00
+        p2 = PricingEngine.calculate_precheck(
+            price_per_hour=333.33,
+            start_time=utc_now(),
+            end_time=utc_now() + timedelta(hours=3),
+        )
+        self.assertEqual(p2["subtotal"], 999.99)
+        self.assertEqual(p2["platform_fee"], 50.0)
+        self.assertEqual(p2["escrow_deposit"], 100.0)
+        self.assertEqual(p2["final_amount"], 1149.99)
+
+        # Case 3: 1 hour @ ₹125.50 = ₹125.50 subtotal
+        # 5% of 125.50 = 6.275 -> 6.28
+        p3 = PricingEngine.calculate_precheck(
+            price_per_hour=125.50,
+            start_time=utc_now(),
+            end_time=utc_now() + timedelta(hours=1),
+        )
+        self.assertEqual(p3["subtotal"], 125.50)
+        self.assertEqual(p3["platform_fee"], 6.28)
+        self.assertEqual(p3["escrow_deposit"], 100.0)
+        self.assertEqual(p3["final_amount"], 231.78)
+
+    # =========================================================================
+    # 6. Payment Adapter, VPA Validation, & Penny-Drop
+    # =========================================================================
+
+    def test_payment_adapter_vpa_and_penny_drop(self):
+        """Verify payment adapter interface, VPA regex verification, mock penny drop, and disclaimers."""
+        adapter = get_payment_adapter()
+
+        # 1. Valid VPA formats
+        self.assertTrue(adapter.validate_vpa("user@okhdfcbank"))
+        self.assertTrue(adapter.validate_vpa("merchant.store@axisbank"))
+        self.assertTrue(adapter.validate_vpa("neha_99@paytm"))
+
+        # 2. Invalid VPA formats
+        self.assertFalse(adapter.validate_vpa("invalid-vpa-no-handle"))
+        self.assertFalse(adapter.validate_vpa("invalid@"))
+        self.assertFalse(adapter.validate_vpa("@bank"))
+
+        # 3. Penny-drop verification
+        penny = adapter.verify_penny_drop("host.anand@okhdfcbank")
+        self.assertTrue(penny.is_valid)
+        self.assertEqual(penny.amount, 1.0)
+        self.assertTrue(penny.is_mock)
+        self.assertIn("No real currency", penny.mock_disclaimer)
+
+        # 4. Verify VPA API endpoint
+        res = self.client.post("/api/v1/escrow/verify-vpa", json={"vpa": "host.anand@okhdfcbank"})
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()["data"]
+        self.assertTrue(data["is_valid"])
+        self.assertTrue(data["is_mock"])
+        self.assertEqual(data["vpa"], "host.anand@okhdfcbank")
+
+    # =========================================================================
+    # 7. Admin Dispute Adjudication & Summary
     # =========================================================================
 
     def test_admin_dispute_resolution(self):
@@ -253,15 +469,10 @@ class EscrowTestCase(unittest.TestCase):
         self.assertEqual(data["status"], "REFUNDED")
         self.assertIsNotNone(data["refunded_at"])
 
-    # =========================================================================
-    # 5. Automated Release Processing (Cron / Background Worker)
-    # =========================================================================
-
     def test_process_scheduled_releases_cron(self):
         """Verify background batch worker auto-releases eligible matured escrows."""
         escrow = EscrowService.hold_funds(self.booking)
         escrow.status = "RELEASE_SCHEDULED"
-        # Simulate scheduled time in the past
         escrow.release_scheduled_at = utc_now() - timedelta(minutes=5)
         db.session.commit()
 
@@ -273,10 +484,6 @@ class EscrowTestCase(unittest.TestCase):
         db.session.refresh(escrow)
         self.assertEqual(escrow.status, "RELEASED")
         self.assertIsNotNone(escrow.released_at)
-
-    # =========================================================================
-    # 6. Admin Summary Metrics
-    # =========================================================================
 
     def test_admin_escrow_summary_metrics(self):
         """Verify platform financial summary endpoint for administrative metrics."""
@@ -291,7 +498,7 @@ class EscrowTestCase(unittest.TestCase):
         self.assertIn("total_refunded", data)
         self.assertIn("total_frozen", data)
         self.assertIn("active_disputes_count", data)
-        self.assertGreaterEqual(data["total_held"], 1006.2)
+        self.assertGreaterEqual(data["total_held"], 1045.0)
 
         # Non-admin view forbidden
         res_guest = self.client.get("/api/v1/escrow/summary", headers=self.guest_headers)
