@@ -391,6 +391,22 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     register_system_routes(app)
     register_cli_commands(app)
 
+    # Auto-initialize database tables if not created yet (idempotent)
+    if not app.config.get("TESTING"):
+        with app.app_context():
+            try:
+                import models  # noqa: F401
+                db.create_all()
+                try:
+                    from models import Space
+                    if Space.query.count() == 0:
+                        from backend.app.persistence.seed import seed_all
+                        seed_all(app)
+                except Exception as seed_err:
+                    app.logger.info(f"Seed data skipped or already present: {seed_err}")
+            except Exception as db_err:
+                app.logger.warning(f"Database schema initialization deferred: {db_err}")
+
     return app
 
 
