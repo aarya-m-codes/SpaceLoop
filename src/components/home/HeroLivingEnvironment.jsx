@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -7,22 +6,21 @@ import { useTheme } from '../../hooks/useTheme';
  * HeroLivingEnvironment Component
  * Fullscreen first impression / front page of SpaceLoop.
  * 
- * Exact Animation Sequence (<= 2.0s):
- * - 0.0s -> 0.5s: ONLY the sky/background is shown. Clouds are moving slowly.
- * - 0.5s -> 1.3s: Buildings rise smoothly from the bottom.
- *                 SIMULTANEOUSLY, "SPACELOOP" descends smoothly from the top.
- * - 1.3s -> 2.0s: Under "SPACELOOP", "Find a space, make it yours" in italics
- *                 descends and fades in.
- * - 2.0s: Sequence completes.
+ * Strict Timeline Animation Sequence (Maximum 2.0s):
+ * - 0.0s: Sky visible, clouds visible and slowly moving.
+ * - 0.0s -> 1.2s: Buildings start below viewport and rise smoothly into position.
+ * - 0.2s -> 1.2s: SPACELOOP descends from above and fades in (simultaneous with rising buildings).
+ * - 1.0s -> 1.8s: "Find a space, make it yours" in italics descends and fades in.
+ * - 1.8s -> 2.4s: Scroll explore cue fades in.
+ * - 0.0s -> continuously: Clouds continuously drift horizontally.
  * 
- * 100% Edge-to-Edge: 8px bleed prevents any subpixel line, border, or corner seam.
+ * 100% Edge-to-Edge: 12px bleed and matched background prevent any edge line or corner seam.
  */
 export const HeroLivingEnvironment = ({ onScrollExplore }) => {
   const { isDark } = useTheme();
-  const shouldReduceMotion = useReducedMotion();
 
   return (
-    <section className="relative w-full h-[100dvh] min-h-[580px] flex flex-col justify-between items-center overflow-hidden select-none border-none m-0 p-0 bg-transparent">
+    <section className="relative w-full h-[100dvh] min-h-[580px] flex flex-col justify-between items-center overflow-hidden select-none border-none m-0 p-0 bg-[#d0c3b3] dark:bg-[#060e1c]">
       
       {/* ==========================================================================
           1. SKY BASE LAYER (0.0s -> Continuous)
@@ -38,58 +36,47 @@ export const HeroLivingEnvironment = ({ onScrollExplore }) => {
 
       {/* ==========================================================================
           2. CLOUD ANIMATION (0.0s -> Continuous before, during, & after intro)
-             Seamless infinite horizontal drift with multi-layer depth.
+             Seamless infinite horizontal drift with multi-layer parallax depth.
          ========================================================================== */}
-      {!shouldReduceMotion && (
-        <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden h-[62%]">
-          {/* Layer 1: Distant Slow Clouds */}
-          <div className="absolute top-[6%] w-[200%] h-32 opacity-35 cloud-layer-back flex">
-            <svg viewBox="0 0 1200 120" className="w-1/2 h-full fill-white/85 dark:fill-slate-300/40 shrink-0">
-              <path d="M50,80 Q90,30 150,50 Q200,20 260,45 Q310,15 380,50 Q430,35 480,75 Q520,40 580,60 Q630,25 700,55 Q760,30 820,65 Q880,35 940,60 Q1000,20 1060,55 Q1120,40 1180,80 Z" filter="blur(8px)" />
-            </svg>
-            <svg viewBox="0 0 1200 120" className="w-1/2 h-full fill-white/85 dark:fill-slate-300/40 shrink-0">
-              <path d="M50,80 Q90,30 150,50 Q200,20 260,45 Q310,15 380,50 Q430,35 480,75 Q520,40 580,60 Q630,25 700,55 Q760,30 820,65 Q880,35 940,60 Q1000,20 1060,55 Q1120,40 1180,80 Z" filter="blur(8px)" />
-            </svg>
-          </div>
-
-          {/* Layer 2: Mid-ground Drifting Clouds */}
-          <div className="absolute top-[15%] w-[200%] h-40 opacity-45 cloud-layer-mid flex">
-            <svg viewBox="0 0 1400 140" className="w-1/2 h-full fill-white/95 dark:fill-slate-200/50 shrink-0">
-              <path d="M40,90 Q100,40 170,60 Q230,25 300,55 Q370,20 440,65 Q510,35 580,70 Q660,25 740,60 Q820,30 900,75 Q980,35 1060,65 Q1140,25 1220,70 Q1300,45 1370,90 Z" filter="blur(11px)" />
-            </svg>
-            <svg viewBox="0 0 1400 140" className="w-1/2 h-full fill-white/95 dark:fill-slate-200/50 shrink-0">
-              <path d="M40,90 Q100,40 170,60 Q230,25 300,55 Q370,20 440,65 Q510,35 580,70 Q660,25 740,60 Q820,30 900,75 Q980,35 1060,65 Q1140,25 1220,70 Q1300,45 1370,90 Z" filter="blur(11px)" />
-            </svg>
-          </div>
-
-          {/* Layer 3: Closer Gentle Wisps */}
-          <div className="absolute top-[24%] w-[200%] h-36 opacity-40 cloud-layer-fore flex">
-            <svg viewBox="0 0 1500 130" className="w-1/2 h-full fill-white dark:fill-slate-100/40 shrink-0">
-              <path d="M60,85 Q130,45 210,65 Q290,30 370,65 Q450,25 530,70 Q620,35 710,65 Q800,25 890,70 Q980,40 1070,75 Q1160,30 1250,70 Q1340,45 1430,85 Z" filter="blur(14px)" />
-            </svg>
-            <svg viewBox="0 0 1500 130" className="w-1/2 h-full fill-white dark:fill-slate-100/40 shrink-0">
-              <path d="M60,85 Q130,45 210,65 Q290,30 370,65 Q450,25 530,70 Q620,35 710,65 Q800,25 890,70 Q980,40 1070,75 Q1160,30 1250,70 Q1340,45 1430,85 Z" filter="blur(14px)" />
-            </svg>
-          </div>
+      <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden h-[62%]">
+        {/* Layer 1: Distant Slow Clouds */}
+        <div className="absolute top-[6%] w-[200%] h-32 opacity-45 cloud-layer-back flex">
+          <svg viewBox="0 0 1200 120" className="w-1/2 h-full fill-white/85 dark:fill-slate-300/40 shrink-0">
+            <path d="M50,80 Q90,30 150,50 Q200,20 260,45 Q310,15 380,50 Q430,35 480,75 Q520,40 580,60 Q630,25 700,55 Q760,30 820,65 Q880,35 940,60 Q1000,20 1060,55 Q1120,40 1180,80 Z" filter="blur(3px)" />
+          </svg>
+          <svg viewBox="0 0 1200 120" className="w-1/2 h-full fill-white/85 dark:fill-slate-300/40 shrink-0">
+            <path d="M50,80 Q90,30 150,50 Q200,20 260,45 Q310,15 380,50 Q430,35 480,75 Q520,40 580,60 Q630,25 700,55 Q760,30 820,65 Q880,35 940,60 Q1000,20 1060,55 Q1120,40 1180,80 Z" filter="blur(3px)" />
+          </svg>
         </div>
-      )}
+
+        {/* Layer 2: Mid-ground Drifting Clouds */}
+        <div className="absolute top-[14%] w-[200%] h-40 opacity-55 cloud-layer-mid flex">
+          <svg viewBox="0 0 1400 140" className="w-1/2 h-full fill-white/95 dark:fill-slate-200/50 shrink-0">
+            <path d="M40,90 Q100,40 170,60 Q230,25 300,55 Q370,20 440,65 Q510,35 580,70 Q660,25 740,60 Q820,30 900,75 Q980,35 1060,65 Q1140,25 1220,70 Q1300,45 1370,90 Z" filter="blur(4px)" />
+          </svg>
+          <svg viewBox="0 0 1400 140" className="w-1/2 h-full fill-white/95 dark:fill-slate-200/50 shrink-0">
+            <path d="M40,90 Q100,40 170,60 Q230,25 300,55 Q370,20 440,65 Q510,35 580,70 Q660,25 740,60 Q820,30 900,75 Q980,35 1060,65 Q1140,25 1220,70 Q1300,45 1370,90 Z" filter="blur(4px)" />
+          </svg>
+        </div>
+
+        {/* Layer 3: Closer Gentle Wisps */}
+        <div className="absolute top-[22%] w-[200%] h-36 opacity-50 cloud-layer-fore flex">
+          <svg viewBox="0 0 1500 130" className="w-1/2 h-full fill-white dark:fill-slate-100/40 shrink-0">
+            <path d="M60,85 Q130,45 210,65 Q290,30 370,65 Q450,25 530,70 Q620,35 710,65 Q800,25 890,70 Q980,40 1070,75 Q1160,30 1250,70 Q1340,45 1430,85 Z" filter="blur(5px)" />
+          </svg>
+          <svg viewBox="0 0 1500 130" className="w-1/2 h-full fill-white dark:fill-slate-100/40 shrink-0">
+            <path d="M60,85 Q130,45 210,65 Q290,30 370,65 Q450,25 530,70 Q620,35 710,65 Q800,25 890,70 Q980,40 1070,75 Q1160,30 1250,70 Q1340,45 1430,85 Z" filter="blur(5px)" />
+          </svg>
+        </div>
+      </div>
 
       {/* ==========================================================================
-          3. BUILDINGS RISING ANIMATION (0.5s -> 1.3s)
-             - 0.0s to 0.5s: Translated down 35% so only sky is in the viewport.
-             - 0.5s to 1.3s: Rises smoothly into full view.
-             - 8px bleed on all edges completely eliminates any corner/edge seams.
+          3. BUILDINGS RISING ANIMATION (0.0s -> 1.2s)
+             - Starts below viewport at transform: translate3d(0, 100%, 0)
+             - Smoothly rises to position at translate3d(0, 0, 0) in 1.2s
+             - 12px bleed completely eliminates any corner or edge seams
          ========================================================================== */}
-      <motion.div
-        initial={shouldReduceMotion ? { y: '0%' } : { y: '35%' }}
-        animate={{ y: '0%' }}
-        transition={{
-          delay: 0.5,
-          duration: 0.8,
-          ease: [0.16, 1, 0.3, 1],
-        }}
-        className="absolute -top-2 -bottom-2 -left-2 -right-2 z-15 pointer-events-none overflow-hidden"
-      >
+      <div className="hero-buildings-rise absolute -top-3 -bottom-3 -left-3 -right-3 z-15 pointer-events-none overflow-hidden">
         {/* Light Theme: Sunset Architectural Building */}
         <img
           src="/images/spaceloop-hero-light.jpg"
@@ -118,26 +105,24 @@ export const HeroLivingEnvironment = ({ onScrollExplore }) => {
         />
 
         {/* Gentle Breeze Sway on Rooftop Foliage */}
-        {!shouldReduceMotion && (
+        <div
+          className="absolute pointer-events-none foliage-breeze"
+          style={{
+            top: '67%',
+            left: '26%',
+            width: '48%',
+            height: '14%',
+          }}
+        >
           <div
-            className="absolute pointer-events-none foliage-breeze"
-            style={{
-              top: '67%',
-              left: '26%',
-              width: '48%',
-              height: '14%',
-            }}
-          >
-            <div
-              className={`w-full h-full rounded-full blur-md opacity-25 ${
-                isDark ? 'bg-emerald-950/40' : 'bg-emerald-600/20'
-              }`}
-            />
-          </div>
-        )}
+            className={`w-full h-full rounded-full blur-md opacity-25 ${
+              isDark ? 'bg-emerald-950/40' : 'bg-emerald-600/20'
+            }`}
+          />
+        </div>
 
         {/* Natural Sun Glow Pulse (Light Theme) */}
-        {!isDark && !shouldReduceMotion && (
+        {!isDark && (
           <div
             className="absolute pointer-events-none sun-ambient-pulse"
             style={{
@@ -150,51 +135,33 @@ export const HeroLivingEnvironment = ({ onScrollExplore }) => {
             <div className="w-full h-full rounded-full bg-gradient-to-r from-amber-200/50 via-yellow-100/35 to-transparent blur-2xl" />
           </div>
         )}
-      </motion.div>
+      </div>
 
       {/* Top spacer */}
       <div className="w-full pt-16 z-30" />
 
       {/* ==========================================================================
           4. TYPOGRAPHY
-             - "SPACELOOP" appears from top SIMULTANEOUSLY with rising building (0.5s -> 1.3s)
-             - "Find a space, make it yours" in italics appears right below (1.3s -> 2.0s)
+             - "SPACELOOP" descends from top and fades in (0.2s -> 1.2s)
+             - "Find a space, make it yours" in italics descends and fades in (1.0s -> 1.8s)
          ========================================================================== */}
       <div className="relative z-30 text-center px-4 max-w-4xl mx-auto my-auto space-y-3.5">
         {/* Brand Title: SPACELOOP */}
-        <motion.h1
-          initial={shouldReduceMotion ? {} : { opacity: 0, y: -45, letterSpacing: '0.12em' }}
-          animate={shouldReduceMotion ? {} : { opacity: 1, y: 0, letterSpacing: '0.24em' }}
-          transition={{
-            delay: 0.5,
-            duration: 0.8,
-            ease: [0.16, 1, 0.3, 1],
-          }}
-          className="text-5xl sm:text-7xl lg:text-8xl font-black text-white tracking-[0.24em] uppercase drop-shadow-[0_4px_28px_rgba(0,0,0,0.85)]"
-        >
+        <h1 className="hero-title-enter text-5xl sm:text-7xl lg:text-8xl font-black text-white tracking-[0.24em] uppercase drop-shadow-[0_4px_28px_rgba(0,0,0,0.85)]">
           SPACELOOP
-        </motion.h1>
+        </h1>
 
         {/* Brand Subtitle in Italics: "Find a space, make it yours" */}
-        <motion.p
-          initial={shouldReduceMotion ? {} : { opacity: 0, y: -25 }}
-          animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
-          transition={{
-            delay: 1.3,
-            duration: 0.7,
-            ease: [0.16, 1, 0.3, 1],
-          }}
-          className="text-base sm:text-xl lg:text-2xl font-light italic text-white/95 tracking-wide drop-shadow-[0_2px_14px_rgba(0,0,0,0.9)]"
-        >
+        <p className="hero-subtitle-enter text-base sm:text-xl lg:text-2xl font-light italic text-white/95 tracking-wide drop-shadow-[0_2px_14px_rgba(0,0,0,0.9)]">
           Find a space, make it yours
-        </motion.p>
+        </p>
       </div>
 
       {/* ==========================================================================
           5. SLEEK SCROLL / EXPLORE INDICATOR
-             Triggers the page-turn / upward slide transition into Explore.
+             Fades in smoothly at 1.8s. Triggers the page-turn upward slide transition.
          ========================================================================== */}
-      <div className="relative z-30 pb-8 flex flex-col items-center">
+      <div className="hero-explore-cue relative z-30 pb-8 flex flex-col items-center">
         <button
           type="button"
           onClick={onScrollExplore}

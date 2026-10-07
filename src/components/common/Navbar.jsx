@@ -25,16 +25,21 @@ export const Navbar = () => {
     return location.pathname.startsWith(path);
   };
 
+  const handleNavClick = (e, path) => {
+    if (path === '#spaceloop-content') {
+      e.preventDefault();
+      const el = document.getElementById('spaceloop-content');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
+
   return (
-    <motion.header
-      initial={isLanding ? { opacity: 0, y: -48 } : { opacity: 1, y: 0 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        delay: isLanding ? 2.0 : 0,
-        duration: 0.5,
-        ease: [0.16, 1, 0.3, 1],
-      }}
-      className="fixed top-0 left-0 right-0 z-50 w-full glass-panel border-b border-border transition-colors duration-250"
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 w-full glass-panel border-b border-border transition-colors duration-250 ${
+        isLanding ? 'landing-header-enter' : ''
+      }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
@@ -61,6 +66,7 @@ export const Navbar = () => {
                 <Link
                   key={link.name}
                   to={link.path}
+                  onClick={(e) => handleNavClick(e, link.path)}
                   className={`relative px-3.5 py-2 text-sm font-medium rounded-lg transition-colors duration-150 ${
                     active
                       ? 'text-primary'
@@ -187,7 +193,7 @@ export const Navbar = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.header>
+    </header>
   );
 };
 

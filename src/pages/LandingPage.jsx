@@ -31,7 +31,6 @@ import { SPACES_DATA } from '../utils/constants';
 
 export const LandingPage = () => {
   const navigate = useNavigate();
-  const shouldReduceMotion = useReducedMotion();
 
   const [locationQuery, setLocationQuery] = useState('');
   const [selectedType, setSelectedType] = useState('all');
@@ -48,9 +47,9 @@ export const LandingPage = () => {
 
   // Scroll-linked transition for Hero -> Explore transition ONLY
   const { scrollY } = useScroll();
-  const heroY = useTransform(scrollY, [0, windowHeight], ['0%', '-24%']);
-  const heroScale = useTransform(scrollY, [0, windowHeight], [1, 0.94]);
-  const heroOpacity = useTransform(scrollY, [0, windowHeight * 0.85, windowHeight], [1, 0.7, 0.2]);
+  const heroY = useTransform(scrollY, [0, windowHeight], ['0%', '-30%']);
+  const heroScale = useTransform(scrollY, [0, windowHeight], [1, 0.92]);
+  const heroOpacity = useTransform(scrollY, [0, windowHeight * 0.8, windowHeight], [1, 0.6, 0.2]);
 
   const handleScrollExplore = () => {
     const target = document.getElementById('spaceloop-content');
@@ -135,16 +134,12 @@ export const LandingPage = () => {
           100% seamless: No visible edge, margin, border, or line.
          ========================================================================== */}
       <motion.div
-        style={
-          shouldReduceMotion
-            ? {}
-            : {
-                y: heroY,
-                scale: heroScale,
-                opacity: heroOpacity,
-              }
-        }
-        className="sticky top-0 h-[100dvh] w-full overflow-hidden z-0 border-none m-0 p-0"
+        style={{
+          y: heroY,
+          scale: heroScale,
+          opacity: heroOpacity,
+        }}
+        className="sticky top-0 h-[100dvh] w-full overflow-hidden z-0 border-none m-0 p-0 bg-[#d0c3b3] dark:bg-[#060e1c]"
       >
         <HeroLivingEnvironment onScrollExplore={handleScrollExplore} />
       </motion.div>
