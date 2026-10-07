@@ -12,5 +12,18 @@ def validate_access(current_user):
     lat = data.get('lat')
     lng = data.get('lng')
     pin = data.get('pin')
-    res, code = BookingService.checkin_with_pin(booking_id, current_user.id, pin, lat, lng)
+    qr_token = data.get('qr_token')
+    photos = data.get('photos')
+    
+    res, err, code = BookingService.check_in_booking(
+        booking_id=booking_id,
+        current_user=current_user,
+        lat=lat,
+        lng=lng,
+        photos=photos,
+        arrival_pin=pin,
+        qr_token=qr_token
+    )
+    if err:
+        return jsonify({'error': err}), code
     return jsonify(res), code

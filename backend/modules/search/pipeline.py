@@ -202,3 +202,8 @@ class DiscoveryPipeline:
             "total_pages": total_pages,
             "parsed_constraints": constraints,
         }
+
+
+# Alias for clean architecture compatibility
+SearchPipeline = DiscoveryPipeline
+

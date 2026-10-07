@@ -7,5 +7,5 @@ loop_bp = Blueprint('loop_api', __name__)
 def loop_chat():
     data = request.get_json() or {}
     message = data.get('message', '')
-    res = LoopBotOrchestrator.respond(message)
+    res = LoopBotOrchestrator.process_message(message=message)
     return jsonify(res), 200
