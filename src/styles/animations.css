@@ -3,8 +3,8 @@
    Calm, natural, premium environmental breeze & sky animations
    ========================================================================== */
 
-/* Seamless Infinite Cloud Drifting Animations */
-@keyframes seamlessCloudsSlow {
+/* Seamless Infinite Cloud Drifting Animations (Parallax & Directional Depth) */
+@keyframes cloudsDriftLeft {
   0% {
     transform: translate3d(0, 0, 0);
   }
@@ -13,36 +13,27 @@
   }
 }
 
-@keyframes seamlessCloudsMedium {
+@keyframes cloudsDriftRight {
   0% {
-    transform: translate3d(0, 0, 0);
-  }
-  100% {
     transform: translate3d(-50%, 0, 0);
   }
-}
-
-@keyframes seamlessCloudsFast {
-  0% {
-    transform: translate3d(0, 0, 0);
-  }
   100% {
-    transform: translate3d(-50%, 0, 0);
+    transform: translate3d(0, 0, 0);
   }
 }
 
 .cloud-layer-back {
-  animation: seamlessCloudsSlow 60s linear infinite;
+  animation: cloudsDriftLeft 52s linear infinite !important;
   will-change: transform;
 }
 
 .cloud-layer-mid {
-  animation: seamlessCloudsMedium 38s linear infinite;
+  animation: cloudsDriftRight 36s linear infinite !important;
   will-change: transform;
 }
 
 .cloud-layer-fore {
-  animation: seamlessCloudsFast 24s linear infinite;
+  animation: cloudsDriftLeft 26s linear infinite !important;
   will-change: transform;
 }
 
@@ -168,17 +159,17 @@
 }
 
 /* ==========================================================================
-   SpaceLoop Hero Intro Timeline (Strict 2.0s Maximum Sequence)
-   - 0.0s -> 1.2s: Buildings start below viewport and rise smoothly into position
-   - 0.2s -> 1.2s: SPACELOOP title descends from above and fades in
-   - 1.0s -> 1.8s: "Find a space, make it yours" in italics descends and fades in
-   - 1.8s -> 2.4s: Scroll explore cue fades in
-   - 2.0s -> 2.6s: Existing header smoothly slides down from top
+   SpaceLoop Hero Intro Timeline (Observable, Noticeable, Elegant Sequence)
+   - 0.0s -> 1.4s: Buildings start at translateY(100vh) and rise smoothly to translateY(0)
+   - 0.2s -> 1.2s: SPACELOOP title: translateY(-60px) + opacity: 0 -> translateY(0) + opacity: 1
+   - 1.0s -> 1.8s: Subtitle in italics: translateY(-40px) + opacity: 0 -> translateY(0) + opacity: 1
+   - 1.8s -> 2.4s: Scroll explore cue fades in smoothly
+   - 2.0s -> 2.6s: Header reveal: translateY(-20px) + opacity: 0 -> translateY(0) + opacity: 1
    ========================================================================== */
 
 @keyframes buildingRise {
   0% {
-    transform: translate3d(0, 100%, 0);
+    transform: translate3d(0, 100vh, 0);
   }
   100% {
     transform: translate3d(0, 0, 0);
@@ -199,7 +190,7 @@
 @keyframes subtitleDescend {
   0% {
     opacity: 0;
-    transform: translate3d(0, -35px, 0);
+    transform: translate3d(0, -40px, 0);
   }
   100% {
     opacity: 1;
@@ -221,13 +212,15 @@
 @keyframes headerReveal {
   0% {
     opacity: 0;
-    transform: translate3d(0, -100%, 0);
+    transform: translate3d(0, -20px, 0);
     pointer-events: none;
+    visibility: hidden;
   }
   1% {
     opacity: 0;
-    transform: translate3d(0, -100%, 0);
+    transform: translate3d(0, -20px, 0);
     pointer-events: none;
+    visibility: visible;
   }
   99% {
     pointer-events: none;
@@ -236,31 +229,32 @@
     opacity: 1;
     transform: translate3d(0, 0, 0);
     pointer-events: auto;
+    visibility: visible;
   }
 }
 
 .hero-buildings-rise {
-  animation: buildingRise 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0s both;
+  animation: buildingRise 1.4s cubic-bezier(0.25, 1, 0.5, 1) 0s both !important;
   will-change: transform;
 }
 
 .hero-title-enter {
-  animation: titleDescend 1.0s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+  animation: titleDescend 1.0s cubic-bezier(0.25, 1, 0.5, 1) 0.2s both !important;
   will-change: transform, opacity;
 }
 
 .hero-subtitle-enter {
-  animation: subtitleDescend 0.8s cubic-bezier(0.16, 1, 0.3, 1) 1.0s both;
+  animation: subtitleDescend 0.8s cubic-bezier(0.25, 1, 0.5, 1) 1.0s both !important;
   will-change: transform, opacity;
 }
 
 .hero-explore-cue {
-  animation: exploreCueFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1.8s both;
+  animation: exploreCueFadeIn 0.6s cubic-bezier(0.25, 1, 0.5, 1) 1.8s both !important;
   will-change: transform, opacity;
 }
 
 .landing-header-enter {
-  animation: headerReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 2.0s both;
+  animation: headerReveal 0.6s cubic-bezier(0.25, 1, 0.5, 1) 2.0s both !important;
   will-change: transform, opacity;
 }
 

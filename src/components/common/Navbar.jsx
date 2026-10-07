@@ -14,7 +14,7 @@ export const Navbar = () => {
   const isLanding = location.pathname === '/';
 
   const navLinks = [
-    { name: 'Explore', path: '/explore', icon: Compass },
+    { name: 'Explore', path: isLanding ? '#spaceloop-content' : '/explore', icon: Compass },
     { name: 'How It Works', path: '/#how-it-works' },
     { name: 'List a Space', path: '/host', icon: PlusCircle },
     { name: 'Bookings', path: '/bookings', icon: Calendar },
