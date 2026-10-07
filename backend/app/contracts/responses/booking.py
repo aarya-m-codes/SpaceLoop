@@ -1,0 +1,2 @@
+class BookingResponse:
+    pass

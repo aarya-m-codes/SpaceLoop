@@ -1,0 +1,2 @@
+class AuditRetentionPolicy:
+    pass

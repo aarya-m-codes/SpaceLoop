@@ -1,21 +1,23 @@
-## Description
-<!-- Provide a concise description of the changes made and the motivation behind them. -->
+## Summary of Changes
+<!-- Provide a clear, concise summary of the changes introduced by this pull request. -->
 
 ## Type of Change
-- [ ] 🚀 New feature (non-breaking change which adds functionality)
-- [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
-- [ ] 💄 UI/UX improvement (visual or interaction refinement)
-- [ ] ⚡ Performance optimization
-- [ ] 🔒 Security hardening
-- [ ] 📝 Documentation update
-- [ ] 🏗️ Architecture/Refactoring
+- [ ] Bug fix (non-breaking change which fixes an issue)
+- [ ] New feature (non-breaking change which adds functionality)
+- [ ] Breaking change (fix or feature that causes existing functionality to change)
+- [ ] Security fix / Hardening
+- [ ] Performance improvement / Refactoring
+- [ ] Documentation / CI/CD update
 
-## Related Issues
-<!-- Link relevant GitHub issues or tickets (e.g. Closes #123) -->
+## Verification & Testing
+- [ ] Unit tests added/updated and passing
+- [ ] Integration tests passing
+- [ ] Frontend build verifies cleanly (`npm run build`)
+- [ ] Security checks run without issues
 
 ## Checklist
-- [ ] My code adheres to the project's architectural guidelines and lint rules.
-- [ ] I have verified that UI elements stretch edge-to-edge with no unintended horizontal scroll or visible border seams.
-- [ ] All intro animations and light/dark theme switches behave consistently.
-- [ ] I have run local tests (`npm test` and `pytest tests/`) and they pass.
-- [ ] I have updated corresponding documentation if applicable.
+- [ ] My code adheres to the project code standards
+- [ ] I have self-reviewed my own code
+- [ ] I have commented complex or critical financial/security logic
+- [ ] No secrets, keys, or PII are committed
+- [ ] All database migration scripts are backwards-compatible

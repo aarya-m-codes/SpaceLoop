@@ -1,16 +1,22 @@
-# Global repository owners
-* @aarya-m-codes
+# SpaceLoop Enterprise Code Owners
 
-# Frontend components and UI
-/src/ @aarya-m-codes
-/public/ @aarya-m-codes
+* @spaceloop/core-team
 
-# Backend engines and microservices
-/backend/ @aarya-m-codes
-/fraud_engine/ @aarya-m-codes
-/*.py @aarya-m-codes
+# Architecture & Security
+/backend/core/ @spaceloop/backend-leads @spaceloop/security
+/backend/modules/trust_safety/ @spaceloop/trust-safety @spaceloop/security
+/fraud_engine/ @spaceloop/ml-leads @spaceloop/security
+/security/ @spaceloop/security
 
-# CI/CD and Devops infrastructure
-/.github/ @aarya-m-codes
-/infrastructure/ @aarya-m-codes
-/deployment/ @aarya-m-codes
+# Payments & Escrow
+/backend/modules/escrow/ @spaceloop/fintech-leads
+/contracts/ @spaceloop/backend-leads
+
+# Frontend
+/src/ @spaceloop/frontend-leads
+/frontend/ @spaceloop/frontend-leads
+
+# DevOps & Infrastructure
+/.github/ @spaceloop/devops
+/infrastructure/ @spaceloop/devops
+/deployment/ @spaceloop/devops

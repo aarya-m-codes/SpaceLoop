@@ -1,28 +1,16 @@
-# Security Policy
+# SpaceLoop Security Policy
 
-SpaceLoop treats trust, verification, and workspace safety as first-class architectural priorities.
+## Reporting Vulnerabilities
+SpaceLoop values security researchers and community feedback. If you discover a vulnerability or security flaw, please notify us immediately through coordinated vulnerability disclosure at `security@spaceloop.app`.
 
-## Supported Versions
+Please provide:
+- Vulnerability description and scope
+- Reproduction steps and proof of concept
+- Potential impact analysis
+- Remediation recommendations if known
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.0.x   | :white_check_mark: |
-| < 1.0   | :x:                |
-
-## Reporting a Vulnerability
-
-If you discover a security vulnerability within SpaceLoop, please do **NOT** disclose it publicly via GitHub issues.
-
-Instead, please send an encrypted or direct disclosure report to:
-- **Email**: `security@spaceloop.io` or `aarya.codes@gmail.com`
-- **PGP Key**: Available upon request.
-
-Please include:
-1. Vulnerability description and scope (e.g., Auth, Escrow Settlement, Smart Access PIN leakage, Trust Engine bypass).
-2. Step-by-step reproduction guide or proof-of-concept (PoC).
-3. Impact evaluation.
-
-We commit to:
-- Acknowledge receipt within **24 hours**.
-- Provide a patch timeline within **72 hours**.
-- Credit researchers in our Hall of Fame upon verified disclosure.
+## Security Principles
+1. **Defense in Depth**: Every API endpoint verifies authentication, authorization, and tenant isolation server-side.
+2. **Zero Raw Identity Storage**: Government IDs such as Aadhaar are strictly hashed with SHA-256 and salted tokens; raw identity numbers are never persisted.
+3. **Financial Protection**: All financial settlements and micro-escrow releases require double-spend prevention, idempotent state transitions, and server-side calculation.
+4. **Physical Geofencing**: Check-in requires GPS verification within 50 meters of listing coordinates and within a 15-minute temporal arrival window.

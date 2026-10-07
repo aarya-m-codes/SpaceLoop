@@ -1,0 +1,7 @@
+{
+  "environment": "staging",
+  "debug": false,
+  "testing": false,
+  "rate_limiting": true,
+  "log_level": "INFO"
+}

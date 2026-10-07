@@ -1,0 +1,2 @@
+class HealthProbe:
+    pass

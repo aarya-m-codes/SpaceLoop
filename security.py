@@ -63,3 +63,8 @@ def generate_access_code(length: int = 6) -> str:
     """Generate an alphanumeric access code for space check-in."""
     alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # omit ambiguous characters (0, O, 1, I)
     return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+# Compatibility alias
+from backend.modules.auth.permissions import require_auth as token_required
+

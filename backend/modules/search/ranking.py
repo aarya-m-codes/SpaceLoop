@@ -9,15 +9,17 @@ from typing import Any
 from backend.core.geo import haversine_distance_km
 
 # Canonical stage-6 ranking weights (sum to 1.00)
-WEIGHT_VECTOR = 0.35
-WEIGHT_KEYWORD = 0.20
-WEIGHT_PRICE = 0.15
-WEIGHT_GEO = 0.20
+WEIGHT_VECTOR = 0.25
+WEIGHT_KEYWORD = 0.15
+WEIGHT_NOISE = 0.15
+WEIGHT_GEO = 0.15
+WEIGHT_PRICE = 0.10
+WEIGHT_CAPACITY = 0.10
 WEIGHT_TRUST = 0.10
 
 
 class RankingEngine:
-    """Calculates composite ranking scores across vector, keyword, price, geo, and trust."""
+    """Calculates composite ranking scores across vector, keyword, noise, geo, price, capacity, and trust."""
 
     @classmethod
     def calculate_score(
@@ -34,6 +36,10 @@ class RankingEngine:
         search_city: str | None = None,
         space_city: str | None = None,
         is_available: bool = True,
+        s_noise: float = 1.0,
+        space_capacity: int = 1,
+        requested_capacity: int | None = None,
+        s_capacity: float | None = None,
     ) -> dict[str, Any]:
         """Compute individual scores, composite score, and detailed diagnostic breakdown."""
         # 1. Vector score: clamped [0.0, 1.0]
@@ -42,10 +48,13 @@ class RankingEngine:
         # 2. Keyword score: clamped [0.0, 1.0]
         s_key = max(0.0, min(1.0, float(s_keyword)))
 
-        # 3. Price score: 1.0 inside budget, linearly degrading when over budget
+        # 3. Noise / Acoustic score: clamped [0.0, 1.0]
+        s_n = max(0.0, min(1.0, float(s_noise)))
+
+        # 4. Price score: 1.0 inside budget, linearly degrading when over budget
         s_price = cls.calculate_price_score(price_per_hour, budget)
 
-        # 4. Geography score: Haversine distance, 1.0 within 2km, degrade to 0 at 25km
+        # 5. Geography score: Haversine distance, 1.0 within 2km, degrade to 0 at 25km
         s_geo, distance_km = cls.calculate_geo_score(
             space_lat=space_lat,
             space_lng=space_lng,
@@ -55,15 +64,23 @@ class RankingEngine:
             space_city=space_city,
         )
 
-        # 5. Trust score: Host Objective Trust Score normalized to [0, 1]
+        # 6. Capacity suitability score
+        if s_capacity is not None:
+            s_cap = max(0.0, min(1.0, float(s_capacity)))
+        else:
+            s_cap = cls.calculate_capacity_score(space_capacity, requested_capacity)
+
+        # 7. Trust score: Host Objective Trust Score normalized to [0, 1]
         s_trust = cls.calculate_trust_score(host_trust_score)
 
-        # 6. Composite weighted combination
+        # 8. Composite weighted combination
         raw_score = (
             (WEIGHT_VECTOR * s_vec)
             + (WEIGHT_KEYWORD * s_key)
-            + (WEIGHT_PRICE * s_price)
+            + (WEIGHT_NOISE * s_n)
             + (WEIGHT_GEO * s_geo)
+            + (WEIGHT_PRICE * s_price)
+            + (WEIGHT_CAPACITY * s_cap)
             + (WEIGHT_TRUST * s_trust)
         )
 
@@ -76,13 +93,26 @@ class RankingEngine:
             "breakdown": {
                 "s_vector": round(s_vec, 4),
                 "s_keyword": round(s_key, 4),
-                "s_price": round(s_price, 4),
+                "s_noise": round(s_n, 4),
                 "s_geo": round(s_geo, 4),
+                "s_price": round(s_price, 4),
+                "s_capacity": round(s_cap, 4),
                 "s_trust": round(s_trust, 4),
                 "distance_km": round(distance_km, 2) if distance_km is not None else None,
                 "is_available": is_available,
             },
         }
+
+    @staticmethod
+    def calculate_capacity_score(space_capacity: int, requested_capacity: int | None) -> float:
+        """Capacity suitability: 1.0 for right-sized fit, slightly degradable for oversized spaces."""
+        if requested_capacity is None or requested_capacity <= 0:
+            return 1.0
+        if space_capacity < requested_capacity:
+            return 0.0
+        # Right-size penalty: large empty halls for small groups degrade gradually
+        excess = space_capacity - requested_capacity
+        return round(max(0.50, 1.0 - (excess * 0.03)), 4)
 
     @staticmethod
     def calculate_price_score(price_per_hour: float, budget: float | None) -> float:

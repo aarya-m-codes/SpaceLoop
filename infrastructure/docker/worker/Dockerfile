@@ -1,12 +1,18 @@
+# Background Job Worker Dockerfile
 FROM python:3.11-slim
-
-ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt celery redis
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY . .
+COPY requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-CMD ["python", "-m", "celery", "-A", "app.celery", "worker", "--loglevel=info"]
+COPY . /app
+
+ENV PYTHONUNBUFFERED=1
+
+CMD ["python", "-m", "backend.app.jobs.queue"]

@@ -1,0 +1,2 @@
+class LogIntegrityVerifier:
+    pass

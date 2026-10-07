@@ -169,6 +169,7 @@ def dispute_booking(booking_id: int):
 
 
 @bookings_bp.route("/<int:booking_id>/check-in", methods=["POST"])
+@bookings_bp.route("/<int:booking_id>/checkin", methods=["POST"])
 @require_auth
 def check_in_booking(booking_id: int):
     """Mark booking as checked in with arrival PIN and GPS coordinates."""
@@ -211,6 +212,7 @@ def check_in_booking(booking_id: int):
 
 @bookings_bp.route("/<int:booking_id>/complete", methods=["POST"])
 @bookings_bp.route("/<int:booking_id>/check-out", methods=["POST"])
+@bookings_bp.route("/<int:booking_id>/checkout", methods=["POST"])
 @require_auth
 def complete_booking(booking_id: int):
     """Mark booking as completed and check out."""

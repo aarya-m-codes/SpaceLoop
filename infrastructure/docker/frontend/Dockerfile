@@ -1,17 +1,15 @@
-# Stage 1: Build React Application
-FROM node:18-alpine AS builder
+# Frontend Build & Production Nginx Stage
+FROM node:20-alpine AS builder
 
-WORKDIR /app
-COPY package*.json ./
+WORKDIR /app/frontend
+
+COPY frontend/package*.json ./
 RUN npm ci
 
-COPY . .
+COPY frontend/ ./
 RUN npm run build
 
-# Stage 2: Serve via Nginx
 FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY infrastructure/docker/nginx/nginx.conf /etc/nginx/conf.d/default.conf
-
-EXPOSE 3000
+COPY --from=builder /app/frontend/dist /usr/share/nginx/html
+EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

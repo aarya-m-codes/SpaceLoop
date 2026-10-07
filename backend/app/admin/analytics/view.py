@@ -1,0 +1,2 @@
+class AdminAnalyticsView:
+    pass

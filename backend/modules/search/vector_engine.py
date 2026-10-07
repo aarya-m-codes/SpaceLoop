@@ -68,9 +68,15 @@ class VectorEngine:
     @classmethod
     def get_embedding(cls, text: str) -> list[float]:
         """Compute normalized vector embedding for given text."""
+        emb, _ = cls.get_embedding_with_metadata(text)
+        return emb
+
+    @classmethod
+    def get_embedding_with_metadata(cls, text: str) -> tuple[list[float], str]:
+        """Compute normalized vector embedding and return with model identifier."""
         cleaned = QueryParser.normalize_text(text)
         if not cleaned:
-            return [0.0] * VECTOR_DIM
+            return [0.0] * VECTOR_DIM, "deterministic-concept-256"
 
         api_key = os.getenv("GEMINI_API_KEY")
         if api_key:
@@ -83,11 +89,104 @@ class VectorEngine:
                 )
                 if response and hasattr(response, "embedding") and response.embedding:
                     emb = list(response.embedding.values)
-                    return cls._normalize_vector(emb)
+                    return cls._normalize_vector(emb), "text-embedding-004"
             except Exception as exc:
                 logger.debug(f"Gemini embedding API unavailable ({exc}), using deterministic vectorizer.")
 
-        return cls.get_deterministic_embedding(cleaned)
+        return cls.get_deterministic_embedding(cleaned), "deterministic-concept-256"
+
+    @classmethod
+    def get_or_create_space_embedding(
+        cls,
+        space: Any,
+        force_rebuild: bool = False,
+    ) -> list[float]:
+        """Retrieve persisted embedding for space, or generate, persist, and return it.
+
+        Avoids regenerating unchanged embeddings by checking SHA-256 content_hash.
+        """
+        doc = cls.build_space_document(space)
+        content_hash = hashlib.sha256(doc.encode("utf-8")).hexdigest()
+
+        # Check existing embedding in database
+        try:
+            from backend.core.database import db
+            from models import SpaceEmbedding
+
+            existing = SpaceEmbedding.query.filter_by(space_id=space.id).first()
+            if existing and not force_rebuild:
+                if existing.content_hash == content_hash and existing.embedding:
+                    return list(existing.embedding)
+        except Exception as exc:
+            logger.debug(f"Could not load persisted embedding ({exc}), calculating in-memory.")
+            existing = None
+
+        # Compute new embedding with model tracking
+        emb, model_name = cls.get_embedding_with_metadata(doc)
+
+        # Persist to database if db session available
+        try:
+            from backend.core.database import db
+            from models import SpaceEmbedding
+
+            if existing:
+                existing.embedding = emb
+                existing.embedding_model = model_name
+                existing.embedding_version = "v1"
+                existing.content_hash = content_hash
+            else:
+                new_record = SpaceEmbedding(
+                    space_id=space.id,
+                    embedding=emb,
+                    embedding_model=model_name,
+                    embedding_version="v1",
+                    content_hash=content_hash,
+                )
+                db.session.add(new_record)
+            db.session.commit()
+        except Exception as exc:
+            logger.debug(f"Failed to persist space embedding to database ({exc}).")
+
+        return emb
+
+    @classmethod
+    def rebuild_embeddings(
+        cls,
+        space_id: int | None = None,
+        force: bool = False,
+    ) -> dict[str, Any]:
+        """Safely rebuild or update persisted embeddings for spaces.
+
+        If space_id is given, rebuilds that space only.
+        If force is True, regenerates even if content_hash matches.
+        """
+        from models import Space, SpaceEmbedding
+
+        if space_id:
+            spaces = Space.query.filter_by(id=space_id).all()
+        else:
+            spaces = Space.query.filter_by(is_active=True).all()
+
+        total = len(spaces)
+        updated = 0
+        skipped = 0
+
+        for sp in spaces:
+            doc = cls.build_space_document(sp)
+            content_hash = hashlib.sha256(doc.encode("utf-8")).hexdigest()
+            existing = SpaceEmbedding.query.filter_by(space_id=sp.id).first()
+            if existing and not force and existing.content_hash == content_hash and existing.embedding:
+                skipped += 1
+                continue
+            cls.get_or_create_space_embedding(sp, force_rebuild=True)
+            updated += 1
+
+        return {
+            "total_evaluated": total,
+            "updated": updated,
+            "skipped": skipped,
+            "force": force,
+        }
 
     @classmethod
     def get_deterministic_embedding(cls, text: str) -> list[float]:
@@ -157,22 +256,55 @@ class VectorEngine:
 
     @classmethod
     def build_space_document(cls, space: Any) -> str:
-        """Serialize space entity attributes into rich semantic representation for embedding."""
-        amenities_str = ", ".join(space.amenities) if space.amenities else ""
+        """Serialize space entity attributes into rich semantic representation for embedding.
+
+        Conforms to SpaceLoop dossier:
+        "Quiet private workspace suitable for focused study and laptop work.
+         Capacity: 4 people. Amenities: Wi-Fi, desk, power outlet. Noise: low. Privacy: private."
+        """
+        amenities_str = ", ".join(space.amenities) if space.amenities else "none specified"
         recommended_uses_str = ", ".join(space.recommended_uses) if space.recommended_uses else ""
+
+        # Privacy categorization
+        st = (space.space_type or "").lower()
+        title_lower = (space.title or "").lower()
+        desc_lower = (space.description or "").lower()
+        if st in ("room", "cabin") or "private" in title_lower or "private" in desc_lower:
+            privacy_desc = "private enclosed space"
+        elif st in ("desk", "hotdesk", "coworking"):
+            privacy_desc = "shared workspace"
+        elif st in ("meeting_room", "boardroom"):
+            privacy_desc = "private meeting space"
+        elif st in ("studio", "creative"):
+            privacy_desc = "private studio space"
+        else:
+            privacy_desc = f"{st} space"
+
+        # Acoustic characteristics
+        noise = space.ai_noise_level or "standard acoustic environment"
+
+        # Optional review comments
+        review_snippets = []
+        if hasattr(space, "reviews") and space.reviews:
+            for rev in space.reviews[:3]:
+                if rev.comment:
+                    review_snippets.append(rev.comment[:100])
+        reviews_str = "; ".join(review_snippets)
+
         doc_parts = [
             space.title or "",
             space.description or "",
-            space.space_type or "",
-            space.category or "",
-            space.neighborhood or "",
-            space.city or "",
-            space.address_line1 or "",
-            f"Amenities: {amenities_str}",
-            f"Lighting: {space.ai_lighting or ''}",
-            f"Noise level: {space.ai_noise_level or ''}",
-            f"Power access: {space.ai_power_access or ''}",
-            f"Recommended uses: {recommended_uses_str}",
-            space.rules or "",
+            f"Space type: {space.space_type or 'workspace'}.",
+            f"Capacity: {space.capacity or 1} people.",
+            f"Privacy: {privacy_desc}.",
+            f"Noise characteristics: {noise}.",
+            f"Price: ₹{space.price_per_hour or 0}/hour.",
+            f"Amenities: {amenities_str}.",
+            f"Location: {space.neighborhood or ''}, {space.city or ''}, {space.address_line1 or ''}.",
+            f"Lighting: {space.ai_lighting or 'standard'}.",
+            f"Power access: {space.ai_power_access or 'standard outlets'}.",
+            f"Recommended uses: {recommended_uses_str}." if recommended_uses_str else "",
+            f"Rules: {space.rules}." if space.rules else "",
+            f"Reviews: {reviews_str}." if reviews_str else "",
         ]
         return " ".join(filter(None, doc_parts))

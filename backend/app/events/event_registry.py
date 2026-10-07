@@ -1,0 +1,2 @@
+class EventRegistry:
+    pass

@@ -1,0 +1,2 @@
+class CryptoService:
+    pass

@@ -1,0 +1,2 @@
+class IntentSchema:
+    pass

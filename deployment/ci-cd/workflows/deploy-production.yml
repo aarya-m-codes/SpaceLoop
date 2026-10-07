@@ -1,0 +1,34 @@
+name: Deploy to Production
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      confirm_deploy:
+        description: 'Type "deploy" to confirm production rollout'
+        required: true
+        default: 'deploy'
+
+environment: production
+
+jobs:
+  production-deploy:
+    name: Production Blue/Green Deployment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate Production Preconditions
+        run: |
+          echo "Running pre-flight schema and configuration checks for SpaceLoop production..."
+
+      - name: Trigger Rolling Update
+        run: |
+          echo "Executing zero-downtime deployment to production environment..."

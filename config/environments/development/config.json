@@ -1,0 +1,7 @@
+{
+  "environment": "development",
+  "debug": true,
+  "testing": false,
+  "rate_limiting": true,
+  "log_level": "DEBUG"
+}

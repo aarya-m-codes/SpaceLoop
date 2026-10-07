@@ -1,22 +1,24 @@
 # SpaceLoop System Architecture
 
+## High-Level Topology
+SpaceLoop is architected as an event-aware, clean-layered peer-to-peer storage and workspace sharing marketplace.
+
 ```mermaid
-graph TD
-    Client[Web & Mobile Clients] -->|HTTPS / TLS 1.3| Gateway[Nginx Reverse Proxy & Gateway]
-    Gateway -->|Static SPA Assets| ReactApp[React 18 Frontend]
-    Gateway -->|/api REST| FlaskBackend[Flask Modular Backend]
-    
-    FlaskBackend --> PostgreSQL[(PostgreSQL Primary)]
-    FlaskBackend --> Redis[(Redis Cache & PubSub)]
-    FlaskBackend --> CeleryWorkers[Background Task Workers]
-    
-    FlaskBackend --> AIOrchestrator[LoopBot AI Concierge]
-    FlaskBackend --> SmartLock[Physical Access Smart Locks]
-    FlaskBackend --> PaymentGateway[Escrow Settlement Gateway]
-    FlaskBackend --> TrustSafety[Fraud & Risk Engine]
+flowchart TD
+    Client[Web & Mobile Clients] --> Gateway[Reverse Proxy / Nginx Gateway]
+    Gateway --> WebApp[Vite React Frontend]
+    Gateway --> BackendAPI[Flask Application Layer]
+    BackendAPI --> CoreAuth[Authentication & MFA]
+    BackendAPI --> TrustEngine[Trust & Safety Engine A]
+    BackendAPI --> FraudEngine[Autonomous ML Fraud Engine B]
+    BackendAPI --> EscrowService[Micro-Escrow Settlement]
+    BackendAPI --> AccessController[Geofenced Access Guard]
+    BackendAPI --> AIEngine[LoopBot Multi-LLM Orchestrator]
+    BackendAPI --> DB[(Relational DB / SQLite / Postgres)]
+    BackendAPI --> Cache[(Redis Cache & Session Store)]
 ```
 
-## Core Tenets
-1. **Separation of Concerns**: Clean presentation layer with full-width responsive UX, decoupled from microservice modules.
-2. **Deterministic Security**: Zero client-side trust; physical smart access credentials only generated after escrow confirmation.
-3. **Resilience**: Redis caching for search pipelines with background asynchronous task processing for email/webhooks.
+## Core Design Principles
+1. **Separation of Concerns**: UI presentation never executes authoritative business rules or financial pricing.
+2. **Deterministic Fallbacks**: Every AI and ML component features hard deterministic fallbacks when external LLMs or serialized model artifacts are unavailable.
+3. **Idempotency & Double-Release Protection**: Micro-escrow and booking access states transition deterministically.

@@ -1,0 +1,2 @@
+class FunnelAnalyzer:
+    pass

@@ -1,0 +1,2 @@
+class ErrorTracker:
+    pass

@@ -1,0 +1,2 @@
+class RealtimeMessaging:
+    pass

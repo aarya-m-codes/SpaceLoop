@@ -1,0 +1,4 @@
+{
+  "dashboard": "SpaceLoop Marketplace Overview",
+  "panels": ["Active Listings", "Bookings/hr", "Micro-Escrow Holds", "Fraud Score Distribution"]
+}

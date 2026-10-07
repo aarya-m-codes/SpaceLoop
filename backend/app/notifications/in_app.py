@@ -1,0 +1,2 @@
+class InAppNotifier:
+    pass

@@ -1,0 +1,2 @@
+class AnalyticsTracker:
+    pass

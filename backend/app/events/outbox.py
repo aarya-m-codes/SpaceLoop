@@ -1,0 +1,2 @@
+class TransactionalOutbox:
+    pass

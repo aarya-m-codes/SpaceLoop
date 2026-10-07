@@ -1,0 +1,7 @@
+{
+  "environment": "production",
+  "debug": false,
+  "testing": false,
+  "rate_limiting": true,
+  "log_level": "INFO"
+}

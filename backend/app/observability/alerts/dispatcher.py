@@ -1,0 +1,2 @@
+class AlertDispatcher:
+    pass

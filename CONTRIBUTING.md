@@ -1,30 +1,38 @@
 # Contributing to SpaceLoop
 
-Thank you for your interest in contributing to SpaceLoop, the hyper-localized intelligent workspace marketplace.
+Thank you for your interest in contributing to SpaceLoop!
+
+SpaceLoop is an intelligent physical storage and workspace sharing marketplace powered by AI-driven space scanning, dynamic micro-escrow, geofenced access control, and behavioral fraud detection.
 
 ## Development Workflow
 
-1. **Fork & Branch**: Create a feature branch from `main` with a descriptive name (`feat/access-nfc`, `fix/nav-alignment`).
-2. **Setup Environment**:
+1. Fork and clone the repository.
+2. Create a virtual environment and install backend requirements:
    ```bash
-   npm install
+   python3 -m venv venv
+   source venv/bin/activate
    pip install -r requirements.txt
    ```
-3. **Run Development Server**:
+3. Install frontend dependencies:
    ```bash
-   npm run dev
+   npm install
    ```
-4. **Code Quality**:
-   - Ensure all components comply with accessibility (WCAG 2.1 AA) standards.
-   - Maintain edge-to-edge layout styling with zero horizontal overflow.
-   - Follow semantic Git commits (`feat:`, `fix:`, `docs:`, `chore:`).
-5. **Testing**:
-   - Run unit and integration tests before opening a pull request:
+4. Run tests before writing any code:
    ```bash
-   npm test
-   pytest tests/
+   make test
+   make build
    ```
-6. **Pull Requests**:
-   - Fill out the PR template completely.
-   - Ensure CI checks pass.
-   - Request review from designated code owners (`@aarya-m-codes`).
+
+## Code Quality Standards
+
+- Maintain zero regression across the 137 unit and integration tests.
+- Always run `python -m unittest discover -s tests -p "test_*.py"` before submitting changes.
+- Ensure Vite production build succeeds (`npm run build`).
+- Do NOT commit credentials, secret tokens, or test private keys.
+- Adhere to semantic commit messages (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`).
+
+## Submitting a Pull Request
+
+- Provide a clear description referencing any corresponding issue.
+- Verify tests pass in GitHub Actions.
+- Ensure code coverage does not decrease.

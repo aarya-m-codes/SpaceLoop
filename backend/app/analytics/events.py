@@ -1,0 +1,2 @@
+class AnalyticsEvent:
+    pass
