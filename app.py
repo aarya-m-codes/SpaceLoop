@@ -250,7 +250,7 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
-    # Register API blueprints
+    from backend.app.api.v1.ai import _handle_chat_request, ai_bp
     from backend.app.api.v1.auth import auth_bp
     from backend.app.api.v1.bookings import bookings_bp
     from backend.app.api.v1.escrow import escrow_bp
@@ -267,6 +267,16 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     app.register_blueprint(bookings_bp, url_prefix="/api/v1/booking", name="booking_v1_singular")
     app.register_blueprint(escrow_bp, url_prefix="/api/escrow")
     app.register_blueprint(escrow_bp, url_prefix="/api/v1/escrow", name="escrow_v1")
+    app.register_blueprint(ai_bp, url_prefix="/api/ai")
+    app.register_blueprint(ai_bp, url_prefix="/api/v1/ai", name="ai_v1")
+
+    # Direct routes for LoopBot conversational endpoints
+    app.add_url_rule("/api/assistant", "api_assistant", _handle_chat_request, methods=["POST"])
+    app.add_url_rule("/api/v1/assistant", "api_v1_assistant", _handle_chat_request, methods=["POST"])
+    app.add_url_rule("/api/concierge/chat", "api_concierge_chat", _handle_chat_request, methods=["POST"])
+    app.add_url_rule("/api/v1/concierge/chat", "api_v1_concierge_chat", _handle_chat_request, methods=["POST"])
+    app.add_url_rule("/api/nlp/dispatch", "api_nlp_dispatch", _handle_chat_request, methods=["POST"])
+    app.add_url_rule("/api/v1/nlp/dispatch", "api_v1_nlp_dispatch", _handle_chat_request, methods=["POST"])
 
     @app.route("/uploads/<path:filename>", methods=["GET"])
     def uploaded_file(filename):
