@@ -38,6 +38,7 @@ SpaceLoop/
 ├── infrastructure/   # Docker container configurations and Nginx gateway
 ├── deployment/       # Staging and production deployment manifests
 ├── tests/            # Automated pytest test suites and production simulation tests
+├── render.yaml       # Render blueprint specification for Web Service & PostgreSQL
 ├── Procfile          # Render web service process definition
 ├── Dockerfile        # Multi-stage production container build
 ├── .env.example      # Reference environment variable specification
