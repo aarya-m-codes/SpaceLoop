@@ -1,0 +1,2 @@
+class AdminBookingsView:
+    pass

@@ -1,0 +1,7 @@
+{
+  "environment": "test",
+  "debug": true,
+  "testing": true,
+  "rate_limiting": false,
+  "log_level": "INFO"
+}

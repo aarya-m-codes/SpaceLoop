@@ -1,0 +1,47 @@
+openapi: 3.0.3
+info:
+  title: SpaceLoop Enterprise API
+  version: 1.0.0
+  description: SpaceLoop marketplace API specification
+paths:
+  /api/v1/auth/register:
+    post:
+      summary: Register a new user
+      responses:
+        '201':
+          description: User registered successfully
+  /api/v1/auth/login:
+    post:
+      summary: User login
+      responses:
+        '200':
+          description: JWT session issued
+  /api/v1/spaces:
+    get:
+      summary: List and search spaces
+      responses:
+        '200':
+          description: List of listings
+    post:
+      summary: Create space listing
+      responses:
+        '201':
+          description: Space listing created
+  /api/v1/bookings:
+    post:
+      summary: Create new booking with micro-escrow
+      responses:
+        '201':
+          description: Booking confirmed
+  /api/v1/trust-safety/assessments:
+    get:
+      summary: List Trust & Safety assessments
+      responses:
+        '200':
+          description: Assessment logs
+  /api/fraud/score:
+    post:
+      summary: Score transaction risk
+      responses:
+        '200':
+          description: Anomaly risk score

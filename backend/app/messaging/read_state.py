@@ -1,0 +1,2 @@
+class ReadStateManager:
+    pass

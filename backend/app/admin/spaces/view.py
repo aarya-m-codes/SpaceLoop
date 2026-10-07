@@ -1,0 +1,2 @@
+class AdminSpacesView:
+    pass

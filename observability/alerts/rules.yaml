@@ -1,0 +1,5 @@
+groups:
+  - name: spaceloop-alerts
+    rules:
+      - alert: HighFraudVelocity
+        expr: rate(fraud_block_events_total[5m]) > 10

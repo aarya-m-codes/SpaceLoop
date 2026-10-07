@@ -1,0 +1,2 @@
+class EmailDelivery:
+    pass

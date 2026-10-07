@@ -1,0 +1,2 @@
+class CSRFProtector:
+    pass

@@ -1,0 +1,2 @@
+class AdminFraudView:
+    pass

@@ -1,0 +1,2 @@
+class LeaseGenerator:
+    pass

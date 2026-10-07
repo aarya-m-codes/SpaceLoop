@@ -1,0 +1,2 @@
+class ConsentManager:
+    pass

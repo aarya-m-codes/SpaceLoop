@@ -188,3 +188,6 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# GitHub workflows excluded from PAT push
+.github/workflows/

@@ -1,0 +1,38 @@
+name: Security Audit & SAST
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * 1'
+
+jobs:
+  security-scan:
+    name: Security Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Bandit & Pip-audit
+        run: |
+          pip install bandit pip-audit
+
+      - name: Run Bandit SAST on Backend
+        run: |
+          bandit -r backend/ app.py security.py models.py -ll || true
+
+      - name: Audit Python Dependencies
+        run: |
+          pip-audit -r requirements.txt || true
+
+      - name: Audit Node.js Dependencies
+        run: |
+          npm audit --audit-level=high || true

@@ -1,0 +1,2 @@
+class NotificationEvents:
+    pass

@@ -1,12 +1,17 @@
 {
-  "name": "spaceloop-frontend",
+  "name": "spaceloop-workspace",
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build:frontend": "npm run build --workspace=frontend"
   },
   "dependencies": {
     "clsx": "^2.1.1",

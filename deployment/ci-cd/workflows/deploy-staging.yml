@@ -1,0 +1,28 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:
+
+environment: staging
+
+jobs:
+  deploy:
+    name: Staging Deployment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node & Build Frontend
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: |
+          npm ci
+          npm run build
+
+      - name: Deploy Staging Workload
+        run: |
+          echo "Deploying SpaceLoop staging build to staging cluster..."

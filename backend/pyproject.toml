@@ -1,0 +1,5 @@
+[project]
+name = "spaceloop-backend"
+version = "1.0.0"
+description = "SpaceLoop Backend Microservices & Intelligence Engines"
+requires-python = ">=3.11"

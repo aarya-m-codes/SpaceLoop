@@ -1,0 +1,4 @@
+import os
+JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'default-jwt-secret')
+JWT_ACCESS_TOKEN_EXPIRES = 86400
+BCRYPT_LOG_ROUNDS = 12

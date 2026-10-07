@@ -1,0 +1,2 @@
+class RateLimitMiddleware:
+    pass

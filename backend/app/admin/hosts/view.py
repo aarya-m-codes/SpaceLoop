@@ -1,0 +1,2 @@
+class AdminHostsView:
+    pass

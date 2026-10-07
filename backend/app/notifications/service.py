@@ -1,0 +1,2 @@
+class NotificationDelivery:
+    pass

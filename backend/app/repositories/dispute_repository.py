@@ -1,0 +1,2 @@
+class DisputeRepository:
+    pass

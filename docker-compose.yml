@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend/Dockerfile
+    container_name: spaceloop-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://spaceloop:spaceloop_pass@db:5432/spaceloop
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-spaceloop-production-secret-must-be-configured}
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:80
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
+
+  worker:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/worker/Dockerfile
+    container_name: spaceloop-worker
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://spaceloop:spaceloop_pass@db:5432/spaceloop
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-spaceloop-production-secret-must-be-configured}
+    depends_on:
+      - backend
+      - redis
+
+  frontend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/frontend/Dockerfile
+    container_name: spaceloop-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  nginx:
+    build:
+      context: infrastructure/docker/nginx
+      dockerfile: Dockerfile
+    container_name: spaceloop-gateway
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - frontend
+      - backend
+
+  db:
+    image: postgres:15-alpine
+    container_name: spaceloop-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: spaceloop
+      POSTGRES_PASSWORD: spaceloop_pass
+      POSTGRES_DB: spaceloop
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spaceloop -d spaceloop"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: spaceloop-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads_data:

@@ -1,0 +1,2 @@
+class AdminPayoutsView:
+    pass

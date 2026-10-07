@@ -1,0 +1,22 @@
+# SpaceLoop Enterprise Code Owners
+
+* @spaceloop/core-team
+
+# Architecture & Security
+/backend/core/ @spaceloop/backend-leads @spaceloop/security
+/backend/modules/trust_safety/ @spaceloop/trust-safety @spaceloop/security
+/fraud_engine/ @spaceloop/ml-leads @spaceloop/security
+/security/ @spaceloop/security
+
+# Payments & Escrow
+/backend/modules/escrow/ @spaceloop/fintech-leads
+/contracts/ @spaceloop/backend-leads
+
+# Frontend
+/src/ @spaceloop/frontend-leads
+/frontend/ @spaceloop/frontend-leads
+
+# DevOps & Infrastructure
+/.github/ @spaceloop/devops
+/infrastructure/ @spaceloop/devops
+/deployment/ @spaceloop/devops
