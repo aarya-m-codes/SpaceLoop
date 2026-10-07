@@ -55,6 +55,28 @@ class ConcurrencyManager:
         return count
 
     @classmethod
+    def clean_all_expired_holds(cls) -> int:
+        """Mark unconfirmed pending bookings older than hold timeout across all spaces as expired."""
+        cutoff = utc_now() - timedelta(minutes=PENDING_HOLD_TIMEOUT_MINUTES)
+        expired_bookings = (
+            Booking.query.filter(
+                Booking.status.in_(["PENDING", "pending"]),
+                Booking.created_at < cutoff,
+            ).all()
+        )
+        count = 0
+        for b in expired_bookings:
+            b.status = "cancelled"
+            b.session_state = "cancelled"
+            b.escrow_status = "refunded"
+            b.cancellation_reason = "Slot reservation hold expired prior to confirmation."
+            count += 1
+        if count > 0:
+            db.session.commit()
+            logger.info(f"Released {count} expired pending slot holds across all spaces.")
+        return count
+
+    @classmethod
     def check_and_lock_slot(
         cls,
         space_id: int,

@@ -6,6 +6,7 @@ Implements strict double-entry ledger bookkeeping, 5% platform fee retention,
 
 import logging
 import secrets
+import threading
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from sqlalchemy import func
@@ -21,6 +22,9 @@ logger = logging.getLogger("spaceloop.escrow.service")
 
 # Scheduled release delay post check-in or start time (in hours)
 ESCROW_RELEASE_DELAY_HOURS = 24
+
+# Re-entrancy lock for payment and refund transactions to prevent race conditions
+_SETTLEMENT_LOCK = threading.Lock()
 
 
 class EscrowService:
@@ -175,22 +179,25 @@ class EscrowService:
         if not (is_guest or is_host or is_admin):
             return None, "Unauthorized to execute checkout settlement.", 403
 
-        # Guardrail 1: Active dispute defense
-        if (booking.escrow_status or "").lower() == "disputed":
-            return None, "Cannot settle funds while a dispute is active. Resolve dispute first.", 409
+        with _SETTLEMENT_LOCK:
+            db.session.refresh(booking)
 
-        # Guardrail 2: Prevent duplicate releases / settlements
-        existing_release = EscrowTransaction.query.filter_by(
-            booking_id=booking.id,
-            transaction_type="release",
-        ).first()
+            # Guardrail 1: Active dispute defense
+            if (booking.escrow_status or "").lower() == "disputed":
+                return None, "Cannot settle funds while a dispute is active. Resolve dispute first.", 409
 
-        if existing_release or (booking.escrow_status or "").lower() == "released":
-            return None, "Settlement has already been executed for this booking.", 409
+            # Guardrail 2: Prevent duplicate releases / settlements
+            existing_release = EscrowTransaction.query.filter_by(
+                booking_id=booking.id,
+                transaction_type="release",
+            ).first()
 
-        # Guardrail 3: Terminal invalid states
-        if (booking.status or "").lower() in ["cancelled", "rejected"]:
-            return None, f"Cannot settle booking in '{booking.status}' status.", 400
+            if existing_release or (booking.escrow_status or "").lower() == "released":
+                return None, "Settlement has already been executed for this booking.", 409
+
+            # Guardrail 3: Terminal invalid states
+            if (booking.status or "").lower() in ["cancelled", "rejected"]:
+                return None, f"Cannot settle booking in '{booking.status}' status.", 400
 
         # Exact accounting math
         subtotal = round(booking.base_amount, 2)
@@ -346,21 +353,24 @@ class EscrowService:
         if not (is_guest or is_host or is_admin):
             return None, "Unauthorized to cancel this booking.", 403
 
-        # Guardrail 1: Active dispute
-        if (booking.escrow_status or "").lower() == "disputed":
-            return None, "Cannot refund funds while a dispute is active. Resolve dispute first.", 409
+        with _SETTLEMENT_LOCK:
+            db.session.refresh(booking)
 
-        # Guardrail 2: Prevent duplicate refunds
-        existing_refund = EscrowTransaction.query.filter_by(
-            booking_id=booking.id,
-            transaction_type="refund",
-        ).first()
+            # Guardrail 1: Active dispute
+            if (booking.escrow_status or "").lower() == "disputed":
+                return None, "Cannot refund funds while a dispute is active. Resolve dispute first.", 409
 
-        if existing_refund or (booking.escrow_status or "").lower() == "refunded":
-            return None, "Refund has already been executed for this booking.", 409
+            # Guardrail 2: Prevent duplicate refunds
+            existing_refund = EscrowTransaction.query.filter_by(
+                booking_id=booking.id,
+                transaction_type="refund",
+            ).first()
 
-        if (booking.status or "").lower() in ["completed"]:
-            return None, "Cannot cancel an already completed booking.", 400
+            if existing_refund or (booking.escrow_status or "").lower() == "refunded":
+                return None, "Refund has already been executed for this booking.", 409
+
+            if (booking.status or "").lower() in ["completed"]:
+                return None, "Cannot cancel an already completed booking.", 400
 
         # Exact cancellation formula
         subtotal = round(booking.base_amount, 2)

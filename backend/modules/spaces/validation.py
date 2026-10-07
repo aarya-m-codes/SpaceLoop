@@ -54,8 +54,12 @@ def validate_space_payload(data: dict[str, Any], is_update: bool = False) -> tup
             return False, {}, "space_type is required."
         cleaned["space_type"] = st
 
-    # Price per hour / hourly_price
-    price_val = data.get("hourly_price", data.get("price_per_hour"))
+    # Price per hour / hourly_price / price
+    price_val = data.get("hourly_price")
+    if price_val is None:
+        price_val = data.get("price_per_hour")
+    if price_val is None:
+        price_val = data.get("price")
     if price_val is not None or not is_update:
         try:
             price = float(price_val)

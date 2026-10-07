@@ -145,4 +145,76 @@ class PolicyRuleEngine:
                 )
             )
 
+        # 9. Fake or Duplicate Listing Detection
+        if ctx.get("is_fake_listing") or ctx.get("copied_description") or ctx.get("duplicate_listing"):
+            triggered.append(
+                DeterministicRule(
+                    code="POLICY_COPIED_OR_DUPLICATE_LISTING",
+                    name="Copied Description or Duplicate Listing",
+                    severity="HIGH",
+                    weight=0.78,
+                    description="Listing text matches existing marketplace listings or duplicates geographical coordinates.",
+                )
+            )
+
+        # 10. Suspicious Listing Pricing
+        if ctx.get("suspicious_pricing") or (ctx.get("price_per_hour", 100.0) <= 10.0 and ctx.get("price_per_hour") is not None):
+            triggered.append(
+                DeterministicRule(
+                    code="POLICY_SUSPICIOUS_LISTING_PRICING",
+                    name="Suspicious Listing Pricing Anomaly",
+                    severity="HIGH",
+                    weight=0.70,
+                    description="Space pricing is unrealistically below minimum commercial floor or extreme outlier.",
+                )
+            )
+
+        # 11. Unusual Host Listing Creation Velocity
+        if ctx.get("listing_creation_burst") or ctx.get("spaces_1h", 0) >= 4:
+            triggered.append(
+                DeterministicRule(
+                    code="POLICY_LISTING_CREATION_VELOCITY",
+                    name="Programmatic Listing Publication Velocity",
+                    severity="HIGH",
+                    weight=0.75,
+                    description="Host published anomalous volume of listings within an abbreviated timeframe.",
+                )
+            )
+
+        # 12. Repeated Payment Failures / Card Testing
+        if ctx.get("repeated_payment_failures") or ctx.get("failed_payment_count", 0) >= 3:
+            triggered.append(
+                DeterministicRule(
+                    code="POLICY_REPEATED_PAYMENT_FAILURES",
+                    name="Repeated Payment Authorization Failures",
+                    severity="HIGH",
+                    weight=0.75,
+                    description="Multiple consecutive failed payment attempts indicating potential card testing or fraud.",
+                )
+            )
+
+        # 13. Account Takeover Indicator
+        if ctx.get("is_account_takeover") or ctx.get("recent_password_reset"):
+            triggered.append(
+                DeterministicRule(
+                    code="POLICY_ACCOUNT_TAKEOVER_INDICATOR",
+                    name="Account Takeover Critical Indicator",
+                    severity="CRITICAL",
+                    weight=0.88,
+                    description="High-value activity from unverified hardware immediately succeeding credential alteration.",
+                )
+            )
+
+        # 14. Suspicious Login Pattern & Geo-Velocity
+        if ctx.get("failed_login_burst") or ctx.get("impossible_travel"):
+            triggered.append(
+                DeterministicRule(
+                    code="POLICY_SUSPICIOUS_LOGIN_PATTERN",
+                    name="Suspicious Login Pattern or Impossible Travel",
+                    severity="MEDIUM",
+                    weight=0.65,
+                    description="Credential brute-forcing burst or geographically impossible transit velocity observed.",
+                )
+            )
+
         return triggered

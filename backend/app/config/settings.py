@@ -110,6 +110,16 @@ class ProductionConfig(BaseConfig):
     DEBUG = False
     TESTING = False
 
+    # Check for missing/insecure default secrets only when running in production
+    if os.getenv("FLASK_ENV") == "production" or os.getenv("ENV") == "production":
+        if not os.getenv("SECRET_KEY") or os.getenv("SECRET_KEY") == "spaceloop-insecure-dev-key-change-in-production":
+            import warnings
+            warnings.warn("CRITICAL SECURITY WARNING: Production SECRET_KEY is missing or set to insecure default!", RuntimeWarning)
+
+        if not os.getenv("JWT_SECRET_KEY") or os.getenv("JWT_SECRET_KEY") == "spaceloop-jwt-dev-key-change-in-production":
+            import warnings
+            warnings.warn("CRITICAL SECURITY WARNING: Production JWT_SECRET_KEY is missing or set to insecure default!", RuntimeWarning)
+
     raw_db_url = os.getenv("DATABASE_URL")
     if not raw_db_url:
         SQLALCHEMY_DATABASE_URI = "postgresql://spaceloop:spaceloop@localhost:5432/spaceloop_prod"

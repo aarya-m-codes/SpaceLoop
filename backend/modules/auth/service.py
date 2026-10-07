@@ -204,7 +204,11 @@ class AuthService:
         norm_email = normalize_email(email)
         ip = get_client_ip()
 
-        # Rate limit brute-force attempts
+        # Rate limit brute-force attempts per account AND per IP
+        rl_ip_key = f"login_ip:{ip}"
+        if not check_rate_limit(rl_ip_key, max_attempts=25, window_seconds=900):
+            return None, "Too many login attempts from this network. Please try again after 15 minutes.", 429
+
         rl_key = f"login:{ip}:{norm_email}"
         if not check_rate_limit(rl_key, max_attempts=5, window_seconds=900):
             return None, "Too many failed login attempts. Please try again after 15 minutes.", 429
@@ -217,6 +221,18 @@ class AuthService:
             elif user.email == "admin@spaceloop.in" and password in ("AdminSecret2026!", "Admin@SpaceLoop2026!"):
                 is_pwd_valid = True
         if not user or not is_pwd_valid:
+            try:
+                from backend.app.persistence.models.schema import FraudEventRecord
+                db.session.add(FraudEventRecord(
+                    user_id=user.id if user else None,
+                    event_type="FAILED_LOGIN",
+                    ip_address=ip,
+                    severity="HIGH" if user else "WARNING",
+                    payload={"attempted_email": norm_email},
+                ))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
             return None, "Invalid email address or password.", 401
 
         if not user.is_active:

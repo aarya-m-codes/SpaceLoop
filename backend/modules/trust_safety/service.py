@@ -42,16 +42,16 @@ class TrustSafetyService:
         booking = None
 
         if norm_type in ("USER", "SEEKER", "HOST"):
-            user = User.query.get(int(entity_id))
+            user = db.session.get(User, int(entity_id))
             if not user:
                 raise ValueError(f"User with ID {entity_id} not found.")
         elif norm_type == "SPACE":
-            space = Space.query.get(int(entity_id))
+            space = db.session.get(Space, int(entity_id))
             if not space:
                 raise ValueError(f"Space with ID {entity_id} not found.")
             user = space.host
         elif norm_type == "BOOKING":
-            booking = Booking.query.get(int(entity_id))
+            booking = db.session.get(Booking, int(entity_id))
             if not booking:
                 raise ValueError(f"Booking with ID {entity_id} not found.")
             user = booking.guest

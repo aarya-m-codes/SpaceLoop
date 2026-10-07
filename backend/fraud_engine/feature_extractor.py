@@ -46,7 +46,7 @@ class FeatureExtractor:
         # Resolve user
         target_user = user
         if not target_user and user_id:
-            target_user = User.query.get(user_id)
+            target_user = db.session.get(User, user_id)
 
         # 1. Account Age (days)
         account_age_days = 0.0
@@ -111,7 +111,7 @@ class FeatureExtractor:
         listing_price_variance = 1.0
         target_space = None
         if space_id:
-            target_space = Space.query.get(space_id)
+            target_space = db.session.get(Space, space_id)
         elif target_user_id:
             target_space = Space.query.filter_by(host_id=target_user_id).first()
 

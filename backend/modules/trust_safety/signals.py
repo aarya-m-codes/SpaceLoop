@@ -14,6 +14,7 @@ import logging
 from typing import Any
 
 from backend.core.database import db
+from backend.core.geo import haversine_distance_meters
 from models import Booking, DeviceSession, FraudEventRecord, Space, User
 
 logger = logging.getLogger("spaceloop.trust_safety.signals")
@@ -108,6 +109,31 @@ class SignalExtractor:
         if rapid_dispute_signal:
             signals.append(rapid_dispute_signal)
 
+        # 7. Fake / Duplicate Listing & Suspicious Pricing
+        fake_listing_signal = cls.check_fake_listing(space=space, context=ctx)
+        if fake_listing_signal:
+            signals.append(fake_listing_signal)
+
+        # 8. Fake Host Profile & Publishing Velocity
+        fake_host_signal = cls.check_fake_host_velocity(user=user, context=ctx)
+        if fake_host_signal:
+            signals.append(fake_host_signal)
+
+        # 9. Payment Failure & Card Testing Abuse
+        payment_failure_signal = cls.check_payment_failure_abuse(user=user, context=ctx)
+        if payment_failure_signal:
+            signals.append(payment_failure_signal)
+
+        # 10. Account Abuse & Takeover Indicators
+        account_abuse_signal = cls.check_account_takeover_and_login_abuse(
+            user=user,
+            device_fingerprint=device_fingerprint or ctx.get("device_fingerprint"),
+            ip_address=ip_address or ctx.get("ip_address"),
+            context=ctx,
+        )
+        if account_abuse_signal:
+            signals.append(account_abuse_signal)
+
         return signals
 
     # -------------------------------------------------------------------------
@@ -129,7 +155,7 @@ class SignalExtractor:
 
         target_space = space
         if not target_space and booking:
-            target_space = booking.space or Space.query.get(booking.space_id)
+            target_space = booking.space or db.session.get(Space, booking.space_id)
 
         target_user_id = user.id if user else (booking.guest_id if booking else None)
 
@@ -142,7 +168,7 @@ class SignalExtractor:
 
         # Check host and guest sharing devices / IP
         if target_space and target_user_id and target_space.host_id != target_user_id:
-            host = target_space.host or User.query.get(target_space.host_id)
+            host = target_space.host or db.session.get(User, target_space.host_id)
             if host:
                 # Compare active sessions
                 host_sessions = DeviceSession.query.filter_by(user_id=host.id).all()
@@ -212,7 +238,7 @@ class SignalExtractor:
         """Detect circular escrow flows: A -> B and B -> A, or larger 3-node cycles."""
         target_user = user
         if not target_user and booking:
-            target_user = booking.guest or User.query.get(booking.guest_id)
+            target_user = booking.guest or db.session.get(User, booking.guest_id)
 
         if not target_user:
             return None
@@ -228,7 +254,7 @@ class SignalExtractor:
 
         hosts_booked_by_user = set()
         for b in user_bookings:
-            sp = b.space or Space.query.get(b.space_id)
+            sp = b.space or db.session.get(Space, b.space_id)
             if sp and sp.host_id != user_id:
                 hosts_booked_by_user.add(sp.host_id)
 
@@ -259,7 +285,7 @@ class SignalExtractor:
                 Booking.status.in_(["confirmed", "active", "completed", "pending"]),
             ).all()
             for bb in b_bookings:
-                sp_c = bb.space or Space.query.get(bb.space_id)
+                sp_c = bb.space or db.session.get(Space, bb.space_id)
                 if sp_c and sp_c.host_id not in (user_id, host_b):
                     host_c = sp_c.host_id
                     # did host_c book user's space?
@@ -524,7 +550,7 @@ class SignalExtractor:
         """Detect exploitative dispute filings immediately following check-in or high dispute ratio."""
         target_user = user
         if not target_user and booking:
-            target_user = booking.guest or User.query.get(booking.guest_id)
+            target_user = booking.guest or db.session.get(User, booking.guest_id)
 
         if not target_user:
             return None
@@ -577,4 +603,294 @@ class SignalExtractor:
                 },
             )
 
+        return None
+
+    # -------------------------------------------------------------------------
+    # 7. FAKE_LISTING Check (Copied descriptions, duplicate listings, suspicious pricing, impossible info)
+    # -------------------------------------------------------------------------
+    @classmethod
+    def check_fake_listing(
+        cls,
+        space: Space | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> BehavioralSignal | None:
+        """Detect fake listings via copied text, duplicate coordinates, extreme price anomaly, or impossible specifications."""
+        ctx = context or {}
+        target_space = space
+        evidence: list[str] = []
+        is_fake = False
+        severity = "MEDIUM"
+        weight = 0.55
+
+        # 1. Copied descriptions & duplicate listings
+        desc = ((target_space.description if target_space else ctx.get("description")) or "").strip()
+        title = ((target_space.title if target_space else ctx.get("title")) or "").strip()
+
+        if desc and len(desc) >= 30:
+            desc_tokens = set(desc.lower().split())
+            query = Space.query
+            if target_space and target_space.id:
+                query = query.filter(Space.id != target_space.id)
+            candidate_spaces = query.limit(50).all()
+
+            for s in candidate_spaces:
+                if not s.description:
+                    continue
+                s_tokens = set(s.description.lower().split())
+                if not s_tokens:
+                    continue
+                intersection = len(desc_tokens.intersection(s_tokens))
+                union = len(desc_tokens.union(s_tokens))
+                jaccard = intersection / max(1, union)
+
+                if jaccard >= 0.80:
+                    is_fake = True
+                    severity = "HIGH"
+                    weight = max(weight, 0.78)
+                    evidence.append(
+                        f"Copied description detected: {round(jaccard * 100, 1)}% text overlap with Space #{s.id} ('{s.title[:30]}') by Host #{s.host_id}."
+                    )
+                    break
+
+                # Check coordinate duplicates (< 50 meters with matching title)
+                if target_space and target_space.latitude and target_space.longitude and s.latitude and s.longitude:
+                    dist_meters = haversine_distance_meters(
+                        target_space.latitude, target_space.longitude, s.latitude, s.longitude
+                    )
+                    if dist_meters <= 50.0 and (title.lower() in s.title.lower() or s.title.lower() in title.lower()):
+                        is_fake = True
+                        severity = "HIGH"
+                        weight = max(weight, 0.82)
+                        evidence.append(
+                            f"Duplicate listing detected: Space #{s.id} exists at identical location ({round(dist_meters, 1)}m away) with duplicate title '{s.title[:30]}'."
+                        )
+                        break
+
+        # 2. Suspicious pricing
+        price = target_space.price_per_hour if target_space else float(ctx.get("price_per_hour", 0.0))
+        if price > 0:
+            if price <= 10.0:
+                is_fake = True
+                severity = "HIGH"
+                weight = max(weight, 0.72)
+                evidence.append(f"Suspicious pricing: Hourly rate ₹{price} is artificially low (<₹15/hr minimum baseline for commercial space).")
+            elif price >= 10000.0:
+                is_fake = True
+                severity = "HIGH"
+                weight = max(weight, 0.75)
+                evidence.append(f"Suspicious pricing: Hourly rate ₹{price} is an extreme outlier (>₹10,000/hr workspace anomaly).")
+
+        # 3. Impossible / inconsistent information
+        capacity = target_space.capacity if target_space else int(ctx.get("capacity", 0))
+        space_type = ((target_space.space_type if target_space else ctx.get("space_type", "")) or "").lower()
+        area_sqft = (getattr(target_space, "sqft", None) or getattr(target_space, "area_sqft", None) or float(ctx.get("sqft", ctx.get("area_sqft", 0.0))) or 0.0)
+
+        if (capacity >= 25 and ("desk" in space_type or "booth" in space_type or "pod" in space_type)) or (capacity >= 50 and 0 < area_sqft < 100):
+            is_fake = True
+            severity = "HIGH"
+            weight = max(weight, 0.80)
+            evidence.append(f"Impossible/inconsistent specifications: Claimed capacity of {capacity} persons for a {space_type or 'single unit'} ({area_sqft} sq ft).")
+
+        if ctx.get("is_fake_listing") or ctx.get("copied_description") or ctx.get("duplicate_listing"):
+            is_fake = True
+            severity = "HIGH"
+            weight = max(weight, 0.75)
+            evidence.append("Telemetry flagged duplicate listing content or fraudulent property submission.")
+
+        if is_fake:
+            return BehavioralSignal(
+                signal_type="FAKE_LISTING",
+                severity=severity,
+                weight=weight,
+                title="Fake or Duplicate Listing Detected",
+                description="Listing exhibits plagiarized descriptions, duplicate location footprints, extreme pricing anomalies, or impossible physical dimensions.",
+                evidence=evidence,
+                metadata={
+                    "space_id": target_space.id if target_space else None,
+                    "price": price,
+                    "capacity": capacity,
+                },
+            )
+        return None
+
+    # -------------------------------------------------------------------------
+    # 8. FAKE_HOST Check (Unusual listing creation velocity, suspicious cancellations)
+    # -------------------------------------------------------------------------
+    @classmethod
+    def check_fake_host_velocity(
+        cls,
+        user: User | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> BehavioralSignal | None:
+        """Detect fraudulent host behavior: bot-like listing creation velocity and high host-initiated cancellation ratios."""
+        if not user:
+            return None
+
+        ctx = context or {}
+        now = datetime.now(timezone.utc)
+        one_hour_ago = now - timedelta(hours=1)
+        one_day_ago = now - timedelta(days=1)
+
+        evidence: list[str] = []
+        is_suspicious_host = False
+        severity = "MEDIUM"
+        weight = 0.55
+
+        # 1. Unusual listing creation velocity
+        spaces_1h = Space.query.filter(
+            Space.host_id == user.id,
+            Space.created_at >= one_hour_ago,
+        ).count()
+
+        spaces_24h = Space.query.filter(
+            Space.host_id == user.id,
+            Space.created_at >= one_day_ago,
+        ).count()
+
+        if spaces_1h >= 4 or spaces_24h >= 8 or ctx.get("listing_creation_burst"):
+            is_suspicious_host = True
+            severity = "HIGH"
+            weight = 0.78
+            evidence.append(f"Unusual listing creation velocity: Host published {spaces_1h} spaces in 1 hour ({spaces_24h} in 24 hours).")
+
+        # 2. Suspicious booking/cancellation behavior by host
+        host_space_ids = [s.id for s in Space.query.filter_by(host_id=user.id)]
+        if host_space_ids:
+            total_host_bookings = Booking.query.filter(Booking.space_id.in_(host_space_ids)).count()
+            cancelled_by_host = Booking.query.filter(
+                Booking.space_id.in_(host_space_ids),
+                Booking.status.in_(["cancelled", "rejected"]),
+            ).count()
+
+            if total_host_bookings >= 4 and (cancelled_by_host / total_host_bookings) >= 0.50:
+                is_suspicious_host = True
+                severity = "HIGH"
+                weight = max(weight, 0.70)
+                evidence.append(
+                    f"Suspicious host cancellation pattern: Host rejected/cancelled {cancelled_by_host}/{total_host_bookings} ({round(cancelled_by_host/total_host_bookings*100, 1)}%) of bookings."
+                )
+
+        if is_suspicious_host:
+            return BehavioralSignal(
+                signal_type="FAKE_HOST",
+                severity=severity,
+                weight=weight,
+                title="Suspicious Host Profile & Publishing Velocity",
+                description="Host demonstrates programmatic listing publication velocity or anomalous booking cancellation patterns.",
+                evidence=evidence,
+                metadata={
+                    "user_id": user.id,
+                    "spaces_1h": spaces_1h,
+                    "spaces_24h": spaces_24h,
+                },
+            )
+        return None
+
+    # -------------------------------------------------------------------------
+    # 9. PAYMENT_FAILURE_ABUSE Check (Repeated payment failures, card testing)
+    # -------------------------------------------------------------------------
+    @classmethod
+    def check_payment_failure_abuse(
+        cls,
+        user: User | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> BehavioralSignal | None:
+        """Detect card testing and repeated payment authorization failures."""
+        ctx = context or {}
+        target_user_id = user.id if user else ctx.get("user_id")
+        if not target_user_id:
+            return None
+
+        now = datetime.now(timezone.utc)
+        one_hour_ago = now - timedelta(hours=1)
+
+        failed_payments_1h = FraudEventRecord.query.filter(
+            FraudEventRecord.user_id == target_user_id,
+            FraudEventRecord.event_type == "PAYMENT_FAILURE",
+            FraudEventRecord.created_at >= one_hour_ago,
+        ).count()
+
+        if "failed_payment_count" in ctx:
+            failed_payments_1h = int(ctx["failed_payment_count"])
+
+        if failed_payments_1h >= 3 or ctx.get("repeated_payment_failures"):
+            severity = "CRITICAL" if failed_payments_1h >= 5 else "HIGH"
+            weight = 0.85 if failed_payments_1h >= 5 else 0.72
+            return BehavioralSignal(
+                signal_type="PAYMENT_FAILURE_ABUSE",
+                severity=severity,
+                weight=weight,
+                title="Repeated Payment Failures & Card Testing Pattern",
+                description="Multiple consecutive payment authorization failures detected, indicating potential card-testing or fraud.",
+                evidence=[f"Repeated payment failures: {failed_payments_1h} failed payment attempts within 60 minutes."],
+                metadata={
+                    "user_id": target_user_id,
+                    "failed_payments_1h": failed_payments_1h,
+                },
+            )
+        return None
+
+    # -------------------------------------------------------------------------
+    # 10. ACCOUNT_TAKEOVER_AND_LOGIN_ABUSE Check (Suspicious logins, ATO indicators)
+    # -------------------------------------------------------------------------
+    @classmethod
+    def check_account_takeover_and_login_abuse(
+        cls,
+        user: User | None = None,
+        device_fingerprint: str | None = None,
+        ip_address: str | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> BehavioralSignal | None:
+        """Detect account takeover indicators and credential stuffing/suspicious login patterns."""
+        ctx = context or {}
+        if not user:
+            return None
+
+        evidence: list[str] = []
+        is_ato = False
+        severity = "HIGH"
+        weight = 0.75
+
+        # 1. Suspicious login patterns (rapid failed password attempts or credential stuffing burst)
+        now = datetime.now(timezone.utc)
+        one_hour_ago = now - timedelta(hours=1)
+
+        failed_logins = FraudEventRecord.query.filter(
+            FraudEventRecord.user_id == user.id,
+            FraudEventRecord.event_type == "FAILED_LOGIN",
+            FraudEventRecord.created_at >= one_hour_ago,
+        ).count()
+
+        if failed_logins >= 4 or ctx.get("failed_login_burst"):
+            is_ato = True
+            severity = "HIGH"
+            weight = max(weight, 0.72)
+            evidence.append(f"Suspicious login pattern: {failed_logins} failed login attempts recorded within 60 minutes.")
+
+        # 2. Account takeover indicators (password reset followed immediately by high-risk actions from new device/IP)
+        if ctx.get("recent_password_reset") or ctx.get("is_account_takeover"):
+            is_ato = True
+            severity = "CRITICAL"
+            weight = 0.88
+            evidence.append("Account takeover indicator: High-risk action initiated from unrecognized device immediately following password reset.")
+
+        if ctx.get("impossible_travel") or ctx.get("geo_velocity_anomaly"):
+            is_ato = True
+            severity = "HIGH"
+            weight = max(weight, 0.80)
+            evidence.append("Suspicious login pattern: Impossible geographic travel velocity detected between login locations.")
+
+        if is_ato:
+            return BehavioralSignal(
+                signal_type="ACCOUNT_ABUSE",
+                severity=severity,
+                weight=weight,
+                title="Account Takeover & Suspicious Login Abuse",
+                description="Indicators of credential stuffing, impossible geographic travel, or post-reset session hijacking.",
+                evidence=evidence,
+                metadata={
+                    "user_id": user.id,
+                    "failed_logins": failed_logins,
+                },
+            )
         return None

@@ -1,9 +1,10 @@
 import hashlib
 import logging
+import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from flask import Flask, Response, g, request
+from flask import Flask, Response, current_app, g, request
 
 from backend.core.database import db
 from backend.modules.auth.tokens import decode_jwt
@@ -45,15 +46,32 @@ def resolve_authenticated_user() -> User | None:
         except Exception as exc:
             logger.debug(f"Token decoding failed during user resolution: {exc}")
 
-    # Fallback: X-User-Id for cross-origin / internal proxy environments
+    # Fallback: X-User-Id is strictly restricted to TESTING mode or authenticated internal gateways
     x_user_id = request.headers.get("X-User-Id")
     if x_user_id and x_user_id.isdigit():
+        is_testing = False
         try:
-            user = db.session.get(User, int(x_user_id))
-            if user and user.is_active:
-                return user
-        except Exception as exc:
-            logger.debug(f"Failed to resolve user from X-User-Id header: {exc}")
+            is_testing = bool(current_app and current_app.config.get("TESTING"))
+        except Exception:
+            pass
+
+        gateway_secret = os.getenv("INTERNAL_GATEWAY_KEY")
+        req_gw_secret = request.headers.get("X-Internal-Gateway-Key")
+        is_trusted_gateway = bool(
+            gateway_secret
+            and req_gw_secret
+            and secrets.compare_digest(gateway_secret, req_gw_secret)
+        )
+
+        if is_testing or is_trusted_gateway:
+            try:
+                user = db.session.get(User, int(x_user_id))
+                if user and user.is_active:
+                    return user
+            except Exception as exc:
+                logger.debug(f"Failed to resolve user from X-User-Id header: {exc}")
+        else:
+            logger.warning("Rejected unauthorized X-User-Id header attempt in non-testing environment.")
 
     return None
 

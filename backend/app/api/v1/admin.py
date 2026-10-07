@@ -153,7 +153,7 @@ def list_admin_users():
 @require_admin
 def toggle_user_status(user_id: int):
     """Suspend or reactivate a user account with server-side authorization."""
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": "User not found."}}), 404
 
@@ -225,7 +225,7 @@ def list_admin_spaces():
 @require_admin
 def toggle_space_status(space_id: int):
     """Admin toggle for space active/inactive status."""
-    space = Space.query.get(space_id)
+    space = db.session.get(Space, space_id)
     if not space:
         return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": "Space not found."}}), 404
 

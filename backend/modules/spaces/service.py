@@ -1,3 +1,4 @@
+import html
 import logging
 import secrets
 from datetime import datetime, time, timezone
@@ -153,6 +154,39 @@ class SpaceService:
         db.session.add(space)
         db.session.commit()
 
+        # Actively run fraud detection on space creation
+        try:
+            from backend.modules.trust_safety.signals import SignalExtractor
+            from backend.app.persistence.models.schema import FraudAlertRecord, FraudEventRecord
+            fake_sig = SignalExtractor.check_fake_listing(space=space)
+            vel_sig = SignalExtractor.check_fake_host_velocity(user=space.host)
+            if fake_sig or vel_sig:
+                space.is_approved = False
+                evidence_list = (fake_sig.evidence if fake_sig else []) + (vel_sig.evidence if vel_sig else [])
+                db.session.add(FraudEventRecord(
+                    user_id=host_id,
+                    event_type="SUSPICIOUS_SPACE_SUBMISSION",
+                    severity="HIGH",
+                    payload={
+                        "space_id": space.id,
+                        "fake_listing": fake_sig.signal_type if fake_sig else None,
+                        "host_velocity": vel_sig.signal_type if vel_sig else None,
+                        "evidence": evidence_list,
+                    },
+                ))
+                db.session.add(FraudAlertRecord(
+                    user_id=host_id,
+                    title=f"Suspicious Listing Intercepted: {space.title[:50]}",
+                    details={
+                        "space_id": space.id,
+                        "evidence": evidence_list,
+                    },
+                    status="OPEN",
+                ))
+                db.session.commit()
+        except Exception as e:
+            logger.warning(f"Trust & safety listing check warning: {e}")
+
         record_audit_log(
             action="SPACE_CREATED",
             entity_type="Space",
@@ -251,9 +285,9 @@ class SpaceService:
                 "booked_slots": [],
             }, None, 200
 
-        # Query confirmed bookings
+        # Query confirmed/active bookings (including unexpired pending holds)
         booking_query = Booking.query.filter_by(space_id=space_id).filter(
-            func.lower(Booking.status).in_(["confirmed", "checked_in", "active"])
+            func.lower(Booking.status).in_(["confirmed", "checked_in", "active", "pending"])
         )
 
         # Filter by specific date if supplied (YYYY-MM-DD)
@@ -283,8 +317,10 @@ class SpaceService:
         # If specific timeframe requested, check direct interval overlap
         if start_time_str and end_time_str:
             try:
-                req_start = datetime.fromisoformat(start_time_str.replace("Z", "+00:00"))
-                req_end = datetime.fromisoformat(end_time_str.replace("Z", "+00:00"))
+                clean_start = start_time_str.strip().replace("Z", "+00:00").replace(" ", "+")
+                clean_end = end_time_str.strip().replace("Z", "+00:00").replace(" ", "+")
+                req_start = datetime.fromisoformat(clean_start)
+                req_end = datetime.fromisoformat(clean_end)
 
                 if req_start.tzinfo is None:
                     req_start = req_start.replace(tzinfo=timezone.utc)
@@ -296,7 +332,7 @@ class SpaceService:
 
                 # Check slot collision
                 overlap = Booking.query.filter_by(space_id=space_id).filter(
-                    func.lower(Booking.status).in_(["confirmed", "checked_in", "active"]),
+                    func.lower(Booking.status).in_(["confirmed", "checked_in", "active", "pending"]),
                     Booking.start_time < req_end,
                     Booking.end_time > req_start,
                 ).first()
@@ -354,11 +390,11 @@ class SpaceService:
         if not isinstance(rating, int) or rating < 1 or rating > 5:
             return None, "Rating must be an integer between 1 and 5.", 400
 
-        # Enforce completed-booking review validation
+        # Enforce completed-booking review validation: stay MUST be finished
         booking_q = Booking.query.filter_by(
             space_id=space_id,
             guest_id=guest_user.id,
-        ).filter(func.lower(Booking.status).in_(["completed", "checked_in", "active"]))
+        ).filter(func.lower(Booking.status).in_(["completed"]))
 
         if booking_id:
             booking_q = booking_q.filter_by(id=booking_id)
@@ -372,13 +408,16 @@ class SpaceService:
         if existing_review:
             return None, "A review has already been submitted for this booking.", 409
 
+        # Sanitize comment against stored XSS attacks
+        clean_comment = html.escape(comment.strip()) if comment else ""
+
         # Create review
         review = Review(
             space_id=space_id,
             booking_id=valid_booking.id,
             guest_id=guest_user.id,
             rating=rating,
-            comment=comment.strip() if comment else "",
+            comment=clean_comment,
             is_verified_stay=True,
             created_at=utc_now(),
         )

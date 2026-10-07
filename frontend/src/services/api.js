@@ -47,6 +47,12 @@ async function request(endpoint, options = {}) {
       data = await response.json();
     } else {
       data = await response.text();
+      if (endpoint.startsWith('/api') && typeof data === 'string' && contentType && contentType.includes('text/html')) {
+        const error = new Error('Received HTML response instead of JSON from API. If deployed on Vercel, set VITE_API_URL in Environment Variables to point to your backend server.');
+        error.status = 502;
+        error.data = data;
+        throw error;
+      }
     }
 
     if (!response.ok) {

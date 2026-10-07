@@ -44,6 +44,7 @@ class DiscoveryPipeline:
         page: int = 1,
         limit: int = 20,
         require_available: bool = False,
+        max_price: float | None = None,
         user_context: dict[str, Any] | None = None,
         filters: dict[str, Any] | None = None,
         capacity: int | None = None,
@@ -53,6 +54,18 @@ class DiscoveryPipeline:
         noise_preference: str | None = None,
     ) -> dict[str, Any]:
         """Execute the complete semantic AI search pipeline with strict constraint safety."""
+
+        # Merge dictionary filters if supplied
+        if filters and isinstance(filters, dict):
+            date = date or filters.get("date")
+            hours = hours if hours is not None else (filters.get("hours") or filters.get("duration_hours"))
+            budget = budget if budget is not None else (filters.get("budget") or filters.get("max_price"))
+            location = location if location is not None else filters.get("location")
+            if "require_available" in filters:
+                require_available = require_available or bool(filters["require_available"])
+
+        if budget is None and max_price is not None:
+            budget = max_price
 
         # -------------------------------------------------------------
         # STAGE 1 & 2: Parse natural-language query & extract constraints

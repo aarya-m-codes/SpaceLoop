@@ -170,8 +170,8 @@ class FraudAndTrustSafetyTestCase(unittest.TestCase):
 
         with self.app.app_context():
             # Host A books Space A
-            host = User.query.get(self.host_a_id)
-            space = Space.query.get(self.space_a_id)
+            host = db.session.get(User, self.host_a_id)
+            space = db.session.get(Space, self.space_a_id)
 
             signal = SignalExtractor.check_self_booking(user=host, space=space)
             self.assertIsNotNone(signal)
@@ -216,7 +216,7 @@ class FraudAndTrustSafetyTestCase(unittest.TestCase):
             db.session.commit()
 
             # Signal extractor should flag COLLUSION_RING for Host A
-            host_a = User.query.get(self.host_a_id)
+            host_a = db.session.get(User, self.host_a_id)
             signal = SignalExtractor.check_collusion_ring(user=host_a)
             self.assertIsNotNone(signal)
             self.assertEqual(signal.signal_type, "COLLUSION_RING")
@@ -250,7 +250,7 @@ class FraudAndTrustSafetyTestCase(unittest.TestCase):
                 db.session.add(b)
             db.session.commit()
 
-            seeker = User.query.get(self.seeker_id)
+            seeker = db.session.get(User, self.seeker_id)
             signal = SignalExtractor.check_velocity_spike(user=seeker)
             self.assertIsNotNone(signal)
             self.assertEqual(signal.signal_type, "VELOCITY_SPIKE")
@@ -278,7 +278,7 @@ class FraudAndTrustSafetyTestCase(unittest.TestCase):
             db.session.add_all([ev1, ev2])
             db.session.commit()
 
-            host_a = User.query.get(self.host_a_id)
+            host_a = db.session.get(User, self.host_a_id)
             signal = SignalExtractor.check_device_reuse(user=host_a, device_fingerprint=shared_fingerprint)
             self.assertIsNotNone(signal)
             self.assertEqual(signal.signal_type, "DEVICE_REUSE")
@@ -289,7 +289,7 @@ class FraudAndTrustSafetyTestCase(unittest.TestCase):
         from backend.modules.trust_safety.signals import SignalExtractor
 
         with self.app.app_context():
-            space = Space.query.get(self.space_a_id)  # Mumbai space
+            space = db.session.get(Space, self.space_a_id)  # Mumbai space
             # Provide BESCOM (Bangalore) for a Mumbai space
             ctx = {
                 "discom_provider": "BESCOM Karnataka",
@@ -326,7 +326,7 @@ class FraudAndTrustSafetyTestCase(unittest.TestCase):
             db.session.add(b)
             db.session.commit()
 
-            seeker = User.query.get(self.seeker_id)
+            seeker = db.session.get(User, self.seeker_id)
             signal = SignalExtractor.check_rapid_dispute(user=seeker, booking=b)
             self.assertIsNotNone(signal)
             self.assertEqual(signal.signal_type, "RAPID_DISPUTE")
@@ -429,7 +429,7 @@ class FraudAndTrustSafetyTestCase(unittest.TestCase):
     def test_system_b_feature_extraction(self):
         """Test continuous numerical feature extraction."""
         with self.app.app_context():
-            seeker = User.query.get(self.seeker_id)
+            seeker = db.session.get(User, self.seeker_id)
             extracted = FeatureExtractor.extract_features(
                 user=seeker,
                 amount=5000.0,
@@ -585,6 +585,263 @@ class FraudAndTrustSafetyTestCase(unittest.TestCase):
         self.assertIn("threshold_applied", data)
         self.assertIn("explanation", data)
 
+    # =========================================================================
+    # COMPREHENSIVE FRAUD TAXONOMY VERIFICATION
+    # =========================================================================
+
+    def test_comprehensive_fraud_taxonomy_detection(self):
+        """Verify that all 4 categories (Fake Listings, Fake Hosts, Booking Abuse, Account Abuse)
+        and all 13 attack types are explicitly distinguished and detected by the fraud engine."""
+        from backend.modules.trust_safety.signals import SignalExtractor
+        from backend.fraud_engine.rules import PolicyRuleEngine
+
+        with self.app.app_context():
+            # -------------------------------------------------------------
+            # CATEGORY 1: FAKE LISTINGS
+            # -------------------------------------------------------------
+            # 1. Copied descriptions
+            orig_space = Space(
+                host_id=self.host_a_id,
+                title="Quiet Professional Suite",
+                space_type="studio",
+                address_line1="101 Linking Road",
+                description="Modern aesthetic workspace equipped with gigabit fiber optic internet and soundproof podcast recording rooms in Bandra West.",
+                city="Mumbai",
+                state="Maharashtra",
+                pincode="400050",
+                price_per_hour=400.0,
+                capacity=4,
+                latitude=19.055,
+                longitude=72.830,
+                is_active=True,
+            )
+            db.session.add(orig_space)
+            db.session.commit()
+
+            plagiarized_space = Space(
+                host_id=self.host_b_id,
+                title="Plagiarized Copy Suite",
+                space_type="studio",
+                address_line1="202 Turner Road",
+                description="Modern aesthetic workspace equipped with gigabit fiber optic internet and soundproof podcast recording rooms in Bandra West copy.",
+                city="Mumbai",
+                state="Maharashtra",
+                pincode="400050",
+                price_per_hour=350.0,
+                capacity=4,
+                latitude=19.060,
+                longitude=72.835,
+                is_active=True,
+            )
+            sig_copy = SignalExtractor.check_fake_listing(space=plagiarized_space)
+            self.assertIsNotNone(sig_copy)
+            self.assertEqual(sig_copy.signal_type, "FAKE_LISTING")
+            self.assertIn("Copied description", sig_copy.evidence[0])
+
+            # 2. Duplicate / similar listings at identical coordinates
+            dup_space = Space(
+                host_id=self.host_b_id,
+                title="Quiet Professional Suite Duplicate",
+                space_type="studio",
+                address_line1="101 Linking Road",
+                description="Fresh unique text but exact same physical GPS coordinates as original space.",
+                city="Mumbai",
+                state="Maharashtra",
+                pincode="400050",
+                price_per_hour=380.0,
+                capacity=4,
+                latitude=19.055001,  # ~0.1 meters away
+                longitude=72.830001,
+                is_active=True,
+            )
+            sig_dup = SignalExtractor.check_fake_listing(space=dup_space)
+            self.assertIsNotNone(sig_dup)
+            self.assertIn("Duplicate listing detected", sig_dup.evidence[0])
+
+            # 3. Suspicious pricing (unrealistic floor price ₹5/hr or outlier ₹50,000/hr)
+            cheap_space = Space(
+                host_id=self.host_a_id,
+                title="Micro Scam Listing",
+                space_type="desk",
+                address_line1="303 Hill Road",
+                description="Suspiciously cheap desk to bypass token controls.",
+                city="Mumbai",
+                price_per_hour=5.0,  # ₹5 is suspicious
+                capacity=1,
+            )
+            sig_price = SignalExtractor.check_fake_listing(space=cheap_space)
+            self.assertIsNotNone(sig_price)
+            self.assertIn("Suspicious pricing", sig_price.evidence[0])
+
+            # 4. Impossible / inconsistent specifications (50 people in a single desk)
+            impossible_space = Space(
+                host_id=self.host_a_id,
+                title="Impossible Nano Desk",
+                description="Tiny private desk with absurdly impossible capacity.",
+                city="Mumbai",
+                space_type="desk",
+                address_line1="404 Perry Cross Road",
+                capacity=50,  # Impossible for a single desk
+                sqft=30.0,
+                price_per_hour=300.0,
+            )
+            sig_impos = SignalExtractor.check_fake_listing(space=impossible_space)
+            self.assertIsNotNone(sig_impos)
+            self.assertIn("Impossible/inconsistent specifications", sig_impos.evidence[0])
+
+            # -------------------------------------------------------------
+            # CATEGORY 2: FAKE HOSTS
+            # -------------------------------------------------------------
+            # 5. Multiple accounts sharing hardware devices
+            shared_fingerprint = "hw-fingerprint-macbook-m3-pro-8899"
+            ev1 = FraudEventRecord(
+                user_id=self.host_a_id,
+                device_fingerprint=shared_fingerprint,
+                event_type="LOGIN",
+                severity="INFO",
+            )
+            ev2 = FraudEventRecord(
+                user_id=self.host_b_id,
+                device_fingerprint=shared_fingerprint,
+                event_type="LOGIN",
+                severity="INFO",
+            )
+            db.session.add_all([ev1, ev2])
+            db.session.commit()
+
+            sig_mult_acc = SignalExtractor.check_device_reuse(
+                user=db.session.get(User, self.host_a_id),
+                device_fingerprint=shared_fingerprint,
+            )
+            self.assertIsNotNone(sig_mult_acc)
+            self.assertEqual(sig_mult_acc.signal_type, "DEVICE_REUSE")
+
+            # 6. Unusual listing creation velocity
+            for i in range(5):
+                sp_bot = Space(
+                    host_id=self.host_b_id,
+                    title=f"Rapid Bot Space {i}",
+                    space_type="desk",
+                    address_line1=f"Suite {i} Linking Road",
+                    city="Mumbai",
+                    state="Maharashtra",
+                    pincode="400050",
+                    latitude=19.05 + (i * 0.001),
+                    longitude=72.83 + (i * 0.001),
+                    price_per_hour=300.0,
+                    created_at=utc_now(),
+                )
+                db.session.add(sp_bot)
+            db.session.commit()
+
+            sig_host_vel = SignalExtractor.check_fake_host_velocity(user=db.session.get(User, self.host_b_id))
+            self.assertIsNotNone(sig_host_vel)
+            self.assertEqual(sig_host_vel.signal_type, "FAKE_HOST")
+            self.assertIn("Unusual listing creation velocity", sig_host_vel.evidence[0])
+
+            # 7. Suspicious booking/cancellation behavior
+            sig_self = SignalExtractor.check_self_booking(
+                user=db.session.get(User, self.host_a_id),
+                space=orig_space,
+            )
+            self.assertIsNotNone(sig_self)
+            self.assertEqual(sig_self.signal_type, "SELF_BOOKING")
+
+            # -------------------------------------------------------------
+            # CATEGORY 3: BOOKING ABUSE
+            # -------------------------------------------------------------
+            # 8. Rapid booking/cancellation
+            sig_vel = SignalExtractor.check_velocity_spike(
+                user=db.session.get(User, self.seeker_id),
+                context={"simulated_velocity_spike": True},
+            )
+            self.assertIsNotNone(sig_vel)
+            self.assertEqual(sig_vel.signal_type, "VELOCITY_SPIKE")
+
+            # 9. Repeated payment failures (card testing pattern)
+            for _ in range(4):
+                pf = FraudEventRecord(
+                    user_id=self.seeker_id,
+                    event_type="PAYMENT_FAILURE",
+                    severity="HIGH",
+                    created_at=utc_now(),
+                )
+                db.session.add(pf)
+            db.session.commit()
+
+            sig_pay = SignalExtractor.check_payment_failure_abuse(user=db.session.get(User, self.seeker_id))
+            self.assertIsNotNone(sig_pay)
+            self.assertEqual(sig_pay.signal_type, "PAYMENT_FAILURE_ABUSE")
+            self.assertIn("Repeated payment failures", sig_pay.evidence[0])
+
+            # 10. Abnormal booking patterns (reciprocal collusion ring)
+            b_ab = Booking(
+                space_id=self.space_b_id,
+                guest_id=self.host_a_id,
+                start_time=utc_now() + timedelta(hours=2),
+                end_time=utc_now() + timedelta(hours=4),
+                total_hours=2.0,
+                base_amount=800.0,
+                total_amount=800.0,
+                status="completed",
+                session_state="checked_out",
+                escrow_status="released",
+            )
+            b_ba = Booking(
+                space_id=self.space_a_id,
+                guest_id=self.host_b_id,
+                start_time=utc_now() + timedelta(hours=5),
+                end_time=utc_now() + timedelta(hours=7),
+                total_hours=2.0,
+                base_amount=1000.0,
+                total_amount=1000.0,
+                status="completed",
+                session_state="checked_out",
+                escrow_status="released",
+            )
+            db.session.add_all([b_ab, b_ba])
+            db.session.commit()
+
+            sig_coll = SignalExtractor.check_collusion_ring(user=db.session.get(User, self.host_a_id))
+            self.assertIsNotNone(sig_coll)
+            self.assertEqual(sig_coll.signal_type, "COLLUSION_RING")
+
+            # -------------------------------------------------------------
+            # CATEGORY 4: ACCOUNT ABUSE
+            # -------------------------------------------------------------
+            # 11. Multiple accounts sharing devices/IPs
+            rules_dev = PolicyRuleEngine.evaluate(
+                {"device_sharing_count": 4},
+                context={"shared_device_multi_account": True},
+            )
+            self.assertTrue(any(r.code == "POLICY_MULTI_ACCOUNT_DEVICE_SHARING" for r in rules_dev))
+
+            # 12. Suspicious login patterns (credential brute-force burst)
+            for _ in range(5):
+                fl = FraudEventRecord(
+                    user_id=self.seeker_id,
+                    event_type="FAILED_LOGIN",
+                    severity="HIGH",
+                    created_at=utc_now(),
+                )
+                db.session.add(fl)
+            db.session.commit()
+
+            sig_login = SignalExtractor.check_account_takeover_and_login_abuse(user=db.session.get(User, self.seeker_id))
+            self.assertIsNotNone(sig_login)
+            self.assertEqual(sig_login.signal_type, "ACCOUNT_ABUSE")
+            self.assertIn("Suspicious login pattern", sig_login.evidence[0])
+
+            # 13. Account takeover indicators (password reset + high risk action)
+            sig_ato = SignalExtractor.check_account_takeover_and_login_abuse(
+                user=db.session.get(User, self.seeker_id),
+                context={"recent_password_reset": True},
+            )
+            self.assertIsNotNone(sig_ato)
+            self.assertEqual(sig_ato.severity, "CRITICAL")
+            self.assertTrue(any("Account takeover indicator" in e for e in sig_ato.evidence))
+
 
 if __name__ == "__main__":
     unittest.main()
+

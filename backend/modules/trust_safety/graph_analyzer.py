@@ -127,7 +127,7 @@ class GraphAnalyzer:
 
         if entity_type == "USER":
             try:
-                user = User.query.get(int(raw_id))
+                user = db.session.get(User, int(raw_id))
                 if user:
                     nodes[key] = GraphNode(
                         node_id=key,
@@ -139,7 +139,7 @@ class GraphAnalyzer:
                 pass
         elif entity_type == "SPACE":
             try:
-                space = Space.query.get(int(raw_id))
+                space = db.session.get(Space, int(raw_id))
                 if space:
                     nodes[key] = GraphNode(
                         node_id=key,
@@ -151,7 +151,7 @@ class GraphAnalyzer:
                 pass
         elif entity_type == "BOOKING":
             try:
-                booking = Booking.query.get(int(raw_id))
+                booking = db.session.get(Booking, int(raw_id))
                 if booking:
                     nodes[key] = GraphNode(
                         node_id=key,
@@ -207,7 +207,7 @@ class GraphAnalyzer:
             cls._add_entity_node("BOOKING", str(b.id), nodes)
             edges.append(GraphEdge(user_key, b_key, "BOOKED"))
 
-            sp = b.space or Space.query.get(b.space_id)
+            sp = b.space or db.session.get(Space, b.space_id)
             if sp:
                 space_key = f"space:{sp.id}"
                 cls._add_entity_node("SPACE", str(sp.id), nodes)
@@ -244,7 +244,7 @@ class GraphAnalyzer:
 
     @classmethod
     def _expand_space(cls, space_id: int, nodes: dict[str, GraphNode], edges: list[GraphEdge], depth: int) -> None:
-        space = Space.query.get(space_id)
+        space = db.session.get(Space, space_id)
         if not space:
             return
 
@@ -266,7 +266,7 @@ class GraphAnalyzer:
 
     @classmethod
     def _expand_booking(cls, booking_id: int, nodes: dict[str, GraphNode], edges: list[GraphEdge], depth: int) -> None:
-        booking = Booking.query.get(booking_id)
+        booking = db.session.get(Booking, booking_id)
         if not booking:
             return
 
@@ -279,7 +279,7 @@ class GraphAnalyzer:
         edges.append(GraphEdge(guest_key, b_key, "BOOKED"))
         edges.append(GraphEdge(b_key, space_key, "RESERVES"))
 
-        space = booking.space or Space.query.get(booking.space_id)
+        space = booking.space or db.session.get(Space, booking.space_id)
         if space:
             host_key = f"user:{space.host_id}"
             cls._add_entity_node("USER", str(space.host_id), nodes)
@@ -340,7 +340,7 @@ class GraphAnalyzer:
         ).all()
 
         for b in bookings:
-            sp = b.space or Space.query.get(b.space_id)
+            sp = b.space or db.session.get(Space, b.space_id)
             if sp and sp.host_id in user_ids and sp.host_id != b.guest_id:
                 adj[b.guest_id].add(sp.host_id)
 

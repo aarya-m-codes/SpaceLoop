@@ -47,7 +47,13 @@ def list_spaces():
 
     return jsonify({
         "success": True,
+        "spaces": data["items"],
+        "items": data["items"],
         "data": data,
+        "total": data["total"],
+        "page": page,
+        "limit": limit,
+        "total_pages": data["total_pages"],
     }), 200
 
 
@@ -290,7 +296,7 @@ def search_spaces():
         query = payload.get("query")
         date = payload.get("date")
         hours = payload.get("hours")
-        budget = payload.get("budget")
+        budget = payload.get("budget") or payload.get("max_price")
         location = payload.get("location")
         page = max(1, int(payload.get("page", 1)))
         limit = min(100, max(1, int(payload.get("limit", 20))))
@@ -299,7 +305,7 @@ def search_spaces():
         query = request.args.get("query") or request.args.get("q")
         date = request.args.get("date")
         hours = request.args.get("hours")
-        budget = request.args.get("budget")
+        budget = request.args.get("budget") or request.args.get("max_price")
         location = request.args.get("location")
         page = max(1, int(request.args.get("page", 1)))
         limit = min(100, max(1, int(request.args.get("limit", 20))))
@@ -318,7 +324,15 @@ def search_spaces():
 
     return jsonify({
         "success": True,
+        "spaces": result["items"],
+        "matches": result["items"],
+        "items": result["items"],
         "data": result,
+        "total": result["total"],
+        "page": result["page"],
+        "limit": result["limit"],
+        "total_pages": result["total_pages"],
+        "parsed_constraints": result.get("parsed_constraints", {}),
     }), 200
 
 
@@ -329,7 +343,7 @@ def ai_match():
     query = payload.get("query")
     date = payload.get("date")
     hours = payload.get("hours")
-    budget = payload.get("budget")
+    budget = payload.get("budget") or payload.get("max_price")
     location = payload.get("location")
     top_k = min(50, max(1, int(payload.get("top_k", 5))))
 
@@ -344,6 +358,12 @@ def ai_match():
 
     return jsonify({
         "success": True,
+        "spaces": match_result["top_matches"],
+        "matches": match_result["top_matches"],
+        "top_matches": match_result["top_matches"],
+        "explanation": match_result["match_explanation"],
+        "match_explanation": match_result["match_explanation"],
         "data": match_result,
+        "total": match_result.get("total_matches", len(match_result["top_matches"])),
     }), 200
 
