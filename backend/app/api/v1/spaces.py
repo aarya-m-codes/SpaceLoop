@@ -2,6 +2,7 @@ from typing import Any
 from flask import Blueprint, g, jsonify, request
 
 from backend.modules.auth.permissions import require_auth
+from backend.modules.search import AIMatcher, DiscoveryPipeline
 from backend.modules.spaces.photo_service import PhotoService
 from backend.modules.spaces.service import SpaceService
 from space_ai import SpaceAIAdapter
@@ -279,3 +280,70 @@ def assist_listing():
         "success": True,
         "data": assist_result,
     }), 200
+
+
+@spaces_bp.route("/search", methods=["POST", "GET"])
+def search_spaces():
+    """Six-stage hybrid discovery pipeline: NLP parsing, constraints, SQL filters, availability, vector/keyword similarity, and composite ranking."""
+    if request.method == "POST":
+        payload: dict[str, Any] = request.get_json(silent=True) or {}
+        query = payload.get("query")
+        date = payload.get("date")
+        hours = payload.get("hours")
+        budget = payload.get("budget")
+        location = payload.get("location")
+        page = max(1, int(payload.get("page", 1)))
+        limit = min(100, max(1, int(payload.get("limit", 20))))
+        require_available = bool(payload.get("require_available", False))
+    else:
+        query = request.args.get("query") or request.args.get("q")
+        date = request.args.get("date")
+        hours = request.args.get("hours")
+        budget = request.args.get("budget")
+        location = request.args.get("location")
+        page = max(1, int(request.args.get("page", 1)))
+        limit = min(100, max(1, int(request.args.get("limit", 20))))
+        require_available = request.args.get("require_available", "").lower() in ("true", "1")
+
+    result = DiscoveryPipeline.search(
+        query=query,
+        date=date,
+        hours=hours,
+        budget=budget,
+        location=location,
+        page=page,
+        limit=limit,
+        require_available=require_available,
+    )
+
+    return jsonify({
+        "success": True,
+        "data": result,
+    }), 200
+
+
+@spaces_bp.route("/ai-match", methods=["POST"])
+def ai_match():
+    """AI space recommendation and natural language match explanation."""
+    payload: dict[str, Any] = request.get_json(silent=True) or {}
+    query = payload.get("query")
+    date = payload.get("date")
+    hours = payload.get("hours")
+    budget = payload.get("budget")
+    location = payload.get("location")
+    top_k = min(50, max(1, int(payload.get("top_k", 5))))
+
+    match_result = AIMatcher.match(
+        query=query,
+        date=date,
+        hours=hours,
+        budget=budget,
+        location=location,
+        top_k=top_k,
+    )
+
+    return jsonify({
+        "success": True,
+        "data": match_result,
+    }), 200
+
