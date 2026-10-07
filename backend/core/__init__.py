@@ -1,0 +1,1 @@
+"""SpaceLoop core architectural utilities."""
