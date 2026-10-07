@@ -363,8 +363,71 @@ export const trustSafetyApi = {
     }),
 };
 
+// ==========================================
+// ADMIN OPERATIONS & COMPLIANCE APIS
+// ==========================================
+export const adminApi = {
+  getStats: () =>
+    request('/api/v1/admin/stats', { method: 'GET' }),
+
+  getUsers: (params = {}) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') query.append(k, v);
+    });
+    const qs = query.toString();
+    return request(`/api/v1/admin/users${qs ? `?${qs}` : ''}`, { method: 'GET' });
+  },
+
+  toggleUserStatus: (userId) =>
+    request(`/api/v1/admin/users/${userId}/toggle-status`, { method: 'POST' }),
+
+  getSpaces: (params = {}) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') query.append(k, v);
+    });
+    const qs = query.toString();
+    return request(`/api/v1/admin/spaces${qs ? `?${qs}` : ''}`, { method: 'GET' });
+  },
+
+  toggleSpaceStatus: (spaceId) =>
+    request(`/api/v1/admin/spaces/${spaceId}/toggle-status`, { method: 'POST' }),
+
+  getBookings: (params = {}) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') query.append(k, v);
+    });
+    const qs = query.toString();
+    return request(`/api/v1/admin/bookings${qs ? `?${qs}` : ''}`, { method: 'GET' });
+  },
+
+  getFinancials: () =>
+    request('/api/v1/admin/financials', { method: 'GET' }),
+
+  getDisputes: () =>
+    request('/api/v1/admin/disputes', { method: 'GET' }),
+
+  adjudicateDispute: (bookingId, payload) =>
+    request(`/api/v1/admin/disputes/${bookingId}/adjudicate`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getAuditLogs: (params = {}) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') query.append(k, v);
+    });
+    const qs = query.toString();
+    return request(`/api/v1/admin/audit-logs${qs ? `?${qs}` : ''}`, { method: 'GET' });
+  },
+};
+
 export default {
   auth: authApi,
+  admin: adminApi,
   spaces: spacesApi,
   bookings: bookingsApi,
   escrow: escrowApi,

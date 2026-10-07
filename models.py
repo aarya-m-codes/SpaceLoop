@@ -562,6 +562,18 @@ class AuditLog(db.Model):
     # Relationships
     user = relationship("User", back_populates="audit_logs", foreign_keys=[user_id])
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "action": self.action,
+            "entity_type": self.entity_type,
+            "entity_id": self.entity_id,
+            "changes": self.changes,
+            "ip_address": self.ip_address,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
 
 class EmailLog(db.Model):
     """Outbox and telemetry record for dispatched transactional emails."""

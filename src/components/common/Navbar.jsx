@@ -106,6 +106,50 @@ export const Navbar = () => {
     }
   };
 
+  // Dynamic navigation links based on active role context
+  const getNavLinks = () => {
+    if (activeRole === 'host') {
+      return [
+        { name: 'Dashboard', path: '/host', icon: Layers },
+        { name: 'List a Space', path: '/host/spaces/new', icon: PlusCircle },
+        { name: 'Reservations', path: '/host/reservations', icon: Calendar },
+        { name: 'Earnings', path: '/host/earnings', icon: DollarSign },
+      ];
+    }
+    if (activeRole === 'admin') {
+      return [
+        { name: 'Admin Console', path: '/admin', icon: Shield },
+        { name: 'Explore Spaces', path: '/explore', icon: Compass },
+      ];
+    }
+    // Default Seeker links
+    return [
+      { name: 'Explore', path: isLanding ? '#spaceloop-content' : '/explore', icon: Compass },
+      { name: 'How It Works', path: '/#how-it-works' },
+      { name: 'My Bookings', path: '/bookings', icon: Calendar },
+      { name: 'List a Space', path: '/host', icon: PlusCircle },
+    ];
+  };
+
+  const navLinks = getNavLinks();
+
+  const isActive = (path) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(path);
+  };
+
+  const handleNavClick = (e, path) => {
+    if (path === '#spaceloop-content') {
+      e.preventDefault();
+      const el = document.getElementById('spaceloop-content');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else if (path === '/#how-it-works') {
+      handleHowItWorksClick(e);
+    }
+  };
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 w-full glass-panel border-b border-border transition-colors duration-250 ${

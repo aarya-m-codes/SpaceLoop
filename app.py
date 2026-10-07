@@ -266,6 +266,7 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
+    from backend.app.api.v1.admin import admin_bp
     from backend.app.api.v1.ai import _handle_chat_request, ai_bp
     from backend.app.api.v1.auth import auth_bp
     from backend.app.api.v1.bookings import bookings_bp
@@ -278,6 +279,8 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     from flask import send_from_directory
 
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
+    app.register_blueprint(admin_bp, url_prefix="/api/admin")
+    app.register_blueprint(admin_bp, url_prefix="/api/v1/admin", name="admin_v1")
     app.register_blueprint(spaces_bp, url_prefix="/api/spaces")
     app.register_blueprint(spaces_bp, url_prefix="/api/v1/spaces", name="spaces_v1")
     app.register_blueprint(bookings_bp, url_prefix="/api/bookings")
