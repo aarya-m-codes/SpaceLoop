@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/frontend/Dockerfile
+    container_name: spaceloop-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:5000
+    depends_on:
+      - backend
+    networks:
+      - spaceloop-network
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend/Dockerfile
+    container_name: spaceloop-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - FLASK_ENV=development
+      - DATABASE_URL=postgresql://spaceloop:spaceloop_secure_pass@postgres:5432/spaceloop_db
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET=spaceloop_super_secret_jwt_key_2026
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - spaceloop-network
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/worker/Dockerfile
+    container_name: spaceloop-worker
+    environment:
+      - DATABASE_URL=postgresql://spaceloop:spaceloop_secure_pass@postgres:5432/spaceloop_db
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - spaceloop-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: spaceloop-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=spaceloop
+      - POSTGRES_PASSWORD=spaceloop_secure_pass
+      - POSTGRES_DB=spaceloop_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infrastructure/database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - spaceloop-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: spaceloop-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - spaceloop-network
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: spaceloop-gateway
+    ports:
+      - "80:80"
+    volumes:
+      - ./infrastructure/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - spaceloop-network
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  spaceloop-network:
+    driver: bridge

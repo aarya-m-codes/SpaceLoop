@@ -1,0 +1,25 @@
+{
+  "webhooks": [
+    {
+      "name": "payment.success",
+      "description": "Triggered when payment gateway authorizes and captures escrow deposit",
+      "payload_example": {
+        "event": "payment.success",
+        "payment_id": "pay_98234",
+        "booking_id": "bk_1002",
+        "amount_paise": 150000,
+        "currency": "INR"
+      }
+    },
+    {
+      "name": "access.checkin",
+      "description": "Triggered when smart door lock validates PIN code and registers physical unlock",
+      "payload_example": {
+        "event": "access.checkin",
+        "lock_id": "lock_delhi_hub_01",
+        "booking_id": "bk_1002",
+        "timestamp": "2026-10-07T14:02:11Z"
+      }
+    }
+  ]
+}

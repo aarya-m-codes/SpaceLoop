@@ -1,0 +1,20 @@
+name: CI Orchestrator
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  frontend-check:
+    name: Frontend Verification
+    uses: ./.github/workflows/frontend-ci.yml
+
+  backend-check:
+    name: Backend Verification
+    uses: ./.github/workflows/backend-ci.yml
+
+  security-scan:
+    name: Security & Vulnerability Scan
+    uses: ./.github/workflows/security.yml

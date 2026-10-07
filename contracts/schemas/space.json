@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SpaceModelSchema",
+  "type": "object",
+  "required": ["id", "title", "hourly_rate", "address", "city", "host_id"],
+  "properties": {
+    "id": { "type": "string" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "space_type": { "type": "string", "enum": ["coworking", "studio", "meeting", "rooftop"] },
+    "hourly_rate": { "type": "number", "minimum": 0 },
+    "capacity": { "type": "integer", "minimum": 1 },
+    "address": { "type": "string" },
+    "city": { "type": "string" },
+    "latitude": { "type": "number" },
+    "longitude": { "type": "number" },
+    "amenities": { "type": "array", "items": { "type": "string" } },
+    "images": { "type": "array", "items": { "type": "string", "format": "uri" } },
+    "instant_book": { "type": "boolean" },
+    "verification_level": { "type": "string", "enum": ["UNVERIFIED", "BASIC", "PHYSICAL_INSPECTED"] }
+  }
+}

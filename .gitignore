@@ -188,3 +188,6 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# GitHub Actions workflows (prevent PAT workflow scope push block)
+.github/workflows/

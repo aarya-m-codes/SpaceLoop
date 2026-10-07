@@ -1,0 +1,104 @@
+openapi: 3.0.3
+info:
+  title: SpaceLoop Platform API
+  description: Hyper-localized intelligent workspace marketplace with smart access PINs, multi-party escrow, and AI concierge matching.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000/api
+    description: Local development environment
+  - url: https://api.spaceloop.io/api
+    description: Production environment
+
+paths:
+  /auth/login:
+    post:
+      summary: Authenticate user session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  user: { $ref: '#/components/schemas/User' }
+
+  /spaces:
+    get:
+      summary: Search and list workspaces
+      parameters:
+        - name: query
+          in: query
+          schema: { type: string }
+        - name: space_type
+          in: query
+          schema: { type: string }
+        - name: city
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: List of verified spaces
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Space'
+
+  /bookings:
+    post:
+      summary: Create micro-lease booking
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [space_id, start_time, end_time]
+              properties:
+                space_id: { type: string }
+                start_time: { type: string, format: date-time }
+                end_time: { type: string, format: date-time }
+      responses:
+        '201':
+          description: Booking created with escrow and access PIN generated
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        full_name: { type: string }
+        role: { type: string, enum: [seeker, host, admin] }
+
+    Space:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        hourly_rate: { type: number }
+        address: { type: string }
+        amenities: { type: array, items: { type: string } }
+        is_verified: { type: boolean }

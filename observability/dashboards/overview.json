@@ -1,0 +1,37 @@
+{
+  "title": "SpaceLoop Operational Health Dashboard",
+  "panels": [
+    {
+      "id": 1,
+      "title": "API Request Rate (req/sec)",
+      "type": "graph",
+      "targets": [
+        { "expr": "rate(http_requests_total[1m])" }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "P95 Latency by Endpoint",
+      "type": "graph",
+      "targets": [
+        { "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))" }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Active Escrow Balance (INR)",
+      "type": "stat",
+      "targets": [
+        { "expr": "spaceloop_escrow_holding_total" }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Physical Smart Check-Ins / hr",
+      "type": "bar",
+      "targets": [
+        { "expr": "rate(spaceloop_checkins_total[1h])" }
+      ]
+    }
+  ]
+}

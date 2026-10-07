@@ -1,0 +1,16 @@
+# Global repository owners
+* @aarya-m-codes
+
+# Frontend components and UI
+/src/ @aarya-m-codes
+/public/ @aarya-m-codes
+
+# Backend engines and microservices
+/backend/ @aarya-m-codes
+/fraud_engine/ @aarya-m-codes
+/*.py @aarya-m-codes
+
+# CI/CD and Devops infrastructure
+/.github/ @aarya-m-codes
+/infrastructure/ @aarya-m-codes
+/deployment/ @aarya-m-codes
