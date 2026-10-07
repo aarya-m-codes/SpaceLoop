@@ -77,7 +77,7 @@ export const Navbar = () => {
       if (targetRole === 'host') {
         navigate('/host');
       } else if (targetRole === 'seeker') {
-        navigate('/explore');
+        navigate('/seeker');
       } else if (targetRole === 'admin') {
         navigate('/admin');
       }
@@ -359,7 +359,7 @@ export const Navbar = () => {
                       </div>
 
                       <Link
-                        to="/profile"
+                        to="/seeker?tab=profile"
                         onClick={() => setProfileDropdownOpen(false)}
                         className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors"
                       >
@@ -368,7 +368,7 @@ export const Navbar = () => {
                       </Link>
 
                       <Link
-                        to="/bookings"
+                        to="/seeker?tab=bookings"
                         onClick={() => setProfileDropdownOpen(false)}
                         className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors"
                       >

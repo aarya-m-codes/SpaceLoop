@@ -39,13 +39,19 @@ import { useToast } from '../../context/ToastContext';
 import { Button } from '../../components/common/Button';
 import { ErrorState } from '../../components/common/ErrorState';
 
-export const AdminDashboard = () => {
+export const AdminDashboard = ({ initialTab = 'overview' }) => {
   const { user, isAdmin } = useAuth();
   const { success, error: toastError, info } = useToast();
 
   // Active navigation tab
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(initialTab);
   // 'overview' | 'users' | 'spaces' | 'bookings' | 'financials' | 'disputes' | 'trust' | 'fraud' | 'audit'
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   // Loading states
   const [loading, setLoading] = useState(true);
