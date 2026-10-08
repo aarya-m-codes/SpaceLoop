@@ -186,4 +186,187 @@ export const translations = {
     'verify.hostTitle': 'होस्ट वीज आणि जागा पडताळणी',
     'verify.hostDesc': 'महावितरण वीज बिल आणि UPI VPA पडताळणी करा.',
   },
+
+  gsw: {
+    // Navigation & Common
+    'nav.explore': 'ठौर खोजा',
+    'nav.howItWorks': 'यौ कनक काम करदु',
+    'nav.calculator': 'कमाई गणक',
+    'nav.verify': 'जाँच अर परखा',
+    'nav.architecture': 'ढांचा अर टोली',
+    'nav.trustSafety': 'भरोसो अर सुरक्षा',
+    'nav.hostDashboard': 'मालिक पोर्टल',
+    'nav.myBookings': 'मेरी बुकिंग',
+    'nav.login': 'भीतर आवा (लॉग इन)',
+    'nav.register': 'शुरू करा',
+    'nav.logout': 'बायरा जावा',
+    'nav.switchHost': 'मालिक मोड म जावा',
+    'nav.switchSeeker': 'ग्राहक मोड म जावा',
+
+    // Hero & Landing
+    'hero.badge': 'भारत को पैलो AI ठौर बाजार',
+    'hero.title': 'घंटे कु हिसाब से कमरा, डेस्क अर स्टुडियो बुक करा',
+    'hero.subtitle': 'बिना चाबी डिजिटल प्रवेश, ₹100 सुरक्षित धरोहर वापसी अर धारा 52 कानूनी सहमति पत्र।',
+    'hero.searchPlaceholder': 'इलाका या काम खोजा (जगा, शहर)...',
+    'hero.searchBtn': 'ठौर खोजा',
+
+    // Features & Guarantees
+    'guarantee.sec52': 'धारा 52 भारतीय सुखाचार अधिनियम',
+    'guarantee.sec52Desc': 'वैधानिक अस्थायी लाइसेंस; किरायेदारी कु कोइ झमेला निछ।',
+    'guarantee.escrow': '₹100 UPI धरोहर सुरक्षा',
+    'guarantee.escrowDesc': 'खाता मा सुरक्षित; कमरा खाली करणा कु फोटो देखि तुरंत वापसी।',
+    'guarantee.telemetry': 'बिना हार्डवेयर प्रवेश',
+    'guarantee.telemetryDesc': '50 मीटर जीपीएस, डिजिटल क्यूआर पास अर 4-अंकीय आगमन पिन।',
+
+    // Session Console
+    'session.title': 'कमरा भीतर कु सीधा कंसोल',
+    'session.remaining': 'बच्युं बगत',
+    'session.pin': 'तुमरो आगमन पिन',
+    'session.pinHelp': 'कमरा का ताला या कीबॉक्स मा यौ 4 अंकों को पिन दबावा।',
+    'session.qrScan': 'दरवाजा क्यूआर स्कैनर',
+    'session.checkinBtn': 'जीपीएस जियोफेंस चेक-इन',
+    'session.checkoutBtn': 'चेकआउट पूरा करा अर धरोहर वापस ल्यावा',
+    'session.extendBtn': 'बगत बढावा (+1 घंटा)',
+    'session.appliances': 'बत्ती-पंखा बंद करणा कु सूची',
+
+    // Calculator
+    'calc.title': 'कमरा कमाई अनुमानक',
+    'calc.subtitle': 'शहर का हिसाब से अपणी जगह की महिनावार कमाई कु हिसाब लगावा।',
+    'calc.sqft': 'ठौर कु नाप (वर्ग फुट)',
+    'calc.city': 'शहर',
+    'calc.category': 'ठौर कु प्रकार',
+    'calc.estimatedMonthly': 'महिनावार अनुमानित आमदनी',
+    'calc.hostNet': 'मालिक कु खांटी मुनाफो (5% काटि)',
+    'calc.hourlyRate': 'प्रति घंटा मानक दर',
+    'calc.occupancy': 'अनुमानित इस्तेमाल',
+
+    // Verify
+    'verify.title': 'पहचान, बिजली अर भरोसो जाँच केंद्र',
+    'verify.studentTitle': 'छात्र छूट जाँच',
+    'verify.studentDesc': '15% छूट खातिर .ac.in या डिजिलॉकर से पहचान जांचा।',
+    'verify.hostTitle': 'मालिक बिजली अर मालिकाना जाँच',
+    'verify.hostDesc': 'बिजली बिल (CA) अर UPI खाता नाम कु तुरन्त सत्यापन करा।',
+  },
+
+  kfy: {
+    // Navigation & Common
+    'nav.explore': 'ठौर खोजा',
+    'nav.howItWorks': 'यो कसी काम करछ',
+    'nav.calculator': 'कमाई गणक',
+    'nav.verify': 'जाँच अर विश्वास',
+    'nav.architecture': 'ढाँचा अर टोली',
+    'nav.trustSafety': 'विश्वास अर सुरक्षा',
+    'nav.hostDashboard': 'मालिक पोर्टल',
+    'nav.myBookings': 'मेरी बुकिंग',
+    'nav.login': 'भितर आवा (लॉग इन)',
+    'nav.register': 'शुरुआत करा',
+    'nav.logout': 'ब्यार जावा',
+    'nav.switchHost': 'मालिक मोड में जावा',
+    'nav.switchSeeker': 'ग्राहक मोड में जावा',
+
+    // Hero & Landing
+    'hero.badge': 'भारत को पैलो AI ठौर बजार',
+    'hero.title': 'घंटे का हिसाब से वर्कस्पेस, डेस्क अर स्टूडियो बुक करा',
+    'hero.subtitle': 'बिना चाबी डिजिटल प्रवेश, ₹100 सुरक्षित धरोहर वापसी अर धारा 52 कानूनी सहमति पत्र।',
+    'hero.searchPlaceholder': 'इलाका या काम खोजा (ठौर, सहर)...',
+    'hero.searchBtn': 'ठौर खोजा',
+
+    // Features & Guarantees
+    'guarantee.sec52': 'धारा 52 भारतीय सुखाचार अधिनियम',
+    'guarantee.sec52Desc': 'वैधानिक अस्थायी लाइसेंस; किरायेदारी कु कोइ झमेला न्है।',
+    'guarantee.escrow': '₹100 UPI धरोहर सुरक्षा',
+    'guarantee.escrowDesc': 'लेजर में सुरक्षित; कमरो खाली करणा कु फोटो देखि तुरंत वापसी।',
+    'guarantee.telemetry': 'बिना हार्डवेयर प्रवेश',
+    'guarantee.telemetryDesc': '50 मीटर जीपीएस, डिजिटल क्यूआर पास अर 4-अंकीय आगमन पिन।',
+
+    // Session Console
+    'session.title': 'कमरा भितर कु सीधो कंसोल',
+    'session.remaining': 'बच्यो बगत',
+    'session.pin': 'तुमरो आगमन पिन',
+    'session.pinHelp': 'कमरा का ताला या कीबॉक्स में यो 4 अंकों को पिन हाल्या।',
+    'session.qrScan': 'द्वाड़ क्यूआर स्कैनर',
+    'session.checkinBtn': 'जीपीएस जियोफेंस चेक-इन',
+    'session.checkoutBtn': 'चेकआउट पूरा करा अर धरोहर वापस ल्यावा',
+    'session.extendBtn': 'बगत बढावा (+1 घंटा)',
+    'session.appliances': 'बत्ती-पंखा बन्द करणा कु सूची',
+
+    // Calculator
+    'calc.title': 'कमरा कमाई अनुमानक',
+    'calc.subtitle': 'सहर का हिसाब से अपणी जगह की मैनावार कमाई कु हिसाब लगावा।',
+    'calc.sqft': 'ठौर कु नाप (वर्ग फुट)',
+    'calc.city': 'सहर',
+    'calc.category': 'ठौर कु प्रकार',
+    'calc.estimatedMonthly': 'मैनावार अनुमानित आमदनी',
+    'calc.hostNet': 'मालिक कु खांटी नफो (5% काटि)',
+    'calc.hourlyRate': 'प्रति घंटा मानक दर',
+    'calc.occupancy': 'अनुमानित इस्तेमाल',
+
+    // Verify
+    'verify.title': 'पहचान, बिजली अर विश्वास जाँच केंद्र',
+    'verify.studentTitle': 'छात्र छूट जाँच',
+    'verify.studentDesc': '15% छूट खातिर .ac.in या डिजिलॉकर से पहचान जांचा।',
+    'verify.hostTitle': 'मालिक बिजली अर मालिकाना जाँच',
+    'verify.hostDesc': 'बिजली बिल (CA) अर UPI खाता नाम कु तुरन्त सत्यापन करा।',
+  },
+
+  jns: {
+    // Navigation & Common
+    'nav.explore': 'जगा खोजो',
+    'nav.howItWorks': 'यो किक काम करदो',
+    'nav.calculator': 'कमाई हिसाब',
+    'nav.verify': 'जाँच अर भरौसो',
+    'nav.architecture': 'ढांचो अर टोली',
+    'nav.trustSafety': 'भरौसो अर सुरक्षा',
+    'nav.hostDashboard': 'मालिक पोर्टल',
+    'nav.myBookings': 'मेरी बुकिंग',
+    'nav.login': 'दाखिला (लॉग इन)',
+    'nav.register': 'शुरू करो',
+    'nav.logout': 'बाहर निकळो',
+    'nav.switchHost': 'मालिक मोड म जाओ',
+    'nav.switchSeeker': 'खोज्यार मोड म जाओ',
+
+    // Hero & Landing
+    'hero.badge': 'भारत रो पहलो AI जगा बजार',
+    'hero.title': 'घंटे रे हिसाब से काम करणे री जगा, डेस्क अर स्टूडियो बुक करो',
+    'hero.subtitle': 'बिना चाबी डिजिटल दाखिला, ₹100 सुरक्षित धरोहर वापसी अर धारा 52 कानूनी सहमति पत्र।',
+    'hero.searchPlaceholder': 'इलाको या काम खोजो (जगा, गाम, शहर)...',
+    'hero.searchBtn': 'जगा खोजो',
+
+    // Features & Guarantees
+    'guarantee.sec52': 'धारा 52 भारतीय सुखाचार अधिनियम',
+    'guarantee.sec52Desc': 'कानूनी अस्थायी अनुमति; किरायेदारी रो कोई झमेला नाइ।',
+    'guarantee.escrow': '₹100 UPI धरोहर सुरक्षा',
+    'guarantee.escrowDesc': 'खाता म सुरक्षित; जगा खाली करणे रो फोटो देखि तुरन्त वापसी।',
+    'guarantee.telemetry': 'बिना हार्डवेयर दाखिला',
+    'guarantee.telemetryDesc': '50 मीटर जीपीएस, डिजिटल क्यूआर पास अर 4-अंकीय पिन।',
+
+    // Session Console
+    'session.title': 'कमरे भितर रो लाइव कंसोल',
+    'session.remaining': 'बच्यो ओखत',
+    'session.pin': 'तुमरो आगमन पिन',
+    'session.pinHelp': 'कमरे रे ताले या कीबॉक्स म यो 4 अंकों रो पिन लगाओ।',
+    'session.qrScan': 'दरवाजा क्यूआर स्कैनर',
+    'session.checkinBtn': 'जीपीएस जियोफेंस चेक-इन',
+    'session.checkoutBtn': 'चेकआउट पूरा करो अर धरोहर वापस लेओ',
+    'session.extendBtn': 'बगत बढाओ (+1 घंटा)',
+    'session.appliances': 'बत्ती-पंखे बन्द करणे री सूची',
+
+    // Calculator
+    'calc.title': 'जगा कमाई हिसाब',
+    'calc.subtitle': 'शहर रे हिसाब से आपणी जगा री महिनावार कमाई रो हिसाब लगाओ।',
+    'calc.sqft': 'जगा रो नाप (वर्ग फुट)',
+    'calc.city': 'शहर',
+    'calc.category': 'जगा रो प्रकार',
+    'calc.estimatedMonthly': 'महिनावार अनुमानित आमदनी',
+    'calc.hostNet': 'मालिक रो शुद्ध फायदो (5% काटि)',
+    'calc.hourlyRate': 'प्रति घंटा मानक दर',
+    'calc.occupancy': 'अनुमानित इस्तेमाल',
+
+    // Verify
+    'verify.title': 'पहचान, बिजली अर भरौसो जाँच केंद्र',
+    'verify.studentTitle': 'छात्र छूट जाँच',
+    'verify.studentDesc': '15% छूट खातिर .ac.in या डिजिलॉकर से पहचान जांचो।',
+    'verify.hostTitle': 'मालिक बिजली अर मालिकाना जाँच',
+    'verify.hostDesc': 'बिजली बिल (CA) अर UPI खाता नाम री तुरन्त पुष्टि करो।',
+  },
 };

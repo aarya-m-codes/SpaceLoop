@@ -28,7 +28,8 @@ export const I18nProvider = ({ children }) => {
     if (!dateStr) return '';
     try {
       const d = new Date(dateStr);
-      return d.toLocaleDateString(language === 'hi' ? 'hi-IN' : language === 'mr' ? 'mr-IN' : 'en-IN', {
+      const locale = language === 'mr' ? 'mr-IN' : ['hi', 'gsw', 'kfy', 'jns'].includes(language) ? 'hi-IN' : 'en-IN';
+      return d.toLocaleDateString(locale, {
         day: 'numeric',
         month: 'short',
         year: 'numeric',

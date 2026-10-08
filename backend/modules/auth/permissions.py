@@ -85,12 +85,18 @@ def require_auth(f: Callable) -> Callable:
     def decorated(*args: Any, **kwargs: Any) -> Any:
         current_user = getattr(g, "current_user", None)
         if not current_user:
+            from backend.modules.i18n.middleware import get_request_language
+            from backend.modules.i18n.lexicon import localize_error
+            lang = get_request_language()
+            loc_msg = localize_error("UNAUTHORIZED", lang)
             return (
                 jsonify({
                     "success": False,
                     "error": {
                         "code": "UNAUTHORIZED",
-                        "message": "Authentication required. Please log in or provide a valid access token.",
+                        "message": loc_msg if lang != "en" else "Authentication required. Please log in or provide a valid access token.",
+                        "localized_message": loc_msg,
+                        "language": lang,
                     },
                 }),
                 401,
@@ -119,12 +125,18 @@ def require_role(*allowed_roles: str) -> Callable:
         def decorated(*args: Any, **kwargs: Any) -> Any:
             current_user = getattr(g, "current_user", None)
             if not current_user:
+                from backend.modules.i18n.middleware import get_request_language
+                from backend.modules.i18n.lexicon import localize_error
+                lang = get_request_language()
+                loc_msg = localize_error("UNAUTHORIZED", lang)
                 return (
                     jsonify({
                         "success": False,
                         "error": {
                             "code": "UNAUTHORIZED",
-                            "message": "Authentication required.",
+                            "message": loc_msg if lang != "en" else "Authentication required.",
+                            "localized_message": loc_msg,
+                            "language": lang,
                         },
                     }),
                     401,

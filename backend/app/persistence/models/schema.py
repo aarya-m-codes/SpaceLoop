@@ -48,6 +48,7 @@ class User(db.Model):
     discom_consumer_hash = db.Column(String(64), nullable=True, index=True)
     discom_provider = db.Column(String(100), nullable=True)
     upi_vpa = db.Column(String(100), nullable=True)
+    preferred_language = db.Column(String(10), default="en", nullable=False)
     created_at = db.Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = db.Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
@@ -102,6 +103,7 @@ class User(db.Model):
             "is_admin": is_adm,
             "is_host": is_hst,
             "is_seeker": True,
+            "preferred_language": self.preferred_language or "en",
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 

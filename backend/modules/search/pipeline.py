@@ -19,6 +19,9 @@ from sqlalchemy import func
 
 from backend.core.database import db
 from backend.core.geo import haversine_distance_km
+from backend.modules.i18n.constants import normalize_language_code
+from backend.modules.i18n.lexicon import MATCH_EXPLANATION_TEMPLATES, localize_amenity
+from backend.modules.i18n.middleware import get_request_language
 from backend.modules.nlp.llm_extractor import LLMExtractor
 from backend.modules.nlp.parser import QueryParser
 from backend.modules.search.availability import AvailabilityEngine
@@ -52,6 +55,7 @@ class DiscoveryPipeline:
         amenities: list[str] | None = None,
         radius_km: float | None = None,
         noise_preference: str | None = None,
+        language: str | None = None,
     ) -> dict[str, Any]:
         """Execute the complete semantic AI search pipeline with strict constraint safety."""
 
@@ -355,51 +359,69 @@ class DiscoveryPipeline:
             # STAGE 9: Grounded "Why This Matches" Generation
             # (Strictly derived from actual space attributes and signals)
             # ---------------------------------------------------------
+            # Grounded Multilingual Explanation of Match
+            # ---------------------------------------------------------
+            lang_code = normalize_language_code(language or get_request_language())
             match_reasons: list[str] = []
 
             # 1. Capacity Reason
             if constraints.get("capacity"):
                 req_cap = constraints["capacity"]
-                match_reasons.append(f"Fits {req_cap} people (Capacity: {space.capacity})")
+                template = MATCH_EXPLANATION_TEMPLATES.get("capacity_match", {}).get(lang_code, MATCH_EXPLANATION_TEMPLATES["capacity_match"]["en"])
+                match_reasons.append(template.format(req=req_cap, max=space.capacity))
             else:
-                match_reasons.append(f"Capacity: {space.capacity} {'person' if space.capacity == 1 else 'people'}")
+                match_reasons.append(f"Capacity: {space.capacity} {'person' if space.capacity == 1 else 'people'}" if lang_code == "en" else f"Capacity: {space.capacity}")
 
             # 2. Price / Budget Reason
             if constraints.get("budget"):
                 user_b = constraints["budget"]
-                match_reasons.append(f"Within your ₹{user_b:g}/hr budget (₹{space.price_per_hour:g}/hr)")
+                template = MATCH_EXPLANATION_TEMPLATES["budget_match"].get(lang_code, MATCH_EXPLANATION_TEMPLATES["budget_match"]["en"])
+                match_reasons.append(template.format(budget=user_b, rate=space.price_per_hour))
             else:
-                match_reasons.append(f"Price: ₹{space.price_per_hour:g}/hour")
+                template = MATCH_EXPLANATION_TEMPLATES["rate_only"].get(lang_code, MATCH_EXPLANATION_TEMPLATES["rate_only"]["en"])
+                match_reasons.append(template.format(rate=space.price_per_hour))
 
             # 3. Acoustic / Noise Reason
             if noise_reason:
-                match_reasons.append(noise_reason)
+                if lang_code == "en":
+                    match_reasons.append(noise_reason)
+                elif constraints.get("noise_preference") == "quiet" or "quiet" in constraints.get("amenities", []):
+                    match_reasons.append(MATCH_EXPLANATION_TEMPLATES["quiet_environment"].get(lang_code, MATCH_EXPLANATION_TEMPLATES["quiet_environment"]["en"]))
+                else:
+                    match_reasons.append(noise_reason)
 
             # 4. Proximity / Location Reason
             dist_km = ranking_info["breakdown"].get("distance_km")
+            loc_name = space.neighborhood or space.city
             if dist_km is not None:
-                match_reasons.append(f"{dist_km:.1f} km away in {space.neighborhood or space.city}")
-            elif space.neighborhood or space.city:
-                match_reasons.append(f"Located in {space.neighborhood or space.city}")
+                template = MATCH_EXPLANATION_TEMPLATES["distance"].get(lang_code, MATCH_EXPLANATION_TEMPLATES["distance"]["en"])
+                match_reasons.append(template.format(dist=dist_km, loc=loc_name))
+            elif loc_name:
+                template = MATCH_EXPLANATION_TEMPLATES["location_only"].get(lang_code, MATCH_EXPLANATION_TEMPLATES["location_only"]["en"])
+                match_reasons.append(template.format(loc=loc_name))
 
             # 5. Availability Reason
             if constraints.get("date"):
                 time_display = f" at {constraints.get('time')}" if constraints.get("time") else ""
                 dur_display = f" for {constraints['duration_hours']:g} hrs" if constraints.get("duration_hours") else ""
                 if is_avail:
-                    match_reasons.append(f"Available on {constraints['date']}{time_display}{dur_display}")
+                    template = MATCH_EXPLANATION_TEMPLATES["available_slot"].get(lang_code, MATCH_EXPLANATION_TEMPLATES["available_slot"]["en"])
+                    match_reasons.append(template.format(date=constraints['date'], time=time_display, dur=dur_display))
                 else:
                     match_reasons.append(f"Occupied for requested slot ({avail_reason or 'Conflict'})")
 
             # 6. Amenity Matches
             if matched_amenities:
-                match_reasons.append(f"Matches amenities: {', '.join(matched_amenities)}")
+                localized_ams = [localize_amenity(am, lang_code) for am in matched_amenities]
+                match_reasons.append(f"{', '.join(localized_ams)}")
             elif space.amenities:
-                match_reasons.append(f"Key amenities: {', '.join(space.amenities[:3])}")
+                localized_ams = [localize_amenity(am, lang_code) for am in space.amenities[:3]]
+                match_reasons.append(f"{', '.join(localized_ams)}")
 
             # 7. Host Trust
             if host_trust and host_trust >= 90:
-                match_reasons.append(f"Hosted by verified host ({int(host_trust)}% trust score)")
+                template = MATCH_EXPLANATION_TEMPLATES["host_trust"].get(lang_code, MATCH_EXPLANATION_TEMPLATES["host_trust"]["en"])
+                match_reasons.append(template.format(score=int(host_trust)))
 
             # Assemble grounded why_this_matches summary
             why_this_matches = " • ".join(match_reasons)

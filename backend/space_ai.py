@@ -190,71 +190,16 @@ def calculate_earnings_estimate(
     }
 
 
-def generate_micro_lease(space_dict: dict[str, Any], booking_dict: dict[str, Any]) -> str:
-    """Generate plain-English, legally binding Temporary Space Use Agreement (Micro-Lease)
-    under the Indian Easements Act 1882, Section 52.
+def generate_micro_lease(
+    space_dict: dict[str, Any],
+    booking_dict: dict[str, Any],
+    language: str = "en",
+) -> str:
+    """Generate legally binding Temporary Space Use Agreement (Micro-Lease)
+    under the Indian Easements Act 1882, Section 52 across all six supported languages.
     """
-    booking_id = booking_dict.get("id", "NEW")
-    space_title = space_dict.get("title", "SpaceLoop Verified Micro-Workspace")
-    space_addr = space_dict.get("address", space_dict.get("location", "Registered SpaceLoop Premises"))
-    host_name = space_dict.get("host_name", space_dict.get("owner_name", "Verified Property Host"))
-    renter_name = booking_dict.get("renter_name", booking_dict.get("guest_name", "Verified SpaceLoop Seeker"))
-    start_time = booking_dict.get("start_time", booking_dict.get("start_iso", "Scheduled Slot Start"))
-    end_time = booking_dict.get("end_time", booking_dict.get("end_iso", "Scheduled Slot End"))
-    hours = booking_dict.get("hours_booked", booking_dict.get("duration_hours", 2))
-    total_price = booking_dict.get("total_price", booking_dict.get("amount", 200.0))
-    escrow_deposit = booking_dict.get("deposit_held", booking_dict.get("escrow_deposit_amount", 100.0))
-    purpose = booking_dict.get("intended_purpose", "Individual Academic Study / Remote Work")
-    attendees = booking_dict.get("attendees_count", 1)
-    rules = space_dict.get("rules", ["Respect noise boundaries", "Leave space tidy", "Lock doors upon departure"])
-    if isinstance(rules, str):
-        rules_str = rules
-    elif isinstance(rules, list):
-        rules_str = "; ".join(rules)
-    else:
-        rules_str = "Standard SpaceLoop Property Rules"
-
-    agreement = f"""# SpaceLoop Temporary Micro-Lease & Access License
-**Agreement ID:** SL-AGR-{booking_id}
-**Statutory Classification:** Revocable License under Section 52 of the Indian Easements Act, 1882.
-**Effective Window:** {start_time} to {end_time} ({hours} hours)
-
----
-
-### 1. Parties & Premises
-- **Grantor (Host / Licensor):** {host_name}
-- **Grantee (Seeker / Licensee):** {renter_name}
-- **Premises:** {space_title}, {space_addr}
-- **Legal Character:** This instrument conveys a temporary, non-exclusive, revocable license strictly for the scheduled duration. It does NOT constitute a lease, tenancy, or right of continuous possession under any state rent control legislation.
-
----
-
-### 2. Permitted Purpose & Occupancy
-- **Authorized Purpose:** {purpose}
-- **Maximum Permitted Occupants:** {attendees} person(s).
-- **Prohibited Conduct:** Sublicensing, smoking, open flames, alcohol, commercial trading beyond permitted purpose, or excessive noise exceeding 55dB.
-
----
-
-### 3. Financial Terms & Security Micro-Escrow
-- **Usage Fee:** ₹{total_price} for {hours} hour(s) of access.
-- **Micro-Escrow Deposit:** ₹{escrow_deposit} held via NPCI UPI automated escrow. Released instantly to the Seeker upon check-out visual clearance.
-- **Overstay Clause:** Any unapproved overstay beyond a 10-minute grace period is charged at 1.5x the hourly rate in 30-minute blocks.
-
----
-
-### 4. Zero-Hardware Access & Care Checklist
-- **Entry Protocol:** Keyless check-in confirmed via 50m smartphone GPS geofence handshake and single-use digital pass.
-- **Departure Protocol:** Licensee must restore furniture to initial positions, switch off all fans and lights, remove all personal waste, and capture an exit condition photo.
-
----
-
-### 5. Mutual Indemnification
-The Licensee agrees to exercise reasonable care and releases the Host and SpaceLoop Technologies from liability for personal injury or personal property loss occurring during the reservation window, save for willful host misconduct.
-
-*Digitally sealed, timestamped, and bound upon booking authorization via SpaceLoop Platform.*
-"""
-    return agreement.strip()
+    from backend.modules.i18n.agreement_i18n import generate_multilingual_micro_lease
+    return generate_multilingual_micro_lease(space_dict, booking_dict, language=language)
 
 
 def evaluate_room_condition_delta(
@@ -368,13 +313,54 @@ def compute_objective_trust_index(
     return round(min(100.0, max(0.0, oti)), 1)
 
 
+OTI_DESCRIPTIONS: dict[str, dict[str, str]] = {
+    "en": {
+        "punctuality": "On-time departure telemetry inside the booked micro-lease window.",
+        "cleanliness": "Computer Vision condition delta verifying furniture unchanged, lights/fans off, zero waste.",
+        "identity_trust": "DigiLocker Aadhaar, student university SSO, or Discom utility meter verification.",
+        "dispute_history": "Clean deposit settlement history with zero payment or property disputes.",
+    },
+    "hi": {
+        "punctuality": "बुक किए गए माइक्रो-लीज़ समय के भीतर समय पर प्रस्थान टेलीमेट्री।",
+        "cleanliness": "कंप्यूटर विज़न स्थिति सत्यापन: फर्नीचर यथावत, पंखे/लाइट्स बंद, शून्य कचरा।",
+        "identity_trust": "डिजिलॉकर आधार, विश्वविद्यालय एसएसओ या बिजली मीटर सत्यापन।",
+        "dispute_history": "शून्य विवाद और स्वच्छ सुरक्षा जमा निपटान इतिहास।",
+    },
+    "mr": {
+        "punctuality": "आरक्षित मायक्रो-लीज कालावधीत वेळेवर बाहेर पडण्याची टेलिमेट्री.",
+        "cleanliness": "कॉम्प्युटर व्हिजन स्थिती तपासणी: फर्निचर सुरक्षित, दिवे/पंखा बंद, कचरा शून्य.",
+        "identity_trust": "डिजीलॉकर आधार, विद्यापीठ एसएसओ किंवा वीज बिल ग्राहक पडताळणी.",
+        "dispute_history": "शून्य वाद आणि पारदर्शक अनामत रक्कम परतावा इतिहास.",
+    },
+    "gsw": {
+        "punctuality": "तय बगत म समै पर जाणा कु टेलीमेट्री प्रमाण।",
+        "cleanliness": "कंप्यूटर विजन जाँच: सामान सुरक्षित, बत्ती-पंखा बंद अर कूडू-कचरा निछ।",
+        "identity_trust": "डिजिलॉकर आधार, पढ़ाई लिखाई प्रमाण या बिजली खाता सत्यापन।",
+        "dispute_history": "कखि भि कज्या-झगड़ा नि, स्वच्छ धरोहर वापसी इतिहास।",
+    },
+    "kfy": {
+        "punctuality": "तय बगत में समै पर जाणो कु टेलीमेट्री प्रमाण।",
+        "cleanliness": "कंप्यूटर विजन जाँच: सामान जसुकु-तसु, बत्ती-पंखा बन्द अर शून्य मैल।",
+        "identity_trust": "डिजिलॉकर आधार, छात्र पहचान या बिजली बिल खाता सत्यापन।",
+        "dispute_history": "कथै भि विवाद न्है, साफ सुरक्षित धरोहर वापसी इतिहास।",
+    },
+    "jns": {
+        "punctuality": "नियत बगत म समै पर निकळने री टेलीमेट्री पुष्टि।",
+        "cleanliness": "कंप्यूटर विजन जाँच: सामान ठिकाणे, बत्ती-पंखे बन्द अर कूडो-कचरो नाइ।",
+        "identity_trust": "डिजिलॉकर आधार, कॉलेज पहचान या बिजली खाता सत्यापन।",
+        "dispute_history": "कोई झमेला नाइ, साफ-सुथरो धरोहर वापसी रिकॉर्ड।",
+    },
+}
+
+
 def get_oti_breakdown(
     punctuality: float = 100.0,
     condition_match: float = 98.0,
     is_identity_verified: bool = True,
     dispute_count: int = 0,
+    language: str = "en",
 ) -> dict[str, Any]:
-    """Return Objective Trust Index (OTI) breakdown with verifiable metrics."""
+    """Return Objective Trust Index (OTI) breakdown with verifiable metrics across all 6 supported languages."""
     punc = round(min(100.0, max(0.0, float(punctuality))), 1)
     cond = round(min(100.0, max(0.0, float(condition_match))), 1)
     id_score = 100.0 if is_identity_verified else 70.0
@@ -382,28 +368,33 @@ def get_oti_breakdown(
     financial_score = max(0.0, 100.0 - dispute_penalty)
 
     total_oti = round((0.35 * punc) + (0.35 * cond) + (0.20 * id_score) + (0.10 * financial_score), 1)
+    
+    from backend.modules.i18n.constants import normalize_language_code
+    lang = normalize_language_code(language)
+    desc = OTI_DESCRIPTIONS.get(lang, OTI_DESCRIPTIONS["en"])
 
     return {
         "total_score": total_oti,
+        "language": lang,
         "punctuality": {
             "score": punc,
             "weight": "35%",
-            "description": "On-time departure telemetry inside the booked micro-lease window.",
+            "description": desc["punctuality"],
         },
         "cleanliness": {
             "score": cond,
             "weight": "35%",
-            "description": "Computer Vision condition delta verifying furniture unchanged, lights/fans off, zero waste.",
+            "description": desc["cleanliness"],
         },
         "identity_trust": {
             "score": id_score,
             "weight": "20%",
-            "description": "DigiLocker Aadhaar, student university SSO, or Discom utility meter verification.",
+            "description": desc["identity_trust"],
         },
         "dispute_history": {
             "score": financial_score,
             "weight": "10%",
-            "description": "Clean deposit settlement history with zero payment or property disputes.",
+            "description": desc["dispute_history"],
         },
     }
 

@@ -20,6 +20,9 @@ from backend.modules.nlp.lexicons import (
 )
 
 
+DEV_DIGIT_MAP = str.maketrans("०१२३४५६७८९", "0123456789")
+
+
 class QueryParser:
     """Deterministic multilingual natural language query parser for physical space search."""
 
@@ -156,9 +159,10 @@ class QueryParser:
 
     @staticmethod
     def normalize_text(text: str) -> str:
-        """Normalize Unicode, strip redundant whitespace, convert to lowercase while preserving Devanagari."""
+        """Normalize Unicode, strip redundant whitespace, convert Devanagari digits to ASCII, and lowercase."""
         nfkd = unicodedata.normalize("NFKD", text)
         cleaned = re.sub(r"[\t\r\n]+", " ", nfkd)
+        cleaned = cleaned.translate(DEV_DIGIT_MAP)
         cleaned = re.sub(r"\s+", " ", cleaned).strip().lower()
         return cleaned
 
@@ -209,17 +213,17 @@ class QueryParser:
             except ValueError:
                 pass
 
-        # Relative days (English, Hindi, Hinglish, Marathi)
-        # Day after tomorrow: "parso", "parwa", "day after tomorrow"
-        if re.search(r"(?:\b|\s|^)(day after tomorrow|parso|parson|परसों|parwa|परवा)(?:\b|\s|$|[,\.\?!])", text):
+        # Relative days across all 6 languages (English, Hindi, Marathi, Garhwali, Kumaoni, Jaunsari)
+        # Day after tomorrow: "parso", "parwa", "day after tomorrow", "परसों", "परवा", "परों"
+        if re.search(r"(?:\b|\s|^)(day after tomorrow|parso|parson|परसों|parwa|परवा|परों)(?:\b|\s|$|[,\.\?!])", text):
             return (now_utc + timedelta(days=2)).isoformat()
 
-        # Tomorrow: "tomorrow", "kal", "udya", "उद्या", "कल"
-        if re.search(r"(?:\b|\s|^)(tomorrow|udya|उद्या|kal|कल)(?:\b|\s|$|[,\.\?!])", text):
+        # Tomorrow: "tomorrow", "kal", "udya", "उद्या", "kal", "कल", "काल", "भोल", "कैल", "काल्ह"
+        if re.search(r"(?:\b|\s|^)(tomorrow|udya|उद्या|kal|कल|काल|भोल|कैल|काल्ह)(?:\b|\s|$|[,\.\?!])", text):
             return (now_utc + timedelta(days=1)).isoformat()
 
-        # Today: "today", "aaj", "आज", "aajcha diwas", "आजचा दिवस"
-        if re.search(r"(?:\b|\s|^)(today|aaj|आज|aajcha diwas|आजचा दिवस)(?:\b|\s|$|[,\.\?!])", text):
+        # Today: "today", "aaj", "आज", "aajcha diwas", "आजचा दिवस", "आजि"
+        if re.search(r"(?:\b|\s|^)(today|aaj|आज|aajcha diwas|आजचा दिवस|आजि)(?:\b|\s|$|[,\.\?!])", text):
             return now_utc.isoformat()
 
         # Next week: "next week", "agle hafte", "pudhchya aathvadyat"
@@ -243,22 +247,26 @@ class QueryParser:
                 hour = 0
             return f"{hour:02d}:{minute:02d}"
 
-        # Hindi/Marathi baje/vajta: e.g. "4 baje", "11 vajta", "४ वाजता"
-        baje_match = re.search(r"(?:\b|\s|^)(\d{1,2})\s*(?:baje|vajta|वाजता|वा)(?:\b|\s|$|[,\.\?!])", text)
+        # Hindi/Marathi/Pahari baje/vajta/bakhata: e.g. "4 baje", "11 vajta", "४ वाजता", "३ बजे"
+        baje_match = re.search(r"(?:\b|\s|^)(\d{1,2})\s*(?:baje|vajta|वाजता|वा|बजे|बगत|बखत|ओखत)(?:\b|\s|$|[,\.\?!])", text)
         if baje_match:
             hour = int(baje_match.group(1))
             if 1 <= hour <= 7:
                 hour += 12
             return f"{hour:02d}:00"
 
-        # Broad time-of-day buckets
-        if re.search(r"(?:\b|\s|^)(morning|subah|saver|सकाळी|sakaal|सकाळ)(?:\b|\s|$|[,\.\?!])", text):
+        # Broad time-of-day buckets across all 6 languages
+        # Morning: morning, subah, saver, सकाळी, सकाळ, सबेर, सबेरे
+        if re.search(r"(?:\b|\s|^)(morning|subah|saver|सकाळी|sakaal|सकाळ|सबेर|सबेरे)(?:\b|\s|$|[,\.\?!])", text):
             return "09:00"
-        if re.search(r"(?:\b|\s|^)(afternoon|dopahar|dupahar|दुपारी|dupari)(?:\b|\s|$|[,\.\?!])", text):
+        # Afternoon: afternoon, dopahar, dupahar, दुपारी, दुपार
+        if re.search(r"(?:\b|\s|^)(afternoon|dopahar|dupahar|दुपारी|dupari|दुपार)(?:\b|\s|$|[,\.\?!])", text):
             return "14:00"
-        if re.search(r"(?:\b|\s|^)(evening|shaam|sandhya|संध्याकाळी|sandhyakali)(?:\b|\s|$|[,\.\?!])", text):
+        # Evening: evening, shaam, sandhya, संध्याकाळी, ब्याल, सांझ
+        if re.search(r"(?:\b|\s|^)(evening|shaam|sandhya|संध्याकाळी|sandhyakali|ब्याल|सांझ)(?:\b|\s|$|[,\.\?!])", text):
             return "17:00"
-        if re.search(r"(?:\b|\s|^)(night|raat|रात्री|raatri)(?:\b|\s|$|[,\.\?!])", text):
+        # Night: night, raat, रात्री, रात, ब्याली
+        if re.search(r"(?:\b|\s|^)(night|raat|रात्री|raatri|रात)(?:\b|\s|$|[,\.\?!])", text):
             return "20:00"
 
         return None
@@ -267,24 +275,24 @@ class QueryParser:
     def extract_duration(cls, text: str) -> float | None:
         """Extract booking duration in hours."""
         # Full day phrases: 8.0 hours
-        if re.search(r"(?:\b|\s|^)(full day|poora din|ek din|purna divas|ek divas|पूर्ण दिवस|एक दिवस)(?:\b|\s|$|[,\.\?!])", text):
+        if re.search(r"(?:\b|\s|^)(full day|poora din|ek din|purna divas|ek divas|पूर्ण दिवस|एक दिवस|पूरो दिन|पूर दिन)(?:\b|\s|$|[,\.\?!])", text):
             return 8.0
 
         # Half day phrases: 4.0 hours
-        if re.search(r"(?:\b|\s|^)(half day|aadha din|ardha divas|अर्धा दिवस)(?:\b|\s|$|[,\.\?!])", text):
+        if re.search(r"(?:\b|\s|^)(half day|aadha din|ardha divas|अर्धा दिवस|आधो दिन)(?:\b|\s|$|[,\.\?!])", text):
             return 4.0
 
-        # Numeric duration: e.g. "2 hours", "3.5 hrs", "4 ghante", "3 taas", "३ तास"
+        # Numeric duration: e.g. "2 hours", "3.5 hrs", "4 ghante", "3 taas", "३ तास", "४ घंटा", "२ घण्टा"
         num_match = re.search(
-            r"(?:\b|\s|^)(\d+(?:\.\d+)?)\s*(?:hours|hrs|hr|ghante|ghanta|घंटे|taas|tas|तास|तासांसाठी)(?:\b|\s|$|[,\.\?!])",
+            r"(?:\b|\s|^)(\d+(?:\.\d+)?)\s*(?:hours|hrs|hr|ghante|ghanta|घंटे|घंटा|घण्टा|taas|tas|तास|तासांसाठी)(?:\b|\s|$|[,\.\?!])",
             text,
         )
         if num_match:
             return float(num_match.group(1))
 
-        # Word duration: e.g. "do ghante", "teen taas", "four hours"
+        # Word duration: e.g. "do ghante", "teen taas", "four hours", "दुई घंटा"
         for word, val in NUMBER_WORDS.items():
-            pattern = rf"(?:\b|\s|^){re.escape(word)}\s*(?:hours|hrs|ghante|ghanta|taas|tas|तास)(?:\b|\s|$|[,\.\?!])"
+            pattern = rf"(?:\b|\s|^){re.escape(word)}\s*(?:hours|hrs|ghante|ghanta|घंटे|घंटा|घण्टा|taas|tas|तास)(?:\b|\s|$|[,\.\?!])"
             if re.search(pattern, text):
                 return float(val)
 
@@ -295,12 +303,12 @@ class QueryParser:
         """Extract maximum price/budget constraint in INR."""
         # Check patterns with currency units or budget boundaries
         patterns = [
-            # "under 500", "below 1000", "budget 1500", "max 2000", "₹800", "rs 800"
-            r"(?:under|below|budget|max|upto|up to|₹|rs\.?|inr|कमी)\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(k|hazar|hazaar|thousand|हजार)?(?:\b|\s|$|[,\.\?!])",
-            # "500 rs", "1000 rupees", "300 रुपयांच्या आत", "500 रुपये"
-            r"(?:\b|\s|^)(\d+(?:,\d+)*(?:\.\d+)?)\s*(k|hazar|hazaar|thousand|हजार)?\s*(?:rs|inr|rupees|rupaye|rupay|rupayan|रुपये|रुपयांच्या|रुपयांचे|रु)\s*(?:chya aat|chya aath|paryant|ke andar|tak|च्या आत|आत|पर्यंत)?(?:\b|\s|$|[,\.\?!])",
-            # "300 च्या आत", "500 तक"
-            r"(?:\b|\s|^)(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:chya aat|chya aath|paryant|ke andar|tak|च्या आत|आत|पर्यंत)(?:\b|\s|$|[,\.\?!])",
+            # "under 500", "below 1000", "budget 1500", "max 2000", "₹800", "rs 800", "कमी 500", "सस्त 400"
+            r"(?:under|below|budget|max|upto|up to|₹|rs\.?|inr|कमी|सस्त|सुआणो)\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(k|hazar|hazaar|thousand|हजार)?(?:\b|\s|$|[,\.\?!])",
+            # "500 rs", "1000 rupees", "300 रुपयांच्या आत", "500 रुपये", "400 रुप्या मा", "500 रुपिया भितर", "300 पिसे"
+            r"(?:\b|\s|^)(\d+(?:,\d+)*(?:\.\d+)?)\s*(k|hazar|hazaar|thousand|हजार)?\s*(?:rs|inr|rupees|rupaye|rupay|rupayan|रुपये|रुपयांच्या|रुपयांचे|रु|रुप्या|टका|रुपिया|पिसे)\s*(?:chya aat|chya aath|paryant|ke andar|tak|च्या आत|आत|पर्यंत|तक|मा|भितर|अन्दर|अंदर|के अंदर|के अन्दर)?(?:\b|\s|$|[,\.\?!])",
+            # "300 च्या आत", "500 तक", "400 मा", "500 भितर", "500 के अंदर", "500 अंदर"
+            r"(?:\b|\s|^)(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:chya aat|chya aath|paryant|ke andar|tak|च्या आत|आत|पर्यंत|तक|मा|भितर|अन्दर|अंदर|के अंदर|के अन्दर)(?:\b|\s|$|[,\.\?!])",
         ]
 
         for pat in patterns:
@@ -315,8 +323,8 @@ class QueryParser:
                         val *= 1000.0
                 return val
 
-        # Check cheap/budget cues (no explicit number given, set sensible cap of 300/hr)
-        if re.search(r"(?:\b|\s|^)(sasta|kam budget|sasti|kam daam|kami kharchat|cheap|budget friendly|low cost|किफायतशीर)(?:\b|\s|$|[,\.\?!])", text):
+        # Check cheap/budget cues across all languages
+        if re.search(r"(?:\b|\s|^)(sasta|kam budget|sasti|kam daam|kami kharchat|cheap|budget friendly|low cost|किफायतशीर|सस्त|सुआणो)(?:\b|\s|$|[,\.\?!])", text):
             return 300.0
 
         return None
@@ -450,7 +458,7 @@ class QueryParser:
     def extract_noise_preference(cls, text: str) -> str | None:
         """Extract noise/acoustic preference from query."""
         if re.search(
-            r"(?:\b|\s|^)(quiet|silent|peaceful|shant|शांत|low noise|soundproof|soundproofing|whisper|calm|deep work|focused work|noise-free|quiet zone|silence)(?:\b|\s|$|[,\.\?!])",
+            r"(?:\b|\s|^)(quiet|silent|peaceful|shant|शांत|low noise|soundproof|soundproofing|whisper|calm|deep work|focused work|noise-free|quiet zone|silence|सुभीता|सुभीत|सुआणो|सुभीतो|आवाज नाही|आवाज निछ|शान्ति|चुपचाप)(?:\b|\s|$|[,\.\?!])",
             text,
         ):
             return "quiet"
@@ -470,7 +478,7 @@ class QueryParser:
     def extract_privacy(cls, text: str) -> str | None:
         """Extract privacy preference from query."""
         if re.search(
-            r"(?:\b|\s|^)(private|private room|private cabin|private workspace|cabin|enclosed|kamra|kholi|single room|private office)(?:\b|\s|$|[,\.\?!])",
+            r"(?:\b|\s|^)(private|private room|private cabin|private workspace|cabin|enclosed|kamra|kholi|single room|private office|कमरा|खोली|कुटिया|स्वतंत्र खोली)(?:\b|\s|$|[,\.\?!])",
             text,
         ):
             return "private"
@@ -540,4 +548,7 @@ class QueryParser:
         if use_case and use_case not in cleaned:
             parts.append(use_case)
         return " ".join(parts)
+
+
+RuleBasedQueryParser = QueryParser
 

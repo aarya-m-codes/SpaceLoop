@@ -12,6 +12,8 @@ from typing import Any
 
 from backend.modules.ai.intent_parser import IntentParser
 from backend.modules.ai.rag_service import RAGService
+from backend.modules.i18n.constants import normalize_language_code
+from backend.modules.i18n.lexicon import get_deterministic_response
 
 logger = logging.getLogger("spaceloop.ai.llm")
 
@@ -151,28 +153,40 @@ class LLMProvider:
         tool_context = "\n".join(tool_lines) if tool_lines else "No specific tool data queried."
         pending_context = f"Pending Confirmation Action: {pending_action.get('action_summary')}" if pending_action else ""
 
+        lang_code = normalize_language_code(language)
+        lang_instruction = {
+            "en": "You MUST respond in professional, helpful English.",
+            "hi": "You MUST respond in standard Hindi (हिन्दी) using Devanagari script.",
+            "mr": "You MUST respond in authentic Marathi (मराठी) using Devanagari script.",
+            "gsw": "You MUST respond in authentic Garhwali (गढ़वळि) using Devanagari script with natural regional Pahari idioms (e.g. ठौर, सुभीता, बगत, पैलाग/प्रणाम).",
+            "kfy": "You MUST respond in authentic Kumaoni (कुमाउँनी) using Devanagari script with natural regional Pahari idioms (e.g. ठौर, सुभीत, बखत, पैलाग).",
+            "jns": "You MUST respond in authentic Jaunsari (जौनसारी) using Devanagari script with natural regional Pahari idioms (e.g. ठौर, सुआणो, ओखत, नमस्ते/प्रणाम).",
+        }.get(lang_code, "You MUST respond in professional English.")
+
         return (
             "You are LoopBot, SpaceLoop's native AI concierge.\n"
             "SpaceLoop is India's premier marketplace for flexible peer-to-peer workspace reservations (desks, soundproof studios, cabins, meeting rooms).\n\n"
-            f"USER LANGUAGE PREFERENCE: {language.upper()}.\n\n"
+            f"TARGET LANGUAGE: {lang_code.upper()}.\n"
+            f"{lang_instruction}\n\n"
             "COMMUNICATION & CONVERSATIONAL RULES:\n"
             "- Speak naturally, intelligently, and conversationally like an experienced local workspace concierge.\n"
             "- NEVER use repetitive robotic formulas like 'Based on your query, here are the spaces' or 'I can help you find verified physical spaces in your area'. Adapt your tone to each message.\n"
             "- Understand typos, broken grammar, abbreviations ('3h', '2 hrs', 'pune me room', 'sasta', 'kharadi side', 'under 700') seamlessly without calling them out.\n"
             "- Natural Multilingual Adaptation:\n"
             "  * If user speaks in English: reply in clear, friendly English.\n"
-            "  * If user speaks in Hinglish (e.g. 'bhai pune me quiet place chahiye', 'sasta kuch hai?', 'kal available hai?'): reply in natural, conversational Hinglish.\n"
-            "  * If user speaks in Hindi or Marathi: reply warmly and respectfully in Hindi or Marathi.\n"
+            "  * If user speaks in Hinglish: reply in natural, conversational Hinglish.\n"
+            "  * If user speaks in Hindi, Marathi, Garhwali, Kumaoni, or Jaunsari: reply warmly and respectfully in that language.\n"
             "- Multi-turn Context:\n"
             "  * Follow-up constraints ('under 700', 'tomorrow afternoon', 'around kharadi') are additions to previous requirements.\n"
             "  * Ordinal references ('the second one', '1st one') refer to the listed spaces.\n"
             "  * Questions ('which one has parking?', 'how much for 4 hours?', 'book it') apply to the current active listings.\n"
             "- Grounding: Ground all spaces, rates, hours, and amenities STRICTLY in the verified platform data below. NEVER invent spaces, fake IDs, or arbitrary prices.\n"
-            "- Core Marketplace Rules:\n"
+            "- Core Marketplace Rules & Invariants:\n"
             "  1. Pricing: Subtotal = hourly rate × hours. Platform fee = exactly 5%. Refundable deposit = exactly ₹100. Total = Subtotal + 5% Fee + ₹100.\n"
-            "  2. Cancellation: SpaceLoop retains ONLY 5% platform fee. Seeker receives 100% of rental subtotal + 100% of ₹100 deposit refunded.\n"
-            "  3. Access: 15-minute start window, 50m GPS geofence, 4-digit arrival PIN.\n"
-            "  4. Legal: Section 52 Indian Easements Act 1882 (Leave and License); no tenancy rights.\n\n"
+            "  2. Cancellation: SpaceLoop retains ONLY 5% platform fee. Seeker receives 100% of rental subtotal + 100% of ₹100 deposit refunded. On host rejection, seeker gets full 100% refund of all fees.\n"
+            "  3. Access: 15-minute start window, 50m GPS geofence (Haversine), 4-digit arrival PIN fallback, dynamic QR code, and AccessLog.\n"
+            "  4. Legal: Section 52 Indian Easements Act 1882 (Leave and License); no tenancy or leasehold rights are created.\n"
+            "  5. Invariants: You NEVER execute unauthorized financial or booking mutations. Every consequential action requires explicit confirmation.\n\n"
             f"{context_block}\n\n"
             f"{tool_context}\n\n"
             f"{pending_context}"
@@ -299,32 +313,57 @@ class LLMProvider:
         tool_data: dict[str, Any] | None = None,
         pending_action: dict[str, Any] | None = None,
     ) -> str:
-        """Produce authoritative deterministic responses with 100% resilience across all 4 languages."""
+        """Produce authoritative deterministic responses with 100% resilience across all 6 supported languages."""
+        clean_lang = str(language or "").strip().lower()
+        if clean_lang == "hinglish":
+            lang_code = "hinglish"
+        else:
+            lang_code = normalize_language_code(language)
         city = entities.get("city") or "your area"
         neighborhood = entities.get("neighborhood")
         loc_str = f"{neighborhood.title()}, {city.title()}" if neighborhood else city.title()
         space_type = entities.get("space_type") or "space"
         budget = entities.get("budget")
-        duration = entities.get("duration_hours") or 2.0
+        budget_info = f" under ₹{budget:g}/hr" if budget else ""
 
-        # If there is a pending confirmation action, explain it clearly
+        # If there is a pending confirmation action, explain it clearly in the target language
         if pending_action:
             act_type = pending_action.get("action")
             summary = pending_action.get("action_summary", "")
-            if language == IntentParser.LANG_EN:
+            if lang_code == "en":
                 return (
                     f"Action Confirmation Required: {summary}\n\n"
                     f"Please confirm by replying 'Yes' or 'Confirm' to proceed, or 'Cancel' to abort."
                 )
-            elif language in (IntentParser.LANG_HI, IntentParser.LANG_HINGLISH):
+            elif lang_code == "hinglish":
                 return (
-                    f"Action Confirmation Chahiye: {summary}\n\n"
-                    f"Aage badhne ke liye 'Yes' ya 'Confirm' bole, ya cancel karne ke liye 'No' bole."
+                    f"Action Confirmation Required: {summary}\n\n"
+                    f"Aage badhne ke liye 'Yes' ya cancel karne ke liye 'Cancel' type karein."
                 )
-            elif language == IntentParser.LANG_MR:
+            elif lang_code == "mr":
                 return (
                     f"कृती पुष्टीकरण आवश्यक आहे: {summary}\n\n"
                     f"पुढे जाण्यासाठी 'होय' (Yes) किंवा रद्द करण्यासाठी 'नाही' (Cancel) टाईप करा."
+                )
+            elif lang_code == "gsw":
+                return (
+                    f"पुष्टीकरण जरूरी छ: {summary}\n\n"
+                    f"आगे बढण खातिर 'ह्वै' (Yes) या रद्द कर्न खातिर 'ना' (Cancel) लिखा।"
+                )
+            elif lang_code == "kfy":
+                return (
+                    f"पुष्टीकरण जरूरी छु: {summary}\n\n"
+                    f"आगै बढ़ण खातिर 'हो' (Yes) या रद्द कर्न खातिर 'ना' (Cancel) लिखा।"
+                )
+            elif lang_code == "jns":
+                return (
+                    f"पुष्टीकरण जरूरी आ: {summary}\n\n"
+                    f"आगे बढ़ण खातिर 'हाँ' (Yes) या रद्द कर्न खातिर 'नाइ' (Cancel) लिखा।"
+                )
+            else:  # Hindi
+                return (
+                    f"कार्रवाई की पुष्टि आवश्यक है: {summary}\n\n"
+                    f"आगे बढ़ने के लिए 'हाँ' (Yes) या रद्द करने के लिए 'नहीं' (Cancel) लिखें।"
                 )
 
         # Dynamic Tool-Grounded Responses for Deterministic Fallback
@@ -333,9 +372,9 @@ class LLMProvider:
             matched = tool_data.get("inspected_spaces", [])
             if matched:
                 names = [f"'{s.get('title')}' (₹{s.get('price_per_hour')}/hr)" for s in matched]
-                if language == IntentParser.LANG_EN:
+                if lang_code == "en":
                     return f"From our active listings in {loc_str}, the following options include {attr}:\n" + "\n".join(f"• {n}" for n in names)
-                elif language in (IntentParser.LANG_HI, IntentParser.LANG_HINGLISH):
+                elif lang_code in ("hi", "hinglish"):
                     return f"{loc_str} ke active listings mein se in spaces mein {attr} available hai:\n" + "\n".join(f"• {n}" for n in names)
                 else:
                     return f"{loc_str} मधील खालील जागांवर {attr} उपलब्ध आहे:\n" + "\n".join(f"• {n}" for n in names)
@@ -346,7 +385,7 @@ class LLMProvider:
             p = tool_data["pricing"]
             sp_title = tool_data.get("space", {}).get("title") or "the selected space"
             dur_h = tool_data.get("duration_hours") or duration
-            if language == IntentParser.LANG_EN:
+            if lang_code == "en":
                 return (
                     f"For {dur_h} hours at '{sp_title}':\n"
                     f"• Rental Subtotal: ₹{p.get('subtotal', 0):.2f}\n"
@@ -355,7 +394,7 @@ class LLMProvider:
                     f"• Total Payable: ₹{p.get('final_amount', 0):.2f}\n\n"
                     f"The ₹100 escrow deposit is refunded to your account upon checkout."
                 )
-            elif language in (IntentParser.LANG_HI, IntentParser.LANG_HINGLISH):
+            elif lang_code in ("hi", "hinglish"):
                 return (
                     f"'{sp_title}' ke {dur_h} ghante ke liye:\n"
                     f"• Rental Subtotal: ₹{p.get('subtotal', 0):.2f}\n"
@@ -376,7 +415,7 @@ class LLMProvider:
         if tool_data and intent in (IntentParser.INTENT_SPACE_DETAILS, "find_spaces") and "space" in tool_data:
             sp = tool_data["space"]
             amenities_str = ", ".join(sp.get("amenities", []) or [])
-            if language == IntentParser.LANG_EN:
+            if lang_code == "en":
                 return (
                     f"Here are the verified details for '{sp.get('title')}':\n"
                     f"• Location: {sp.get('neighborhood') or sp.get('city')}, {sp.get('city')}\n"
@@ -396,144 +435,32 @@ class LLMProvider:
                     f"Kya aap is space ko book karna chahte hain?"
                 )
 
-        # Standard Intent Responses
-        # ------------------- English -------------------
-        if language == IntentParser.LANG_EN:
-            if intent in (IntentParser.INTENT_SPACE_SEARCH, "find_spaces"):
-                budget_info = f" with hourly budgets under ₹{budget}" if budget else ""
-                spaces = tool_data.get("spaces", []) if tool_data else []
-                spaces_count = len(spaces)
-                if spaces_count > 0:
-                    summary_lines = [
-                        f"{i}. '{s.get('title')}' (₹{s.get('price_per_hour')}/hr, {s.get('neighborhood') or s.get('city')})"
-                        for i, s in enumerate(spaces[:3], 1)
-                    ]
-                    return (
-                        f"I found {spaces_count} verified physical {space_type}s matching your criteria in {loc_str}{budget_info}:\n"
-                        + "\n".join(summary_lines)
-                        + "\n\nAll spaces feature high-speed WiFi, verified acoustic profiles, and keyless PIN/QR entry. Let me know if you would like to book or inspect one."
-                    )
-                return (
-                    f"I can help you find verified physical {space_type}s in {loc_str}{budget_info}. "
-                    f"SpaceLoop matches listings within 2km to 25km using acoustic noise levels, high-speed WiFi, "
-                    f"and host trust scores. Click below to browse active spaces or refine your filters."
-                )
-
-            elif intent in (IntentParser.INTENT_BOOKING_CREATE, IntentParser.INTENT_SPACE_AVAILABILITY, "booking_reservation"):
-                return (
-                    f"To book a space on SpaceLoop: 1) Run an instant precheck to verify slot availability and minimum "
-                    f"hours. 2) Submit your reservation. 3) Once the host accepts, you'll receive a secure 4-digit arrival "
-                    f"PIN for physical access. No overlapping bookings are ever allowed for the same slot."
-                )
-
-            elif intent in (IntentParser.INTENT_BOOKING_CANCEL, IntentParser.INTENT_REFUND_HELP, "cancellation_refund"):
-                return (
-                    "Here is SpaceLoop's cancellation policy: When you cancel a booking, SpaceLoop retains only the "
-                    "5% platform fee. You receive 100% of your rental subtotal plus 100% of the ₹100 security deposit "
-                    "back to your account. If the host rejects your booking, you receive a full 100% refund."
-                )
-
-            elif intent in (IntentParser.INTENT_ACCESS_STATUS, IntentParser.INTENT_ACCESS_HELP, "checkin_checkout"):
-                return (
-                    "For seamless check-in: 1) Enter your 4-digit arrival PIN at the door. 2) Your phone confirms you are "
-                    "within the 50-meter GPS geofence. 3) Upload quick check-in inspection photos to document space condition. "
-                    "Repeat photo upload at check-out to safely release your ₹100 deposit."
-                )
-
-            elif intent in (IntentParser.INTENT_ESCROW_STATUS, "pricing_escrow"):
-                return (
-                    "SpaceLoop uses a transparent micro-escrow pricing model: Space Subtotal = hourly rate × duration hours. "
-                    "Platform fee = 5% of subtotal. Refundable security deposit = ₹100.00. Total paid = Subtotal + 5% Fee + ₹100. "
-                    "Upon normal checkout, the host receives the subtotal, SpaceLoop retains the 5% fee, and the ₹100 deposit is returned."
-                )
-
-            elif intent in (IntentParser.INTENT_HOST_HELP, "host_listing"):
-                return (
-                    "To list your space on SpaceLoop: Upload photos (up to 5MB with verified image headers), set your hourly "
-                    "rate and capacity, and complete KYC verification. After a seeker's session completes, your payout is "
-                    "released directly to your verified UPI VPA with zero listing subscription fees."
-                )
-
-            elif intent in (IntentParser.INTENT_LEGAL_INFORMATION, "legal"):
-                return (
-                    "All SpaceLoop reservations operate as a Leave and License under Section 52 of the Indian Easements Act, 1882. "
-                    "This creates a revocable personal license to occupy the workspace for the booked hours. Crucially, "
-                    "no tenancy, leasehold, or proprietary rights are created in the property."
-                )
-
-            elif intent in (IntentParser.INTENT_DISPUTE_HELP, IntentParser.INTENT_TRUST_SAFETY, "trust_safety"):
-                return (
-                    "SpaceLoop protects hosts and seekers with an Objective Trust Score (0-100), government KYC identity "
-                    "verification, and automated escrow protection. In case of any dispute or access failure, escrow funds "
-                    "are immediately frozen while administrators adjudicate."
-                )
-
-            else:  # General / Support
-                return (
-                    "Hello! I am LoopBot, your SpaceLoop concierge. I can help you discover workspaces, studios, "
-                    "and meeting rooms, understand our 5% fee & ₹100 escrow deposit, explain check-in PINs, or guide you through listing a space."
-                )
-
-        # ------------------- Hinglish -------------------
-        elif language == IntentParser.LANG_HINGLISH:
-            if intent in (IntentParser.INTENT_SPACE_SEARCH, "find_spaces"):
-                return (
-                    f"Main aapke liye {loc_str} mein verified physical {space_type}s dhoondh sakta hoon. "
-                    f"Sabhi spaces mein high-speed WiFi aur 4-digit arrival PIN access available hai. "
-                    f"Neeche diye gaye options se active spaces browse karein."
-                )
-            elif intent in (IntentParser.INTENT_BOOKING_CANCEL, IntentParser.INTENT_REFUND_HELP, "cancellation_refund"):
-                return (
-                    "SpaceLoop cancellation policy ke mutabik: Agar aap booking cancel karte hain, toh SpaceLoop sirf "
-                    "5% platform fee retain karta hai. Aapko rental subtotal ka 100% plus ₹100 security deposit pura wapas milta hai."
-                )
-            elif intent in (IntentParser.INTENT_ACCESS_STATUS, IntentParser.INTENT_ACCESS_HELP, "checkin_checkout"):
-                return (
-                    "Check-in karne ke liye aapko 50m GPS geofence ke andar hona hoga aur apna 4-digit arrival PIN ya "
-                    "QR code use karna hoga. Saath hi inspection photos upload karke entry confirm karein."
-                )
-            elif intent in (IntentParser.INTENT_ESCROW_STATUS, "pricing_escrow"):
-                return (
-                    "SpaceLoop pricing formula: Total = Space Subtotal (hourly rate × hours) + 5% platform fee + ₹100 refundable escrow deposit. "
-                    "Checkout par ₹100 deposit aapko pura refund mil jata hai."
-                )
-            else:
-                return (
-                    "Namaste! Main LoopBot hoon, aapka SpaceLoop concierge. Main spaces dhoondhne, booking precheck, "
-                    "5% fee rules, aur PIN check-in mein aapki madad kar sakta hoon."
-                )
-
-        # ------------------- Hindi -------------------
-        elif language == IntentParser.LANG_HI:
-            if intent in (IntentParser.INTENT_BOOKING_CANCEL, IntentParser.INTENT_REFUND_HELP, "cancellation_refund"):
-                return (
-                    "SpaceLoop रद्दीकरण नीति: बुकिंग रद्द करने पर SpaceLoop केवल 5% प्लेटफ़ॉर्म शुल्क रखता है। "
-                    "आपको 100% किराया और ₹100 सुरक्षा जमा राशि पूरी वापस मिलती है। मेज़बान द्वारा अस्वीकार किए जाने पर पूरा 100% रिफ़ंड मिलता है।"
-                )
-            elif intent in (IntentParser.INTENT_ESCROW_STATUS, "pricing_escrow"):
-                return (
-                    "SpaceLoop मूल्य निर्धारण: कुल राशि = किराया उप-योग + 5% प्लेटफ़ॉर्म शुल्क + ₹100 रिफ़ंडेबल सुरक्षा जमा। "
-                    "सत्र समाप्ति पर ₹100 जमा राशि आपके खाते में वापस भेज दी जाती है।"
-                )
-            else:
-                return (
-                    "नमस्ते! मैं लूपबॉट (LoopBot) हूँ, स्पेस-लूप का सहायक। मैं कार्यक्षेत्र खोजने, बुकिंग और नियमों में आपकी सहायता कर सकता हूँ।"
-                )
-
-        # ------------------- Marathi -------------------
+        # Map intent code to standard lexicon key
+        if intent in (IntentParser.INTENT_SPACE_SEARCH, "find_spaces"):
+            intent_key = "search"
+        elif intent in (IntentParser.INTENT_BOOKING_CREATE, IntentParser.INTENT_SPACE_AVAILABILITY, "booking_reservation"):
+            intent_key = "booking"
+        elif intent in (IntentParser.INTENT_BOOKING_CANCEL, IntentParser.INTENT_REFUND_HELP, "cancellation_refund"):
+            intent_key = "cancellation"
+        elif intent in (IntentParser.INTENT_ACCESS_STATUS, IntentParser.INTENT_ACCESS_HELP, "checkin_checkout"):
+            intent_key = "access"
+        elif intent in (IntentParser.INTENT_ESCROW_STATUS, "pricing_escrow"):
+            intent_key = "escrow"
+        elif intent in (IntentParser.INTENT_HOST_HELP, "host_listing"):
+            intent_key = "host"
+        elif intent in (IntentParser.INTENT_LEGAL_INFORMATION, "legal"):
+            intent_key = "legal"
+        elif intent in (IntentParser.INTENT_DISPUTE_HELP, IntentParser.INTENT_TRUST_SAFETY, "trust_safety"):
+            intent_key = "trust"
         else:
-            if intent in (IntentParser.INTENT_BOOKING_CANCEL, IntentParser.INTENT_REFUND_HELP, "cancellation_refund"):
-                return (
-                    "स्पेस-लूप रद्द करण्याचे धोरण: बुकिंग रद्द केल्यास केवळ 5% प्लॅटफॉर्म शुल्क कापले जाते. "
-                    "आपल्याला 100% भाडे आणि ₹100 सुरक्षा ठेव पूर्ण परत मिळते. यजमानाने नाकारल्यास 100% पूर्ण परतावा मिळतो."
-                )
-            elif intent in (IntentParser.INTENT_ESCROW_STATUS, "pricing_escrow"):
-                return (
-                    "स्पेस-लूप शुल्क नियम: एकूण रक्कम = भाडे + 5% प्लॅटफॉर्म शुल्क + ₹100 सुरक्षा ठेव. "
-                    "सत्र पूर्ण झाल्यावर ₹100 सुरक्षा ठेव थेट परत केली जाते."
-                )
-            else:
-                return (
-                    "नमस्कार! मी लूपबॉट (LoopBot), स्पेस-लूपचा डिजिटल सहाय्यक. मी जागा शोधणे, बुकिंग, "
-                    "5% शुल्क नियम आणि चेक-इन पिनमध्ये आपली मदत करू शकतो."
-                )
+            intent_key = "welcome"
+
+        return get_deterministic_response(
+            intent=intent_key,
+            language=lang_code,
+            context_vars={
+                "loc_str": loc_str,
+                "budget_info": budget_info,
+                "space_type": space_type,
+            },
+        )

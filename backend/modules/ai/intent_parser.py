@@ -26,6 +26,16 @@ import re
 import unicodedata
 from typing import Any
 
+from backend.modules.i18n.constants import (
+    LANG_EN,
+    LANG_GSW,
+    LANG_HI,
+    LANG_HINGLISH,
+    LANG_JNS,
+    LANG_KFY,
+    LANG_MR,
+)
+from backend.modules.i18n.detector import LanguageDetector
 from backend.modules.nlp.parser import QueryParser
 
 logger = logging.getLogger("spaceloop.ai.intent")
@@ -76,55 +86,19 @@ class IntentParser:
         INTENT_SUPPORT: "platform_help",
     }
 
-    # Supported language identifiers
-    LANG_EN = "en"
-    LANG_HI = "hi"
-    LANG_HINGLISH = "hinglish"
-    LANG_MR = "mr"
+    # Supported 6 canonical language identifiers
+    LANG_EN = LANG_EN
+    LANG_HI = LANG_HI
+    LANG_MR = LANG_MR
+    LANG_GSW = LANG_GSW
+    LANG_KFY = LANG_KFY
+    LANG_JNS = LANG_JNS
+    LANG_HINGLISH = LANG_HINGLISH
 
     @classmethod
     def detect_language(cls, text: str) -> str:
-        """Detect language across English, Hindi, Hinglish, and Marathi."""
-        if not text:
-            return cls.LANG_EN
-
-        # Check Devanagari script (\u0900 - \u097F)
-        if re.search(r"[\u0900-\u097F]", text):
-            # Check distinctive Marathi Devanagari markers
-            marathi_markers = [
-                "आहे", "नाही", "पाहिजे", "कसे", "मला", "शोधत", "शोधतो", "भाडे", "कार्यालय",
-                "स्थान", "माहिती", "कसा", "करा", "नका", "होय", "किती", "झाले", "मिळेल",
-                "पुणे", "मुंबई", "जागा", "कशी", "करावे", "नमस्कार", "थेट", "तक्रार",
-            ]
-            for m in marathi_markers:
-                if m in text:
-                    return cls.LANG_MR
-            return cls.LANG_HI
-
-        # Romanized Marathi markers
-        marathi_roman = [
-            r"\bahe\b", r"\bnahi\b", r"\bpahije\b", r"\bkashi\b", r"\bkiti\b", r"\bkuthe\b",
-            r"\bmadhe\b", r"\bmala\b", r"\bsangava\b", r"\bmahiti\b", r"\bkaraychi\b",
-            r"\bbhaden\b", r"\bkarave\b", r"\bshodh\b", r"\btakrar\b",
-        ]
-        for pat in marathi_roman:
-            if re.search(pat, text, re.IGNORECASE):
-                return cls.LANG_MR
-
-        # Romanized Hindi / Hinglish markers
-        hinglish_markers = [
-            r"\bmujhe\b", r"\bchahiye\b", r"\bmein\b", r"\bkaise\b", r"\bhoga\b", r"\bkarna\b",
-            r"\bhai\b", r"\bkya\b", r"\bsath\b", r"\bpaise\b", r"\bbatao\b", r"\bkarein\b",
-            r"\bkitna\b", r"\bmilega\b", r"\bdekhna\b", r"\bbataiye\b", r"\bkaru\b", r"\braha\b",
-            r"\brahi\b", r"\bhain\b", r"\bki\b", r"\bse\b", r"\bko\b", r"\baap\b", r"\bhum\b",
-            r"\bkare\b", r"\bkaha\b", r"\bkab\b", r"\bkisko\b", r"\brupaye\b", r"\bkamra\b",
-            r"\bdhoondo\b", r"\bkhojo\b", r"\bwapas\b", r"\bradd\b",
-        ]
-        for pat in hinglish_markers:
-            if re.search(pat, text, re.IGNORECASE):
-                return cls.LANG_HINGLISH
-
-        return cls.LANG_EN
+        """Detect language across all 6 languages (en, hi, mr, gsw, kfy, jns) and Hinglish."""
+        return LanguageDetector.detect(text, allow_hinglish=True)
 
     @staticmethod
     def normalize_text(text: str) -> str:

@@ -34,6 +34,9 @@ def execute_search():
             "role": getattr(request.current_user, "role", None),
         }
 
+    from backend.modules.i18n.middleware import get_request_language
+    from backend.modules.i18n.constants import normalize_language_code
+
     if request.method == "POST":
         payload: dict[str, Any] = request.get_json(silent=True) or {}
         query = payload.get("query") or payload.get("q")
@@ -45,6 +48,7 @@ def execute_search():
         limit = min(100, max(1, int(payload.get("limit", 20))))
         require_available = bool(payload.get("require_available", False))
         filters = payload.get("filters")
+        language = normalize_language_code(payload.get("language") or request.args.get("language") or request.args.get("lang") or get_request_language())
         payload_context = payload.get("user_context")
         if payload_context and isinstance(payload_context, dict):
             if user_context:
@@ -60,6 +64,7 @@ def execute_search():
         page = max(1, int(request.args.get("page", 1)))
         limit = min(100, max(1, int(request.args.get("limit", 20))))
         require_available = request.args.get("require_available", "").lower() in ("true", "1")
+        language = normalize_language_code(request.args.get("language") or request.args.get("lang") or get_request_language())
         filters = {
             "capacity": request.args.get("capacity"),
             "space_type": request.args.get("space_type"),
@@ -78,11 +83,13 @@ def execute_search():
         page=page,
         limit=limit,
         require_available=require_available,
+        language=language,
     )
 
     return jsonify({
         "success": True,
         "data": results,
+        "language": language,
         "results": results.get("results", []),
         "items": results.get("items", []),
         "total": results.get("total", 0),

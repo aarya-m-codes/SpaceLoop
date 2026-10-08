@@ -41,6 +41,9 @@ class LoopBotOrchestrator:
     LANG_HI = IntentParser.LANG_HI
     LANG_HINGLISH = IntentParser.LANG_HINGLISH
     LANG_MR = IntentParser.LANG_MR
+    LANG_GSW = IntentParser.LANG_GSW
+    LANG_KFY = IntentParser.LANG_KFY
+    LANG_JNS = IntentParser.LANG_JNS
 
     # Legacy intent constants for backwards compatibility
     INTENT_FIND_SPACES = "find_spaces"

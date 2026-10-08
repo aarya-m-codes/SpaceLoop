@@ -20,9 +20,12 @@ def handle_loopbot_chat_request():
         or ""
     )
 
+    from backend.modules.i18n.middleware import get_request_language
+    from backend.modules.i18n.constants import normalize_language_code
+
     conversation_id = payload.get("conversation_id")
     context = payload.get("context") or {}
-    language = payload.get("language")
+    language = normalize_language_code(payload.get("language") or get_request_language())
 
     current_user = getattr(g, "current_user", None)
 

@@ -33,7 +33,7 @@ class LLMExtractor:
             from google import genai
             client = genai.Client(api_key=api_key)
             prompt = (
-                f"Extract physical space search constraints from this query (English, Hindi, Hinglish, or Marathi):\n"
+                f"Extract physical space search constraints from this query (English, Hindi, Marathi, Garhwali, Kumaoni, or Jaunsari):\n"
                 f"\"{query}\"\n\n"
                 f"Respond ONLY with a JSON object containing keys: "
                 f"city, neighborhood, date, time, duration_hours, budget, capacity, space_type, amenities, use_case. "

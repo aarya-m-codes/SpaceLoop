@@ -21,6 +21,9 @@ function getAuthHeaders(isFormData = false) {
   if (activeRole) {
     headers['X-SpaceLoop-Role'] = activeRole;
   }
+  const lang = localStorage.getItem('spaceloop_lang') || 'en';
+  headers['X-Language'] = lang;
+  headers['Accept-Language'] = lang;
   return headers;
 }
 

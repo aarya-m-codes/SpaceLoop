@@ -26,41 +26,114 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { aiApi } from '../../services/api';
+import { useI18n } from '../../i18n/I18nContext';
 
 const LANGUAGES = [
   { code: 'en', label: 'English' },
-  { code: 'hi', label: 'हिंदी (Hindi)' },
-  { code: 'hinglish', label: 'Hinglish' },
+  { code: 'hi', label: 'हिन्दी (Hindi)' },
   { code: 'mr', label: 'मराठी (Marathi)' },
+  { code: 'gsw', label: 'गढ़वळि (Garhwali)' },
+  { code: 'kfy', label: 'कुमाउँनी (Kumaoni)' },
+  { code: 'jns', label: 'जौनसारी (Jaunsari)' },
 ];
 
-const DEFAULT_SUGGESTED_ACTIONS = [
-  'Find quiet desks in Bengaluru under ₹400',
-  'How does the ₹100 refundable escrow work?',
-  'What is the cancellation policy (5% fee)?',
-  'What is Section 52 Leave and License?',
-  'How does 50m GPS & PIN check-in work?',
-];
+const LOOPBOT_INIT_MESSAGES = {
+  en: 'Namaste! I am LoopBot, your SpaceLoop AI concierge. How can I help you find verified physical spaces, calculate micro-escrow quotes, or assist with PIN check-in today?',
+  hi: 'नमस्ते! मैं लूपबॉट हूँ, आपका स्पेस-लूप AI सहायक। आज मैं आपको सत्यापित जगहें खोजने, माइक्रो-एस्क्रो उद्धरणों की गणना करने या पिन चेक-इन में कैसे मदद कर सकता हूँ?',
+  mr: 'नमस्कार! मी लूपबॉट आहे, तुमचा स्पेस-लूप AI सहाय्यक. आज मी तुम्हाला पडताळलेली जागा शोधण्यात, अनामत रकमेची गणना करण्यात किंवा पिन चेक-इन मध्ये कशी मदत करू शकतो?',
+  gsw: 'नमस्कार! मैं लूपबॉट छौं, तुमरो स्पेस-लूप AI सहायक। आज मैं तुमते जांची-परखी ठौर खोजण, धरोहर हिसाब लगाण या पिन चेक-इन म क्या मदद करि सकदूँ?',
+  kfy: 'नमस्कार! मैं लूपबॉट छुँ, तुमरो स्पेस-लूप AI सहायक। आज मैं तुमूंकै जाँची-परखी ठौर खोजण, धरोहर हिसाब लगाण या पिन चेक-इन में कै मदद करि सकूँला?',
+  jns: 'नमस्कार! मुं लूपबॉट आं, तुमरो स्पेस-लूप AI सहायक। आज मुं तुमूखे जांची-परखी जगा खोजणे, धरोहर हिसाब लगाणे या पिन चेक-इन म क्या मदद करि सकूँ?',
+};
+
+const LOCALIZED_SUGGESTED_ACTIONS = {
+  en: [
+    'Find quiet desks in Bengaluru under ₹400',
+    'How does the ₹100 refundable escrow work?',
+    'What is the cancellation policy (5% fee)?',
+    'What is Section 52 Leave and License?',
+    'How does 50m GPS & PIN check-in work?',
+  ],
+  hi: [
+    'बेंगलुरु में ₹400 के अंदर शांत डेस्क खोजें',
+    '₹100 रिफंडेबल एस्क्रो कैसे काम करता है?',
+    'रद्दीकरण नीति (5% शुल्क) क्या है?',
+    'धारा 52 लीव एंड लाइसेंस क्या है?',
+    '50 मीटर जीपीएस और पिन चेक-इन कैसे काम करता है?',
+  ],
+  mr: [
+    'बेंगळुरूमध्ये ₹400 च्या आत शांत डेस्क शोधा',
+    '₹100 परतावा अनामत रक्कम कशी कार्य करते?',
+    'रद्द करण्याचे धोरण (5% शुल्क) काय आहे?',
+    'कलम 52 लिव्ह अँड लायसन्स करार म्हणजे काय?',
+    '50 मी जीपीएस आणि पिन चेक-इन कसे कार्य करते?',
+  ],
+  gsw: [
+    'बेंगलुरु म ₹400 भीतर शांत कमरा/डेस्क खोजा',
+    '₹100 धरोहर वापसी कनक काम करदी?',
+    'बुकिंग रद्द करणा कु नियम (5% शुल्क) क्या च?',
+    'धारा 52 अनुमति पत्र क्या हुंद?',
+    '50 मीटर जीपीएस अर पिन चेक-इन कनक काम करदु?',
+  ],
+  kfy: [
+    'बेंगलुरु में ₹400 भितर शांत कमरा/डेस्क खोजा',
+    '₹100 धरोहर वापसी कसी काम करछ?',
+    'बुकिंग रद्द करनो कु नियम (5% शुल्क) क्या छू?',
+    'धारा 52 अनुमति पत्र क्या हुनो?',
+    '50 मीटर जीपीएस अर पिन चेक-इन कसी काम करछ?',
+  ],
+  jns: [
+    'बेंगलुरु म ₹400 भितर शांत कमरा/डेस्क खोजो',
+    '₹100 धरोहर वापसी किक काम करदी?',
+    'बुकिंग रद्द करणे रो नियम (5% शुल्क) क्या आ?',
+    'धारा 52 अनुमति पत्र क्या होलो?',
+    '50 मीटर जीपीएस अर पिन चेक-इन किक काम करदो?',
+  ],
+};
 
 export const LoopBot = () => {
   const navigate = useNavigate();
+  const { language: currentLang, setLanguage: setGlobalLang } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState(currentLang || 'en');
   const [messages, setMessages] = useState([
     {
       id: 'init-1',
       sender: 'bot',
-      text: 'Namaste! I am LoopBot, your SpaceLoop AI concierge. How can I help you find verified physical spaces, calculate micro-escrow quotes, or assist with PIN check-in today?',
+      text: LOOPBOT_INIT_MESSAGES[currentLang || 'en'] || LOOPBOT_INIT_MESSAGES.en,
       intent: 'GENERAL',
       type: 'message',
       sources: ['SpaceLoop Platform Specifications', 'Section 52 Legal Framework'],
-      suggested_actions: DEFAULT_SUGGESTED_ACTIONS,
+      suggested_actions: LOCALIZED_SUGGESTED_ACTIONS[currentLang || 'en'] || LOCALIZED_SUGGESTED_ACTIONS.en,
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState('');
-  const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState(() => `conv_${Date.now()}`);
+
+  useEffect(() => {
+    if (currentLang && currentLang !== selectedLanguage) {
+      setSelectedLanguage(currentLang);
+    }
+  }, [currentLang]);
+
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length === 1 && prev[0].sender === 'bot') {
+        const welcome = LOOPBOT_INIT_MESSAGES[selectedLanguage] || LOOPBOT_INIT_MESSAGES.en;
+        const actions = LOCALIZED_SUGGESTED_ACTIONS[selectedLanguage] || LOCALIZED_SUGGESTED_ACTIONS.en;
+        return [
+          {
+            ...prev[0],
+            text: welcome,
+            suggested_actions: actions,
+          },
+        ];
+      }
+      return prev;
+    });
+  }, [selectedLanguage]);
   const [copiedCode, setCopiedCode] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -167,11 +240,11 @@ export const LoopBot = () => {
       {
         id: 'init-fresh',
         sender: 'bot',
-        text: 'Session reset! What architectural space, booking inquiry, or access question can I assist you with?',
+        text: LOOPBOT_INIT_MESSAGES[selectedLanguage] || LOOPBOT_INIT_MESSAGES.en,
         intent: 'GENERAL',
         type: 'message',
         sources: [],
-        suggested_actions: DEFAULT_SUGGESTED_ACTIONS,
+        suggested_actions: LOCALIZED_SUGGESTED_ACTIONS[selectedLanguage] || LOCALIZED_SUGGESTED_ACTIONS.en,
         timestamp: new Date(),
       },
     ]);
@@ -528,7 +601,11 @@ export const LoopBot = () => {
               <div className="flex items-center gap-1.5">
                 <select
                   value={selectedLanguage}
-                  onChange={(e) => setSelectedLanguage(e.target.value)}
+                  onChange={(e) => {
+                    const newL = e.target.value;
+                    setSelectedLanguage(newL);
+                    setGlobalLang(newL);
+                  }}
                   className="text-xs bg-surface border border-border rounded-lg px-2 py-1 text-text-secondary focus:outline-none focus:border-primary"
                   title="Choose conversation language"
                 >

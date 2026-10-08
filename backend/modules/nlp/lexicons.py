@@ -191,65 +191,72 @@ NEIGHBORHOOD_MAP: dict[str, dict[str, Any]] = {
 SPACE_TYPE_SYNONYMS: dict[str, list[str]] = {
     "desk": [
         "desk", "hot desk", "dedicated desk", "hotdesk", "coworking desk",
-        "mej", "मेज", "टेबल", "table", "workstation", "seat",
+        "mej", "मेज", "टेबल", "table", "workstation", "seat", "बैठक",
     ],
     "room": [
         "room", "private room", "cabin", "private cabin", "kamra", "कमरा",
-        "kholi", "खोली", "private office", "enclosed room",
+        "kholi", "खोली", "private office", "enclosed room", "कुटिया",
     ],
     "meeting_room": [
         "meeting room", "conference room", "boardroom", "meeting space", "meeting",
-        "baithak", "बैठक", "discussion room", "conference hall", "meeting pod",
+        "baithak", "बैठक", "discussion room", "conference hall", "meeting pod", "सभा", "गोष्ठी",
     ],
     "studio": [
         "studio", "podcast studio", "recording studio", "photo studio",
-        "video studio", "art studio", "स्टुडिओ", "स्टूडियो", "sound booth",
+        "video studio", "art studio", "स्टुडिओ", "स्टूडियो", "sound booth", "कला ठौर",
     ],
     "commercial": [
         "commercial space", "retail space", "office space", "commercial",
-        "dukaan", "दुकान", "showroom", "shop", "hall",
+        "dukaan", "दुकान", "showroom", "shop", "hall", "व्यापारिक", "कारोबार",
     ],
     "creative": [
-        "creative space", "maker space", "art space", "workshop space", "craft studio",
+        "creative space", "maker space", "art space", "workshop space", "craft studio", "हुनर ठौर",
     ],
 }
 
-# Amenity aliases
+# Amenity aliases across all 6 languages
 AMENITY_SYNONYMS: dict[str, list[str]] = {
-    "wifi": ["wifi", "wi-fi", "internet", "fiber", "high speed net", "broadband", "वायफाय", "इंटरनेट"],
-    "ac": ["ac", "a/c", "air condition", "air conditioning", "air conditioned", "cool", "hawa", "एसी"],
-    "parking": ["parking", "car parking", "bike parking", "valet", "gaadi parking", "पार्किंग", "वाहन पार्किंग"],
-    "power_backup": ["power backup", "inverter", "generator", "ups", "bijli", "uninterrupted power", "charging", "surge protector"],
-    "quiet": ["quiet", "silent", "shant", "शांत", "soundproof", "soundproofing", "noise-free", "whisper", "peaceful", "shanti", "आवाज नाही"],
-    "projector": ["projector", "screen", "display", "tv", "monitor", "4k display", "प्रोजेक्टर"],
+    "wifi": ["wifi", "wi-fi", "internet", "fiber", "high speed net", "broadband", "वायफाय", "इंटरनेट", "नेट", "वाइफाइ"],
+    "ac": ["ac", "a/c", "air condition", "air conditioning", "air conditioned", "cool", "hawa", "एसी", "ठंडी हवा", "वातानुकूलित"],
+    "parking": ["parking", "car parking", "bike parking", "valet", "gaadi parking", "पार्किंग", "वाहन पार्किंग", "गाड़ी खड़ी", "वाहन"],
+    "power_backup": ["power backup", "inverter", "generator", "ups", "bijli", "uninterrupted power", "charging", "surge protector", "बिजली बैकअप", "बत्ती"],
+    "quiet": [
+        "quiet", "silent", "shant", "शांत", "soundproof", "soundproofing", "noise-free", "whisper",
+        "peaceful", "shanti", "आवाज नाही", "सुभीता", "सुभीत", "सुआणो", "सुभीतो", "आवाज निछ", "शान्ति", "चुपचाप",
+    ],
+    "projector": ["projector", "screen", "display", "tv", "monitor", "4k display", "प्रोजेक्टर", "स्क्रीन", "पर्दा"],
     "whiteboard": ["whiteboard", "board", "marker", "व्हाइटबोर्ड", "फळा"],
-    "coffee": ["coffee", "tea", "chai", "espresso", "चाय", "चहा", "beverages", "pantry", "cafe"],
-    "washroom": ["washroom", "restroom", "toilet", "bathroom", "शौचालय"],
-    "ergonomic_seating": ["ergonomic chair", "herman miller", "ergonomic seating", "comfortable seating", "ergonomic"],
+    "coffee": ["coffee", "tea", "chai", "espresso", "चाय", "चहा", "beverages", "pantry", "cafe", "पानी"],
+    "washroom": ["washroom", "restroom", "toilet", "bathroom", "शौचालय", "टॉयलेट"],
+    "ergonomic_seating": [
+        "ergonomic chair", "herman miller", "ergonomic seating", "comfortable seating", "ergonomic",
+        "आरामदायक कुर्सियाँ", "आरामदायी बैठक", "सुभीता कुर्सी", "सुभीत कुर्सी", "सुआणि कुर्सी",
+    ],
 }
 
 # Use case categories
 USE_CASE_SYNONYMS: dict[str, list[str]] = {
-    "podcast": ["podcast", "podcasting", "recording", "voiceover", "audio", "पोडकास्ट", "ध्वनिमुद्रण"],
-    "coding": ["coding", "programming", "hackathon", "software", "development", "coder", "developer", "deep work"],
-    "study": ["study", "padhai", "पढ़ाई", "abhyas", "अभ्यास", "exam prep", "reading", "अभ्यासासाठी"],
-    "meeting": ["meeting", "client meeting", "interview", "discussion", "board meeting", "team sync", "presentation"],
-    "photoshoot": ["photoshoot", "photo shoot", "video shoot", "shooting", "filming", "photography"],
-    "workshop": ["workshop", "training", "seminar", "meetup", "event", "class"],
+    "podcast": ["podcast", "podcasting", "recording", "voiceover", "audio", "पोडकास्ट", "ध्वनिमुद्रण", "आवाज", "बोल"],
+    "coding": ["coding", "programming", "hackathon", "software", "development", "coder", "developer", "deep work", "कोडिंग", "कंप्यूटर"],
+    "study": ["study", "padhai", "पढ़ाई", "abhyas", "अभ्यास", "exam prep", "reading", "अभ्यासासाठी", "पढ़ण", "सीखण", "तैयारी"],
+    "meeting": ["meeting", "client meeting", "interview", "discussion", "board meeting", "team sync", "presentation", "बैठक", "सभा", "बातचीत"],
+    "photoshoot": ["photoshoot", "photo shoot", "video shoot", "shooting", "filming", "photography", "फोटो", "शूटिंग"],
+    "workshop": ["workshop", "training", "seminar", "meetup", "event", "class", "कार्यशाला", "प्रशिक्षण"],
 }
 
-# Multilingual number dictionary
+# Multilingual number dictionary across English, Hindi, Marathi, Garhwali, Kumaoni, Jaunsari
 NUMBER_WORDS: dict[str, int] = {
-    "one": 1, "ek": 1, "एक": 1, "१": 1,
-    "two": 2, "do": 2, "don": 2, "दोन": 2, "दो": 2, "२": 2,
-    "three": 3, "teen": 3, "तीन": 3, "३": 3,
-    "four": 4, "chaar": 4, "char": 4, "चार": 4, "४": 4,
-    "five": 5, "paanch": 5, "panch": 5, "पाच": 5, "पांच": 5, "५": 5,
-    "six": 6, "chhah": 6, "sah": 6, "सहा": 6, "छह": 6, "६": 6,
+    "one": 1, "ek": 1, "एक": 1, "१": 1, "एकै": 1,
+    "two": 2, "do": 2, "don": 2, "दोन": 2, "दो": 2, "दुई": 2, "दुइ": 2, "२": 2,
+    "three": 3, "teen": 3, "तीन": 3, "तिन": 3, "३": 3,
+    "four": 4, "chaar": 4, "char": 4, "चार": 4, "च्यार": 4, "४": 4,
+    "five": 5, "paanch": 5, "panch": 5, "पाच": 5, "पांच": 5, "पाँच": 5, "५": 5,
+    "six": 6, "chhah": 6, "sah": 6, "सहा": 6, "छह": 6, "छ": 6, "६": 6,
     "seven": 7, "saat": 7, "सात": 7, "७": 7,
     "eight": 8, "aath": 8, "आठ": 8, "८": 8,
     "nine": 9, "nau": 9, "नऊ": 9, "नौ": 9, "९": 9,
     "ten": 10, "das": 10, "daha": 10, "दहा": 10, "दस": 10, "१०": 10,
     "twenty": 20, "bees": 20, "vis": 20, "वीस": 20, "बीस": 20,
     "fifty": 50, "pachaas": 50, "pannaas": 50, "पन्नास": 50, "पचास": 50,
+    "hundred": 100, "sau": 100, "सौ": 100, "शंभर": 100,
 }

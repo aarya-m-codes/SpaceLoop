@@ -39,16 +39,23 @@ def configure_logging(app: Flask) -> None:
 
 
 def register_error_handlers(app: Flask) -> None:
-    """Register JSON error handlers for consistent API error contracts."""
+    """Register JSON error handlers for consistent API error contracts across all supported languages."""
+    from backend.modules.i18n.middleware import get_request_language
+    from backend.modules.i18n.lexicon import localize_error
 
     @app.errorhandler(400)
     def handle_bad_request(err: Any):
+        lang = get_request_language()
+        loc_msg = localize_error("BAD_REQUEST", lang)
+        default_desc = str(getattr(err, "description", "Malformed request payload"))
         return (
             jsonify({
                 "success": False,
                 "error": {
                     "code": "BAD_REQUEST",
-                    "message": str(getattr(err, "description", "Malformed request payload")),
+                    "message": loc_msg if lang != "en" else default_desc,
+                    "localized_message": loc_msg,
+                    "language": lang,
                 },
             }),
             400,
@@ -56,12 +63,16 @@ def register_error_handlers(app: Flask) -> None:
 
     @app.errorhandler(401)
     def handle_unauthorized(err: Any):
+        lang = get_request_language()
+        loc_msg = localize_error("UNAUTHORIZED", lang)
         return (
             jsonify({
                 "success": False,
                 "error": {
                     "code": "UNAUTHORIZED",
-                    "message": "Authentication required to access this resource.",
+                    "message": loc_msg if lang != "en" else "Authentication required to access this resource.",
+                    "localized_message": loc_msg,
+                    "language": lang,
                 },
             }),
             401,
@@ -69,12 +80,16 @@ def register_error_handlers(app: Flask) -> None:
 
     @app.errorhandler(403)
     def handle_forbidden(err: Any):
+        lang = get_request_language()
+        loc_msg = localize_error("FORBIDDEN", lang)
         return (
             jsonify({
                 "success": False,
                 "error": {
                     "code": "FORBIDDEN",
-                    "message": "You do not have permission to perform this action.",
+                    "message": loc_msg if lang != "en" else "You do not have permission to perform this action.",
+                    "localized_message": loc_msg,
+                    "language": lang,
                 },
             }),
             403,
@@ -83,12 +98,16 @@ def register_error_handlers(app: Flask) -> None:
     @app.errorhandler(404)
     def handle_not_found(err: Any):
         if request.path.startswith("/api/"):
+            lang = get_request_language()
+            loc_msg = localize_error("NOT_FOUND", lang)
             return (
                 jsonify({
                     "success": False,
                     "error": {
                         "code": "NOT_FOUND",
-                        "message": f"Resource not found: {request.path}",
+                        "message": loc_msg if lang != "en" else f"Resource not found: {request.path}",
+                        "localized_message": loc_msg,
+                        "language": lang,
                     },
                 }),
                 404,
@@ -99,12 +118,16 @@ def register_error_handlers(app: Flask) -> None:
             index_path = os.path.join(dist_dir, "index.html")
             if os.path.exists(index_path):
                 return send_from_directory(dist_dir, "index.html")
+        lang = get_request_language()
+        loc_msg = localize_error("NOT_FOUND", lang)
         return (
             jsonify({
                 "success": False,
                 "error": {
                     "code": "NOT_FOUND",
-                    "message": f"Endpoint not found: {request.path}",
+                    "message": loc_msg if lang != "en" else f"Endpoint not found: {request.path}",
+                    "localized_message": loc_msg,
+                    "language": lang,
                 },
             }),
             404,
@@ -112,12 +135,17 @@ def register_error_handlers(app: Flask) -> None:
 
     @app.errorhandler(409)
     def handle_conflict(err: Any):
+        lang = get_request_language()
+        loc_msg = localize_error("CONFLICT", lang)
+        default_desc = str(getattr(err, "description", "Resource state conflict"))
         return (
             jsonify({
                 "success": False,
                 "error": {
                     "code": "CONFLICT",
-                    "message": str(getattr(err, "description", "Resource state conflict")),
+                    "message": loc_msg if lang != "en" else default_desc,
+                    "localized_message": loc_msg,
+                    "language": lang,
                 },
             }),
             409,
@@ -125,12 +153,17 @@ def register_error_handlers(app: Flask) -> None:
 
     @app.errorhandler(422)
     def handle_unprocessable_entity(err: Any):
+        lang = get_request_language()
+        loc_msg = localize_error("VALIDATION_ERROR", lang)
+        default_desc = str(getattr(err, "description", "Unprocessable entity"))
         return (
             jsonify({
                 "success": False,
                 "error": {
                     "code": "VALIDATION_ERROR",
-                    "message": str(getattr(err, "description", "Unprocessable entity")),
+                    "message": loc_msg if lang != "en" else default_desc,
+                    "localized_message": loc_msg,
+                    "language": lang,
                 },
             }),
             422,
@@ -138,12 +171,16 @@ def register_error_handlers(app: Flask) -> None:
 
     @app.errorhandler(429)
     def handle_rate_limit(err: Any):
+        lang = get_request_language()
+        loc_msg = localize_error("RATE_LIMIT_EXCEEDED", lang)
         return (
             jsonify({
                 "success": False,
                 "error": {
                     "code": "RATE_LIMIT_EXCEEDED",
-                    "message": "Too many requests. Please slow down.",
+                    "message": loc_msg if lang != "en" else "Too many requests. Please slow down.",
+                    "localized_message": loc_msg,
+                    "language": lang,
                 },
             }),
             429,
@@ -152,12 +189,16 @@ def register_error_handlers(app: Flask) -> None:
     @app.errorhandler(500)
     def handle_internal_error(err: Any):
         app.logger.error(f"Internal server error: {err}", exc_info=True)
+        lang = get_request_language()
+        loc_msg = localize_error("INTERNAL_SERVER_ERROR", lang)
         return (
             jsonify({
                 "success": False,
                 "error": {
                     "code": "INTERNAL_SERVER_ERROR",
-                    "message": "An internal server error occurred.",
+                    "message": loc_msg if lang != "en" else "An internal server error occurred.",
+                    "localized_message": loc_msg,
+                    "language": lang,
                 },
             }),
             500,

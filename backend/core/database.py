@@ -49,8 +49,11 @@ def init_db(app: Flask) -> None:
             with db.engine.connect() as conn:
                 if db.engine.dialect.name == "sqlite":
                     cols = [row[1] for row in conn.execute(text("PRAGMA table_info(users)")).fetchall()]
-                    if cols and "mfa_pending_secret" not in cols:
-                        conn.execute(text("ALTER TABLE users ADD COLUMN mfa_pending_secret VARCHAR(255)"))
+                    if cols:
+                        if "mfa_pending_secret" not in cols:
+                            conn.execute(text("ALTER TABLE users ADD COLUMN mfa_pending_secret VARCHAR(255)"))
+                        if "preferred_language" not in cols:
+                            conn.execute(text("ALTER TABLE users ADD COLUMN preferred_language VARCHAR(10) DEFAULT 'en' NOT NULL"))
                         conn.commit()
         except Exception as exc:
             logger.debug(f"SQLite schema migration notice: {exc}")

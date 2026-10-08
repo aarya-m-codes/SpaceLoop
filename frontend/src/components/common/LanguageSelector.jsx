@@ -2,10 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Globe, Check, ChevronDown } from 'lucide-react';
 import { useI18n } from '../../i18n/I18nContext';
 
-const LANGUAGES = [
-  { code: 'en', label: 'English', native: 'English', flag: '🇬🇧' },
+export const LANGUAGES = [
+  { code: 'en', label: 'English', native: 'English', flag: '🌐' },
   { code: 'hi', label: 'Hindi', native: 'हिन्दी', flag: '🇮🇳' },
   { code: 'mr', label: 'Marathi', native: 'मराठी', flag: '🇮🇳' },
+  { code: 'gsw', label: 'Garhwali', native: 'गढ़वळि', flag: '🏔️' },
+  { code: 'kfy', label: 'Kumaoni', native: 'कुमाउँनी', flag: '🌲' },
+  { code: 'jns', label: 'Jaunsari', native: 'जौनसारी', flag: '🏞️' },
 ];
 
 export const LanguageSelector = ({ compact = false, className = '' }) => {
