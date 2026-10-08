@@ -530,7 +530,7 @@ export const LandingPage = () => {
                             <p className="font-bold text-text-primary">The Atrium Sunlit Studio</p>
                             <p className="text-[11px] text-text-muted">$45/hr • SoHo Arts District</p>
                           </div>
-                          <Link to="/spaces/2">
+                          <Link to="/spaces/2" state={{ space: SPACES_DATA[1] }}>
                             <Button size="sm" variant="primary" className="text-xs h-7 px-2.5">
                               Book
                             </Button>

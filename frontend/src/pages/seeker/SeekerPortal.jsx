@@ -634,7 +634,7 @@ export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
                               ({space.reviews || 42})
                             </span>
                           </div>
-                          <Link to={`/spaces/${space.id}`}>
+                          <Link to={`/spaces/${space.id}`} state={{ space }}>
                             <Button variant="primary" size="xs">
                               View Space
                             </Button>
@@ -1003,7 +1003,7 @@ export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
                           >
                             Remove
                           </button>
-                          <Link to={`/spaces/${space.id || ''}`}>
+                          <Link to={`/spaces/${space.id || ''}`} state={{ space }}>
                             <Button variant="primary" size="xs">
                               Book Now
                             </Button>

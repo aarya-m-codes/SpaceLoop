@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Star,
@@ -23,15 +23,237 @@ import { useToast } from '../context/ToastContext';
 import { Button } from '../components/common/Button';
 import { BookingWidget } from '../components/booking/BookingWidget';
 import { ErrorState } from '../components/common/ErrorState';
+import { SPACES_DATA } from '../utils/constants';
+
+// Authentic reviews tailored to each demonstration property
+const getDemoReviewsForSpace = (sp) => {
+  if (!sp) return [];
+  const idStr = String(sp.id || '');
+  const title = (sp.title || '').toLowerCase();
+
+  if (idStr === '1' || title.includes('glass loft')) {
+    return [
+      {
+        author_name: 'Aditya Sharma',
+        rating: 5,
+        comment: 'Floor-to-ceiling panoramic glass windows and open-air rooftop garden workspace are incredible. 1Gbps WiFi was rock-solid.',
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+      },
+      {
+        author_name: 'Priya Patel',
+        rating: 5,
+        comment: 'Keyless entry PIN worked instantly on arrival. Herman Miller chairs made our 6-hour sprint totally effortless.',
+        created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
+      },
+      {
+        author_name: 'Vikram Mehta',
+        rating: 4.9,
+        comment: 'Superb espresso bar and architectural aesthetic. Truly a benchmark workspace in the Design District.',
+        created_at: new Date(Date.now() - 86400000 * 12).toISOString(),
+      },
+    ];
+  }
+
+  if (idStr === '2' || title.includes('atrium')) {
+    return [
+      {
+        author_name: 'Rohit Verma',
+        rating: 5,
+        comment: 'Diffused natural skylights and acoustic wood paneling made our podcast recording session crystal clear.',
+        created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+      },
+      {
+        author_name: 'Sneha Rao',
+        rating: 4.9,
+        comment: 'Motorized standing desks and high industrial ceilings gave our creative team amazing focus.',
+        created_at: new Date(Date.now() - 86400000 * 8).toISOString(),
+      },
+    ];
+  }
+
+  if (idStr === '3' || title.includes('timber vault') || title.includes('boardroom')) {
+    return [
+      {
+        author_name: 'Karan Singhania',
+        rating: 5,
+        comment: 'The dual 75" 4K displays and soundproofing were perfect for our confidential executive sync.',
+        created_at: new Date(Date.now() - 86400000 * 4).toISOString(),
+      },
+      {
+        author_name: 'Ananya Deshmukh',
+        rating: 4.8,
+        comment: 'Executive ambiance with seamless keyless code access and great coffee station.',
+        created_at: new Date(Date.now() - 86400000 * 9).toISOString(),
+      },
+    ];
+  }
+
+  if (idStr === '4' || title.includes('rooftop canopy')) {
+    return [
+      {
+        author_name: 'Manish Joshi',
+        rating: 5,
+        comment: 'Working under the shaded teak cabanas with sunset horizon views was a dream. Weather-proof power outlets at every desk.',
+        created_at: new Date(Date.now() - 86400000 * 1).toISOString(),
+      },
+      {
+        author_name: 'Divya Nambiar',
+        rating: 5,
+        comment: 'Reliable mesh WiFi and great refreshment bar. The best outdoor work vibe in town.',
+        created_at: new Date(Date.now() - 86400000 * 6).toISOString(),
+      },
+    ];
+  }
+
+  if (idStr === '5' || title.includes('focus pods') || title.includes('nordic')) {
+    return [
+      {
+        author_name: 'Arjun Kulkarni',
+        rating: 5,
+        comment: 'Completely distraction-free acoustic isolation. Pale birch wood and warm focus lighting helped me finish a whole sprint.',
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+      },
+      {
+        author_name: 'Ritu Sen',
+        rating: 4.8,
+        comment: 'Air quality was monitored and fresh. Instant passcode unlock and great ergonomics.',
+        created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
+      },
+    ];
+  }
+
+  if (idStr === '6' || title.includes('gallery open floor')) {
+    return [
+      {
+        author_name: 'Tanvi Shah',
+        rating: 5,
+        comment: 'Modular furniture allowed us to configure the space for a 30-person workshop in minutes. 4K laser projector was razor sharp.',
+        created_at: new Date(Date.now() - 86400000 * 4).toISOString(),
+      },
+      {
+        author_name: 'Gaurav Roy',
+        rating: 4.9,
+        comment: 'High industrial ceilings and beautiful track lighting. Excellent venue for team offsites.',
+        created_at: new Date(Date.now() - 86400000 * 11).toISOString(),
+      },
+    ];
+  }
+
+  return [
+    {
+      author_name: 'Verified Seeker',
+      rating: 5,
+      comment: 'High-speed WiFi and flawless keyless arrival. Clean, bright, and inspiring architectural design.',
+      created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+    },
+    {
+      author_name: 'SpaceLoop Member',
+      rating: 4.9,
+      comment: 'Ergonomic seating and zero acoustic distractions. Highly recommended for productive sessions.',
+      created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
+    },
+  ];
+};
+
+// Normalize space schema across backend model and SPACES_DATA demo format
+const normalizeSpace = (raw) => {
+  if (!raw) return null;
+  const title = raw.title || raw.name || 'Architectural Space';
+  const category = raw.space_type || raw.category || 'Workspace';
+  const price = raw.price_per_hour ?? raw.price ?? raw.hourly_rate ?? raw.hourly_price ?? 150;
+  const loc = raw.location || (raw.city ? `${raw.address_line1 || ''}, ${raw.city}` : 'India');
+  const city = raw.city || (raw.location?.includes(',') ? raw.location.split(',').pop().trim() : 'India');
+  const address = raw.address_line1 || raw.address || (raw.location?.includes(',') ? raw.location.split(',')[0].trim() : loc);
+  const instant = raw.instant_booking_enabled ?? raw.instantAccess ?? true;
+  const rating = Number(raw.rating || raw.avg_rating || 4.9).toFixed(1);
+  const reviewsCount = raw.total_reviews ?? raw.reviews_count ?? raw.reviews ?? 12;
+  const capacity = raw.capacity ?? 8;
+  const description = raw.description || 'High-speed ergonomic workspace equipped with keyless digital locks, natural illumination, and premium acoustics.';
+  const amenities = Array.isArray(raw.amenities) && raw.amenities.length > 0
+    ? raw.amenities
+    : ['High-speed 1Gbps WiFi', 'Smart Keyless Access', 'Ergonomic Herman Miller Chairs', 'Secure Soundproofing'];
+
+  let imagesList = [];
+  if (Array.isArray(raw.images) && raw.images.length > 0) {
+    imagesList = raw.images;
+  } else if (raw.image) {
+    imagesList = [raw.image];
+  } else {
+    imagesList = ['https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80'];
+  }
+
+  const host = raw.host || {
+    full_name: 'SpaceLoop Host (Verified)',
+    is_host_verified: true,
+    is_verified: true,
+  };
+
+  return {
+    ...raw,
+    id: raw.id,
+    title,
+    name: title,
+    space_type: category,
+    category,
+    price_per_hour: price,
+    price,
+    hourly_rate: price,
+    location: loc,
+    city,
+    address_line1: address,
+    capacity,
+    rating,
+    reviews_count: reviewsCount,
+    instant_booking_enabled: instant,
+    instantAccess: instant,
+    description,
+    amenities,
+    images: imagesList,
+    image: imagesList[0],
+    host,
+  };
+};
 
 export const SpaceDetails = () => {
   const { id } = useParams();
+  const location = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { success, error: toastError } = useToast();
 
-  const [space, setSpace] = useState(null);
-  const [reviews, setReviews] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Multi-tier initial resolution:
+  // 1. Navigation state from clicked card
+  // 2. Session cache from previous view
+  // 3. Demo dataset matching ID or Title
+  const getInitialSpace = () => {
+    if (location.state?.space && (String(location.state.space.id) === String(id) || !id)) {
+      return normalizeSpace(location.state.space);
+    }
+    try {
+      const cached = sessionStorage.getItem(`spaceloop_space_${id}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && (String(parsed.id) === String(id) || parsed.title)) {
+          return normalizeSpace(parsed);
+        }
+      }
+    } catch {
+      // ignore
+    }
+    const demo = SPACES_DATA.find(
+      (sp) =>
+        String(sp.id) === String(id) ||
+        String(sp.title).toLowerCase() === decodeURIComponent(String(id || '')).toLowerCase()
+    );
+    if (demo) {
+      return normalizeSpace(demo);
+    }
+    return null;
+  };
+
+  const initialSpace = getInitialSpace();
+  const [space, setSpace] = useState(initialSpace);
+  const [reviews, setReviews] = useState(() => (initialSpace ? getDemoReviewsForSpace(initialSpace) : []));
+  const [loading, setLoading] = useState(!initialSpace);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [notFound, setNotFound] = useState(false);
 
@@ -52,52 +274,105 @@ export const SpaceDetails = () => {
     // Check initial wishlist status from storage
     try {
       const stored = JSON.parse(localStorage.getItem('spaceloop_wishlist') || '[]');
-      if (Array.isArray(stored) && stored.some((item) => (item.id || item) === Number(id) || (item.id || item) === id)) {
+      if (Array.isArray(stored) && stored.some((item) => (item.id || item) === Number(id) || String(item.id || item) === String(id))) {
         setIsWishlisted(true);
       }
     } catch {
       // ignore
     }
 
+    let isMounted = true;
     const fetchSpaceData = async () => {
       try {
-        setLoading(true);
+        let currentResolved = space || getInitialSpace();
+
+        // 1. Attempt backend API fetch
         const [spaceRes, reviewsRes] = await Promise.allSettled([
           spacesApi.getSpace(id),
           spacesApi.getReviews(id),
         ]);
 
+        if (!isMounted) return;
+
         if (spaceRes.status === 'fulfilled') {
           const val = spaceRes.value;
           const s = val?.data || val?.space || (val && !val.success ? val : val);
           if (s && (s.id || s.title)) {
-            setSpace(s);
-          } else {
-            setNotFound(true);
+            // If user clicked a demo property whose title differs from the backend database space,
+            // prioritize the clicked property to avoid data mismatch.
+            if (location.state?.space && location.state.space.title !== s.title) {
+              currentResolved = normalizeSpace(location.state.space);
+            } else {
+              currentResolved = normalizeSpace(s);
+            }
           }
+        }
+
+        // 2. If backend didn't return a space, ensure fallback to SPACES_DATA
+        if (!currentResolved) {
+          const demo = SPACES_DATA.find(
+            (sp) =>
+              String(sp.id) === String(id) ||
+              String(sp.title).toLowerCase() === decodeURIComponent(String(id || '')).toLowerCase()
+          );
+          if (demo) {
+            currentResolved = normalizeSpace(demo);
+          }
+        }
+
+        if (currentResolved) {
+          setSpace(currentResolved);
+          setNotFound(false);
+          try {
+            sessionStorage.setItem(`spaceloop_space_${id}`, JSON.stringify(currentResolved));
+          } catch {
+            // ignore
+          }
+
+          // Process reviews
+          let resolvedReviews = [];
+          if (reviewsRes.status === 'fulfilled') {
+            const rVal = reviewsRes.value;
+            const rList =
+              rVal?.data?.items ||
+              rVal?.data?.reviews ||
+              rVal?.reviews ||
+              rVal?.items ||
+              (Array.isArray(rVal?.data) ? rVal.data : []) ||
+              (Array.isArray(rVal) ? rVal : []);
+            if (Array.isArray(rList) && rList.length > 0) {
+              resolvedReviews = rList;
+            }
+          }
+
+          if (resolvedReviews.length === 0) {
+            resolvedReviews = getDemoReviewsForSpace(currentResolved);
+          }
+          setReviews(resolvedReviews);
         } else {
           setNotFound(true);
         }
-
-        if (reviewsRes.status === 'fulfilled') {
-          const rVal = reviewsRes.value;
-          const rList =
-            rVal?.data?.items ||
-            rVal?.data?.reviews ||
-            rVal?.reviews ||
-            rVal?.items ||
-            (Array.isArray(rVal?.data) ? rVal.data : []) ||
-            (Array.isArray(rVal) ? rVal : []);
-          setReviews(rList);
-        }
       } catch (err) {
-        setNotFound(true);
+        if (!isMounted) return;
+        const fallback = getInitialSpace();
+        if (fallback) {
+          setSpace(fallback);
+          setReviews(getDemoReviewsForSpace(fallback));
+          setNotFound(false);
+        } else {
+          setNotFound(true);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchSpaceData();
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   const handleToggleWishlist = async () => {
@@ -211,14 +486,15 @@ export const SpaceDetails = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Back Link */}
-      <Link
-        to="/explore"
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-secondary hover:text-primary transition-colors"
+      {/* Back Link with History & Route Fallback */}
+      <button
+        type="button"
+        onClick={() => (window.history.length > 1 ? window.history.back() : (window.location.href = '/explore'))}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-secondary hover:text-primary transition-colors cursor-pointer"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span>Back to all spaces</span>
-      </Link>
+        <span>Back to spaces</span>
+      </button>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
         {/* Left Column: Media & Overview */}

@@ -56,7 +56,7 @@ export const SpaceCard = ({ space }) => {
       {...cardMotionProps}
       className="group relative flex flex-col bg-surface rounded-2xl border border-border overflow-hidden transition-shadow duration-250 hover:shadow-hover hover:border-primary/30"
     >
-      <Link to={`/spaces/${spaceId}`} className="flex flex-col flex-grow">
+      <Link to={`/spaces/${spaceId}`} state={{ space }} className="flex flex-col flex-grow">
         {/* Card Image Container with Restrained Hover Zoom */}
         <div className="relative overflow-hidden aspect-[16/10] bg-surface-elevated">
           <motion.div {...imageMotionProps} className="w-full h-full">
