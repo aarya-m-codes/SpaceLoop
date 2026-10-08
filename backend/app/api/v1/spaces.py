@@ -5,6 +5,7 @@ from backend.modules.auth.permissions import require_auth
 from backend.modules.search import AIMatcher, DiscoveryPipeline
 from backend.modules.spaces.photo_service import PhotoService
 from backend.modules.spaces.service import SpaceService
+from models import Notification, Review, Space, SpaceInquiry, WishlistItem, db
 from space_ai import SpaceAIAdapter
 
 spaces_bp = Blueprint("spaces", __name__)
@@ -67,9 +68,11 @@ def get_space(space_id: int):
             "error": {"code": "NOT_FOUND", "message": "Space listing not found."},
         }), 404
 
+    space_data = space.to_dict()
     return jsonify({
         "success": True,
-        "data": space.to_dict(),
+        "data": space_data,
+        "space": space_data,
     }), 200
 
 
@@ -366,4 +369,153 @@ def ai_match():
         "data": match_result,
         "total": match_result.get("total_matches", len(match_result["top_matches"])),
     }), 200
+
+
+# =========================================================================
+# SEEKER WISHLIST ENDPOINTS
+# =========================================================================
+
+@spaces_bp.route("/my-wishlist", methods=["GET"])
+@require_auth
+def get_my_wishlist():
+    """Retrieve authenticated seeker's saved wishlist spaces."""
+    items = WishlistItem.query.filter_by(user_id=g.current_user.id).order_by(WishlistItem.created_at.desc()).all()
+    spaces = [w.space.to_dict() for w in items if w.space]
+    return jsonify({
+        "success": True,
+        "wishlist": spaces,
+        "items": spaces,
+        "data": spaces,
+        "total": len(spaces),
+    }), 200
+
+
+@spaces_bp.route("/<int:space_id>/wishlist", methods=["POST"])
+@require_auth
+def add_to_wishlist(space_id: int):
+    """Add a space to user's saved wishlist."""
+    space = Space.query.get(space_id)
+    if not space:
+        return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": "Space listing not found."}}), 404
+
+    existing = WishlistItem.query.filter_by(user_id=g.current_user.id, space_id=space_id).first()
+    if not existing:
+        item = WishlistItem(user_id=g.current_user.id, space_id=space_id)
+        db.session.add(item)
+        db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": f"Saved '{space.title}' to your wishlist.",
+        "space": space.to_dict(),
+    }), 200
+
+
+@spaces_bp.route("/<int:space_id>/wishlist", methods=["DELETE"])
+@require_auth
+def remove_from_wishlist(space_id: int):
+    """Remove a space from user's saved wishlist."""
+    item = WishlistItem.query.filter_by(user_id=g.current_user.id, space_id=space_id).first()
+    if item:
+        db.session.delete(item)
+        db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": "Removed space from your wishlist.",
+    }), 200
+
+
+# =========================================================================
+# SEEKER INQUIRIES & MESSAGES ENDPOINTS
+# =========================================================================
+
+@spaces_bp.route("/<int:space_id>/inquiries", methods=["POST"])
+@require_auth
+def send_inquiry(space_id: int):
+    """Submit a space inquiry to the host."""
+    space = Space.query.get(space_id)
+    if not space:
+        return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": "Space listing not found."}}), 404
+
+    payload = request.get_json(silent=True) or {}
+    message_text = payload.get("message", "").strip()
+    if not message_text:
+        return jsonify({"success": False, "error": {"code": "BAD_REQUEST", "message": "Inquiry message is required."}}), 400
+
+    inquiry = SpaceInquiry(
+        space_id=space_id,
+        sender_id=g.current_user.id,
+        message=message_text,
+        status="PENDING",
+    )
+    db.session.add(inquiry)
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": f"Inquiry for '{space.title}' sent to host successfully.",
+        "data": inquiry.to_dict(),
+        "inquiry": inquiry.to_dict(),
+    }), 201
+
+
+@spaces_bp.route("/my-inquiries", methods=["GET"])
+@require_auth
+def get_my_inquiries():
+    """List inquiries sent by the authenticated user."""
+    inquiries = SpaceInquiry.query.filter_by(sender_id=g.current_user.id).order_by(SpaceInquiry.created_at.desc()).all()
+    inquiry_list = [i.to_dict() for i in inquiries]
+    return jsonify({
+        "success": True,
+        "data": inquiry_list,
+        "inquiries": inquiry_list,
+        "items": inquiry_list,
+        "total": len(inquiry_list),
+    }), 200
+
+
+# =========================================================================
+# SEEKER REVIEWS & NOTIFICATIONS ENDPOINTS
+# =========================================================================
+
+@spaces_bp.route("/my-reviews", methods=["GET"])
+@require_auth
+def get_my_reviews():
+    """List reviews submitted by authenticated user."""
+    reviews = Review.query.filter_by(guest_id=g.current_user.id).order_by(Review.created_at.desc()).all()
+    review_list = [r.to_dict() for r in reviews]
+    return jsonify({
+        "success": True,
+        "data": review_list,
+        "reviews": review_list,
+        "items": review_list,
+        "total": len(review_list),
+    }), 200
+
+
+@spaces_bp.route("/my-notifications", methods=["GET"])
+@require_auth
+def get_my_notifications():
+    """List user in-app notifications."""
+    notifs = Notification.query.filter_by(user_id=g.current_user.id).order_by(Notification.created_at.desc()).all()
+    notif_list = [n.to_dict() for n in notifs]
+    return jsonify({
+        "success": True,
+        "data": notif_list,
+        "notifications": notif_list,
+        "items": notif_list,
+        "total": len(notif_list),
+    }), 200
+
+
+@spaces_bp.route("/notifications/<int:notification_id>/read", methods=["POST"])
+@require_auth
+def mark_notification_read(notification_id: int):
+    """Mark a notification as read."""
+    notif = Notification.query.filter_by(id=notification_id, user_id=g.current_user.id).first()
+    if notif:
+        notif.is_read = True
+        db.session.commit()
+    return jsonify({"success": True}), 200
 

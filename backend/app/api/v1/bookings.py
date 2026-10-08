@@ -50,6 +50,7 @@ def create_booking():
     return jsonify({
         "success": True,
         "data": result,
+        "booking": result,
         "message": "Space slot reserved successfully.",
     }), 201
 
@@ -69,6 +70,7 @@ def get_booking(booking_id: int):
     return jsonify({
         "success": True,
         "data": result,
+        "booking": result,
     }), 200
 
 
@@ -281,6 +283,9 @@ def list_my_bookings():
     return jsonify({
         "success": True,
         "data": data,
+        "bookings": data.get("items", []),
+        "items": data.get("items", []),
+        "total": data.get("total", 0),
     }), 200
 
 

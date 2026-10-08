@@ -56,6 +56,7 @@ class User(db.Model):
     bookings = relationship("Booking", back_populates="guest", foreign_keys="Booking.guest_id")
     reviews = relationship("Review", back_populates="guest", foreign_keys="Review.guest_id")
     inquiries = relationship("SpaceInquiry", back_populates="sender", foreign_keys="SpaceInquiry.sender_id")
+    wishlist_items = relationship("WishlistItem", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
     device_sessions = relationship("DeviceSession", back_populates="user", cascade="all, delete-orphan")
     password_reset_tokens = relationship("PasswordResetToken", back_populates="user", cascade="all, delete-orphan")
@@ -622,6 +623,22 @@ class SpaceInquiry(db.Model):
     space = relationship("Space", back_populates="inquiries", foreign_keys=[space_id])
     sender = relationship("User", back_populates="inquiries", foreign_keys=[sender_id])
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "space_id": self.space_id,
+            "sender_id": self.sender_id,
+            "sender_name": self.sender.full_name if self.sender else "SpaceLoop Guest",
+            "space_title": self.space.title if self.space else "Space",
+            "space_city": self.space.city if self.space else None,
+            "space_image": (self.space.images[0] if (self.space and self.space.images and len(self.space.images) > 0) else None),
+            "message": self.message,
+            "host_reply": self.host_reply,
+            "status": self.status.lower() if self.status else "pending",
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
 
 class Review(db.Model):
     """Guest reviews and ratings submitted following verified stays."""
@@ -673,6 +690,45 @@ class Notification(db.Model):
 
     # Relationships
     user = relationship("User", back_populates="notifications", foreign_keys=[user_id])
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "title": self.title,
+            "body": self.body,
+            "notification_type": self.notification_type,
+            "is_read": self.is_read,
+            "metadata": self.metadata_json or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class WishlistItem(db.Model):
+    """Seeker saved spaces."""
+    __tablename__ = "wishlist_items"
+
+    id = db.Column(Integer, primary_key=True)
+    user_id = db.Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    space_id = db.Column(Integer, ForeignKey("spaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = db.Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    # Relationships
+    space = relationship("Space", foreign_keys=[space_id])
+    user = relationship("User", back_populates="wishlist_items", foreign_keys=[user_id])
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "space_id", name="uq_user_space_wishlist"),
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "space_id": self.space_id,
+            "space": self.space.to_dict() if self.space else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
 
 
 class SpaceEmbedding(db.Model):

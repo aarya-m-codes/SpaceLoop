@@ -51,8 +51,14 @@ export const ExploreSpaces = () => {
     try {
       setLoading(true);
       const res = await spacesApi.getSpaces();
-      const list = res.spaces || (Array.isArray(res) ? res : []);
-      if (list && list.length > 0) {
+      const list =
+        res?.spaces ||
+        res?.data?.spaces ||
+        res?.data?.items ||
+        res?.items ||
+        (Array.isArray(res?.data) ? res.data : []) ||
+        (Array.isArray(res) ? res : []);
+      if (Array.isArray(list) && list.length > 0) {
         setSpaces(list);
       }
     } catch {

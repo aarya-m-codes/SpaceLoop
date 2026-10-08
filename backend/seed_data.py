@@ -12,7 +12,9 @@ from models import (
     Notification,
     Review,
     Space,
+    SpaceInquiry,
     User,
+    WishlistItem,
     utc_now,
 )
 from security import hash_password
@@ -317,6 +319,25 @@ def _seed_all_internal() -> dict[str, int]:
                 is_read=False,
             )
             db.session.add(notif1)
+
+        # Seed sample inquiry for seeker_rohit if none exists
+        if seeker_rohit and space1 and SpaceInquiry.query.filter_by(sender_id=seeker_rohit.id).count() == 0:
+            inquiry1 = SpaceInquiry(
+                space_id=space1.id,
+                sender_id=seeker_rohit.id,
+                message="Hi Arjun! Does this workspace have high-speed dual monitors and quiet booths for client calls?",
+                host_reply="Hi Rohit, yes! We have two soundproof phone booths and 4K displays available on desks 3 & 4.",
+                status="REPLIED",
+            )
+            db.session.add(inquiry1)
+
+        # Seed sample wishlist item for seeker_rohit if none exists
+        if seeker_rohit and space2 and WishlistItem.query.filter_by(user_id=seeker_rohit.id).count() == 0:
+            wishlist1 = WishlistItem(
+                user_id=seeker_rohit.id,
+                space_id=space2.id,
+            )
+            db.session.add(wishlist1)
 
         db.session.commit()
         logger.info(f"Database successfully seeded: {counts}")

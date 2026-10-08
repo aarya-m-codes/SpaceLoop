@@ -34,8 +34,14 @@ export const SeekerBookings = () => {
     try {
       setLoading(true);
       const res = await bookingsApi.getMyBookings();
-      const list = res.bookings || (Array.isArray(res) ? res : []);
-      setBookings(list);
+      const list =
+        res?.data?.items ||
+        res?.data?.bookings ||
+        res?.bookings ||
+        res?.items ||
+        (Array.isArray(res?.data) ? res.data : []) ||
+        (Array.isArray(res) ? res : []);
+      setBookings(Array.isArray(list) ? list : []);
     } catch (err) {
       toastError(err.message || 'Could not fetch your reservations.');
     } finally {
@@ -148,10 +154,12 @@ export const SeekerBookings = () => {
             const location = b.space?.location || b.space?.city || 'India';
             const price = b.total_price || b.total_amount || 0;
             const arrivalPin = b.arrival_pin || b.access_code || '1234';
-            const startTimeStr = new Date(b.start_time).toLocaleString('en-IN', {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-            });
+            const startTimeStr = b.start_time
+              ? new Date(b.start_time).toLocaleString('en-IN', {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                })
+              : 'Upcoming Slot';
             const status = (b.status || 'pending').toLowerCase();
             const escrow = (b.escrow_status || 'held').toLowerCase();
 

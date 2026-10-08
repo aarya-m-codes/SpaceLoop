@@ -91,7 +91,7 @@ export const BookingCheckout = () => {
       };
 
       const result = await bookingsApi.createBooking(bookingPayload);
-      const created = result.booking || result;
+      const created = result?.data?.booking || result?.data || result?.booking || result;
       setConfirmedBooking(created);
       success('Booking confirmed! Secure arrival PIN generated.');
     } catch (err) {

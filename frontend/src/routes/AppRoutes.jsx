@@ -141,6 +141,7 @@ export const AppRoutes = () => {
         {/* Checkout & Physical Access */}
         <Route path="/checkout/:spaceId" element={<BookingCheckout />} />
         <Route path="/booking/:id/access" element={<BookingAccess />} />
+        <Route path="/access/:id" element={<BookingAccess />} />
 
         {/* Authentication */}
         <Route path="/auth" element={<AuthPage />} />

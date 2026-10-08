@@ -35,11 +35,20 @@ import {
   Lock,
   ArrowRight,
   Check,
+  HelpCircle,
 } from 'lucide-react';
 import { PortalLayout } from '../../layouts/PortalLayout';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { bookingsApi, spacesApi, aiApi } from '../../services/api';
+import {
+  bookingsApi,
+  spacesApi,
+  aiApi,
+  wishlistApi,
+  inquiriesApi,
+  reviewsApi,
+  notificationsApi,
+} from '../../services/api';
 import { ExploreSpaces } from '../ExploreSpaces';
 import { SeekerBookings } from '../SeekerBookings';
 import { Profile } from '../Profile';
@@ -66,6 +75,9 @@ export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
   const [bookings, setBookings] = useState([]);
   const [spaces, setSpaces] = useState(SPACES_DATA);
   const [wishlist, setWishlist] = useState([]);
+  const [inquiries, setInquiries] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // LoopBot quick assistant state
@@ -83,9 +95,20 @@ export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [bookingsRes, spacesRes] = await Promise.allSettled([
+        const [
+          bookingsRes,
+          spacesRes,
+          wishlistRes,
+          inquiriesRes,
+          reviewsRes,
+          notificationsRes,
+        ] = await Promise.allSettled([
           bookingsApi.getMyBookings(),
           spacesApi.getSpaces(),
+          wishlistApi.getWishlist(),
+          inquiriesApi.getMyInquiries(),
+          reviewsApi.getMyReviews(),
+          notificationsApi.getMyNotifications(),
         ]);
 
         if (bookingsRes.status === 'fulfilled') {
@@ -114,14 +137,66 @@ export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
           setSpaces(SPACES_DATA);
         }
 
-        // Real wishlist from storage
-        try {
-          const storedWishlist = JSON.parse(
-            localStorage.getItem('spaceloop_wishlist') || '[]'
-          );
-          setWishlist(storedWishlist);
-        } catch {
-          setWishlist([]);
+        // Real wishlist from backend API with localStorage fallback
+        let loadedWishlist = [];
+        if (wishlistRes.status === 'fulfilled') {
+          const wVal = wishlistRes.value;
+          const wList =
+            wVal?.wishlist ||
+            wVal?.items ||
+            wVal?.data?.items ||
+            wVal?.data ||
+            (Array.isArray(wVal) ? wVal : []);
+          if (Array.isArray(wList) && wList.length > 0) {
+            loadedWishlist = wList;
+          }
+        }
+        if (loadedWishlist.length === 0) {
+          try {
+            const stored = JSON.parse(
+              localStorage.getItem('spaceloop_wishlist') || '[]'
+            );
+            loadedWishlist = Array.isArray(stored) ? stored : [];
+          } catch {
+            loadedWishlist = [];
+          }
+        }
+        setWishlist(loadedWishlist);
+
+        // Real inquiries from backend
+        if (inquiriesRes.status === 'fulfilled') {
+          const inqVal = inquiriesRes.value;
+          const inqList =
+            inqVal?.inquiries ||
+            inqVal?.items ||
+            inqVal?.data?.items ||
+            inqVal?.data ||
+            (Array.isArray(inqVal) ? inqVal : []);
+          setInquiries(Array.isArray(inqList) ? inqList : []);
+        }
+
+        // Real reviews from backend
+        if (reviewsRes.status === 'fulfilled') {
+          const revVal = reviewsRes.value;
+          const revList =
+            revVal?.reviews ||
+            revVal?.items ||
+            revVal?.data?.items ||
+            revVal?.data ||
+            (Array.isArray(revVal) ? revVal : []);
+          setReviews(Array.isArray(revList) ? revList : []);
+        }
+
+        // Real notifications from backend
+        if (notificationsRes.status === 'fulfilled') {
+          const notifVal = notificationsRes.value;
+          const notifList =
+            notifVal?.notifications ||
+            notifVal?.items ||
+            notifVal?.data?.items ||
+            notifVal?.data ||
+            (Array.isArray(notifVal) ? notifVal : []);
+          setNotifications(Array.isArray(notifList) ? notifList : []);
         }
       } catch (err) {
         toastError(err.message || 'Could not load Seeker Portal data');
@@ -133,26 +208,41 @@ export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
     fetchData();
   }, []);
 
-  // Wishlist toggle handler
-  const handleToggleWishlist = (space) => {
+  // Wishlist toggle handler with backend synchronization
+  const handleToggleWishlist = async (space) => {
     const isSaved = wishlist.some((item) => (item.id || item) === space.id);
     let updated;
     if (isSaved) {
       updated = wishlist.filter((item) => (item.id || item) !== space.id);
       success(`Removed "${space.title}" from your wishlist`);
+      try {
+        await wishlistApi.removeFromWishlist(space.id);
+      } catch {
+        // Optimistic fallback
+      }
     } else {
       updated = [...wishlist, space];
       success(`Saved "${space.title}" to your wishlist`);
+      try {
+        await wishlistApi.addToWishlist(space.id);
+      } catch {
+        // Optimistic fallback
+      }
     }
     setWishlist(updated);
     localStorage.setItem('spaceloop_wishlist', JSON.stringify(updated));
   };
 
-  const handleRemoveWishlist = (spaceId) => {
+  const handleRemoveWishlist = async (spaceId) => {
     const updated = wishlist.filter((item) => (item.id || item) !== spaceId);
     setWishlist(updated);
     localStorage.setItem('spaceloop_wishlist', JSON.stringify(updated));
     success('Removed space from your wishlist');
+    try {
+      await wishlistApi.removeFromWishlist(spaceId);
+    } catch {
+      // Optimistic fallback
+    }
   };
 
   // LoopBot natural language query submit
@@ -200,9 +290,9 @@ export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
     { id: 'explore', label: 'Explore Spaces', icon: Compass },
     { id: 'bookings', label: 'My Bookings', icon: Calendar, badge: bookings.length || undefined },
     { id: 'wishlist', label: 'Wishlist', icon: Heart, badge: wishlist.length || undefined },
-    { id: 'messages', label: 'Inquiries / Messages', icon: MessageSquare },
-    { id: 'reviews', label: 'Reviews', icon: Star },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'messages', label: 'Inquiries / Messages', icon: MessageSquare, badge: inquiries.length || undefined },
+    { id: 'reviews', label: 'Reviews', icon: Star, badge: reviews.length || undefined },
+    { id: 'notifications', label: 'Notifications', icon: Bell, badge: notifications.length || undefined },
     { id: 'verification', label: 'Verification', icon: ShieldCheck },
     { id: 'loopbot', label: 'LoopBot', icon: Bot },
     { id: 'profile', label: 'Profile', icon: User },
@@ -934,23 +1024,105 @@ export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
          ========================================================================= */}
       {activeTab === 'messages' && (
         <div className="space-y-6 animate-fadeIn">
-          <div>
-            <h1 className="text-2xl font-bold text-text-primary">Inquiries & Messages</h1>
-            <p className="text-xs text-text-secondary mt-1">
-              Direct communication channels with workspace hosts.
-            </p>
-          </div>
-
-          <div className="p-8 rounded-3xl bg-surface border border-border text-center space-y-3">
-            <MessageSquare className="w-8 h-8 text-primary mx-auto" />
-            <p className="text-sm font-semibold text-text-primary">No Active Message Threads</p>
-            <p className="text-xs text-text-secondary max-w-sm mx-auto">
-              When you send an inquiry regarding a space or book a reservation, host communication will appear here.
-            </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-text-primary">Inquiries & Messages</h1>
+              <p className="text-xs text-text-secondary mt-1">
+                Direct communication channels with workspace hosts.
+              </p>
+            </div>
             <Button variant="outline" size="sm" onClick={() => handleTabChange('explore')}>
-              Explore Spaces
+              Ask About Another Space
             </Button>
           </div>
+
+          {inquiries.length > 0 ? (
+            <div className="space-y-4">
+              {inquiries.map((inq) => {
+                const dateStr = inq.created_at
+                  ? new Date(inq.created_at).toLocaleDateString('en-IN', {
+                      dateStyle: 'medium',
+                    })
+                  : 'Recently';
+                const isReplied = inq.status === 'replied' || Boolean(inq.host_reply);
+
+                return (
+                  <div
+                    key={inq.id}
+                    className="p-6 rounded-3xl bg-surface border border-border shadow-sm space-y-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4 text-primary" />
+                        <h3 className="font-bold text-sm text-text-primary">
+                          {inq.space_title || 'Workspace Inquiry'}
+                        </h3>
+                        {inq.space_city && (
+                          <span className="text-xs text-text-muted">• {inq.space_city}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                            isReplied
+                              ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                              : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                          }`}
+                        >
+                          {isReplied ? 'Replied by Host' : 'Pending Response'}
+                        </span>
+                        <span className="text-[11px] text-text-muted">{dateStr}</span>
+                      </div>
+                    </div>
+
+                    {/* Inquiry Message */}
+                    <div className="p-3.5 rounded-2xl bg-surface-elevated border border-border text-xs space-y-1">
+                      <span className="text-[10px] font-semibold text-text-muted block">
+                        Your Inquiry:
+                      </span>
+                      <p className="text-text-primary leading-relaxed">{inq.message}</p>
+                    </div>
+
+                    {/* Host Reply if present */}
+                    {inq.host_reply ? (
+                      <div className="p-3.5 rounded-2xl bg-primary/5 border border-primary/20 text-xs space-y-1">
+                        <span className="text-[10px] font-bold text-primary flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span>Host Response:</span>
+                        </span>
+                        <p className="text-text-primary leading-relaxed">{inq.host_reply}</p>
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-text-muted italic">
+                        Host will respond here. You'll receive a real-time notification once replied.
+                      </p>
+                    )}
+
+                    {inq.space_id && (
+                      <div className="pt-2 flex justify-end">
+                        <Link to={`/spaces/${inq.space_id}`}>
+                          <Button variant="outline" size="xs">
+                            View Listing Details
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-8 rounded-3xl bg-surface border border-dashed border-border text-center space-y-3">
+              <MessageSquare className="w-8 h-8 text-primary/50 mx-auto" />
+              <p className="text-sm font-semibold text-text-primary">No Active Message Threads</p>
+              <p className="text-xs text-text-secondary max-w-sm mx-auto">
+                Have a question about desk equipment, lighting, or quiet hours? Send an inquiry directly from any space listing page.
+              </p>
+              <Button variant="primary" size="sm" onClick={() => handleTabChange('explore')}>
+                Explore Spaces
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -962,17 +1134,55 @@ export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
           <div>
             <h1 className="text-2xl font-bold text-text-primary">Reviews & Ratings</h1>
             <p className="text-xs text-text-secondary mt-1">
-              Feedback you have provided to workspace hosts.
+              Feedback you have provided to workspace hosts following verified stays.
             </p>
           </div>
 
-          <div className="p-8 rounded-3xl bg-surface border border-border text-center space-y-3">
-            <Star className="w-8 h-8 text-amber-500 mx-auto" />
-            <p className="text-sm font-semibold text-text-primary">No Reviews Yet</p>
-            <p className="text-xs text-text-secondary max-w-sm mx-auto">
-              Once you complete a booking, you can submit verified reviews with ratings on WiFi speed, cleanliness, and soundproofing.
-            </p>
-          </div>
+          {reviews.length > 0 ? (
+            <div className="space-y-4">
+              {reviews.map((rev) => (
+                <div
+                  key={rev.id}
+                  className="p-6 rounded-3xl bg-surface border border-border shadow-sm space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 text-amber-500">
+                        <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                        <span className="font-bold text-sm text-text-primary">{rev.rating || 5}.0</span>
+                      </div>
+                      <span className="text-xs font-semibold text-text-secondary">
+                        • {rev.is_verified_stay ? 'Verified Stay' : 'Community Review'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-text-muted">
+                      {rev.created_at ? new Date(rev.created_at).toLocaleDateString() : 'Recent'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-text-secondary leading-relaxed">{rev.comment}</p>
+                  {rev.host_response && (
+                    <div className="p-3 rounded-2xl bg-surface-elevated border border-border text-xs text-text-muted">
+                      <span className="font-bold text-text-primary block text-[11px] mb-0.5">
+                        Host Reply:
+                      </span>
+                      {rev.host_response}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-8 rounded-3xl bg-surface border border-dashed border-border text-center space-y-3">
+              <Star className="w-8 h-8 text-amber-500/50 mx-auto" />
+              <p className="text-sm font-semibold text-text-primary">No Reviews Yet</p>
+              <p className="text-xs text-text-secondary max-w-sm mx-auto">
+                Once you complete a booking, you can submit verified reviews with ratings on WiFi speed, cleanliness, and soundproofing.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => handleTabChange('bookings')}>
+                View Completed Bookings
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -989,26 +1199,46 @@ export const SeekerPortal = ({ initialTab = 'dashboard' }) => {
           </div>
 
           <div className="space-y-3">
-            <div className="p-4 rounded-2xl bg-surface border border-border flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-text-primary">Account Verification Complete</p>
-                <p className="text-xs text-text-muted mt-0.5">
-                  Your identity trust rating has been calibrated to {user?.trust_score || '85.0'}%.
-                </p>
-                <span className="text-[10px] text-text-muted">Today</span>
-              </div>
-            </div>
-            <div className="p-4 rounded-2xl bg-surface border border-border flex items-start gap-3">
-              <Zap className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-text-primary">Micro-Escrow Protection Active</p>
-                <p className="text-xs text-text-muted mt-0.5">
-                  All upcoming bookings are safeguarded with two-phase escrow release.
-                </p>
-                <span className="text-[10px] text-text-muted">Yesterday</span>
-              </div>
-            </div>
+            {notifications.length > 0 ? (
+              notifications.map((n) => (
+                <div
+                  key={n.id}
+                  className="p-4 rounded-2xl bg-surface border border-border flex items-start gap-3 shadow-sm hover:border-primary/30 transition-colors"
+                >
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-text-primary">{n.title}</p>
+                    <p className="text-xs text-text-muted mt-0.5 leading-relaxed">{n.body}</p>
+                    <span className="text-[10px] text-text-muted mt-1 block">
+                      {n.created_at ? new Date(n.created_at).toLocaleDateString() : 'Today'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <>
+                <div className="p-4 rounded-2xl bg-surface border border-border flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-text-primary">Account Verification Complete</p>
+                    <p className="text-xs text-text-muted mt-0.5">
+                      Your identity trust rating has been calibrated to {user?.trust_score || '85.0'}%.
+                    </p>
+                    <span className="text-[10px] text-text-muted">Today</span>
+                  </div>
+                </div>
+                <div className="p-4 rounded-2xl bg-surface border border-border flex items-start gap-3">
+                  <Zap className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-text-primary">Micro-Escrow Protection Active</p>
+                    <p className="text-xs text-text-muted mt-0.5">
+                      All upcoming bookings are safeguarded with two-phase escrow release.
+                    </p>
+                    <span className="text-[10px] text-text-muted">Yesterday</span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

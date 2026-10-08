@@ -178,6 +178,15 @@ export const Profile = () => {
     }
   };
 
+  if (!user) {
+    return (
+      <div className="py-24 text-center">
+        <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+        <p className="text-xs text-text-secondary">Loading profile data...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
       {/* Header Profile Bar */}
@@ -367,7 +376,7 @@ export const Profile = () => {
           ) : (
             <div className="p-3.5 rounded-2xl bg-surface-elevated border border-border text-xs text-text-secondary flex items-center justify-between">
               <span className="font-mono text-text-primary font-bold">
-                {user.masked_aadhaar || 'XXXX-XXXX-8912'}
+                {user?.masked_aadhaar || 'XXXX-XXXX-8912'}
               </span>
               <span className="text-[10px] text-text-muted">SHA-256 Secured</span>
             </div>

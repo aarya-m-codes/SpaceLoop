@@ -345,6 +345,12 @@ export const aiApi = {
       body: JSON.stringify(payload),
     }),
 
+  askAssistant: (query) =>
+    request('/api/v1/loopbot/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message: typeof query === 'string' ? query : query?.message || '' }),
+    }),
+
   loopbotChat: (payload) =>
     request('/api/v1/loopbot/chat', {
       method: 'POST',
@@ -368,6 +374,62 @@ export const aiApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+};
+
+// ==========================================
+// INQUIRIES & DIRECT MESSAGING APIS
+// ==========================================
+export const inquiriesApi = {
+  sendInquiry: (spaceId, payload) =>
+    request(`/api/spaces/${spaceId}/inquiries`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getMyInquiries: () =>
+    request('/api/spaces/my-inquiries', { method: 'GET' }),
+};
+
+// ==========================================
+// WISHLIST & SAVED SPACES APIS
+// ==========================================
+export const wishlistApi = {
+  getWishlist: () =>
+    request('/api/spaces/my-wishlist', { method: 'GET' }),
+
+  addToWishlist: (spaceId) =>
+    request(`/api/spaces/${spaceId}/wishlist`, { method: 'POST' }),
+
+  removeFromWishlist: (spaceId) =>
+    request(`/api/spaces/${spaceId}/wishlist`, { method: 'DELETE' }),
+};
+
+// ==========================================
+// REVIEWS APIS
+// ==========================================
+export const reviewsApi = {
+  getMyReviews: () =>
+    request('/api/spaces/my-reviews', { method: 'GET' }),
+
+  getSpaceReviews: (spaceId) =>
+    request(`/api/spaces/${spaceId}/reviews`, { method: 'GET' }),
+
+  createReview: (spaceId, payload) =>
+    request(`/api/spaces/${spaceId}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+};
+
+// ==========================================
+// NOTIFICATIONS APIS
+// ==========================================
+export const notificationsApi = {
+  getMyNotifications: () =>
+    request('/api/spaces/my-notifications', { method: 'GET' }),
+
+  markAsRead: (id) =>
+    request(`/api/spaces/notifications/${id}/read`, { method: 'POST' }),
 };
 
 // ==========================================
@@ -490,4 +552,8 @@ export default {
   ai: aiApi,
   verify: verifyApi,
   trustSafety: trustSafetyApi,
+  inquiries: inquiriesApi,
+  wishlist: wishlistApi,
+  reviews: reviewsApi,
+  notifications: notificationsApi,
 };

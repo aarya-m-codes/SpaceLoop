@@ -21,6 +21,7 @@ from backend.app.persistence.models import (
     SpaceEmbedding,
     SpaceInquiry,
     User,
+    WishlistItem,
     db,
     utc_now,
 )
@@ -37,6 +38,7 @@ __all__ = [
     "AccessLog",
     "Review",
     "SpaceInquiry",
+    "WishlistItem",
     "Notification",
     "DeviceSession",
     "PasswordResetToken",

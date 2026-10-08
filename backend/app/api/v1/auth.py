@@ -74,6 +74,9 @@ def login():
     response = make_response(jsonify({
         "success": True,
         "data": result,
+        "token": result.get("access_token"),
+        "access_token": result.get("access_token"),
+        "user": result.get("user"),
         "message": "Login successful.",
     }), 200)
 

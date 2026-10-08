@@ -15,8 +15,9 @@ import {
   Building2,
   MessageSquare,
   Send,
+  Heart,
 } from 'lucide-react';
-import { spacesApi } from '../services/api';
+import { spacesApi, wishlistApi, inquiriesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Button } from '../components/common/Button';
@@ -34,12 +35,30 @@ export const SpaceDetails = () => {
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [notFound, setNotFound] = useState(false);
 
+  // Wishlist state
+  const [isWishlisted, setIsWishlisted] = useState(false);
+
+  // Inquiry Modal state
+  const [inquiryModalOpen, setInquiryModalOpen] = useState(false);
+  const [inquiryMessage, setInquiryMessage] = useState('');
+  const [submittingInquiry, setSubmittingInquiry] = useState(false);
+
   // New Review Form
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
+    // Check initial wishlist status from storage
+    try {
+      const stored = JSON.parse(localStorage.getItem('spaceloop_wishlist') || '[]');
+      if (Array.isArray(stored) && stored.some((item) => (item.id || item) === Number(id) || (item.id || item) === id)) {
+        setIsWishlisted(true);
+      }
+    } catch {
+      // ignore
+    }
+
     const fetchSpaceData = async () => {
       try {
         setLoading(true);
@@ -49,16 +68,26 @@ export const SpaceDetails = () => {
         ]);
 
         if (spaceRes.status === 'fulfilled') {
-          const s = spaceRes.value.space || spaceRes.value;
-          setSpace(s);
+          const val = spaceRes.value;
+          const s = val?.data || val?.space || (val && !val.success ? val : val);
+          if (s && (s.id || s.title)) {
+            setSpace(s);
+          } else {
+            setNotFound(true);
+          }
         } else {
           setNotFound(true);
         }
 
         if (reviewsRes.status === 'fulfilled') {
+          const rVal = reviewsRes.value;
           const rList =
-            reviewsRes.value.reviews ||
-            (Array.isArray(reviewsRes.value) ? reviewsRes.value : []);
+            rVal?.data?.items ||
+            rVal?.data?.reviews ||
+            rVal?.reviews ||
+            rVal?.items ||
+            (Array.isArray(rVal?.data) ? rVal.data : []) ||
+            (Array.isArray(rVal) ? rVal : []);
           setReviews(rList);
         }
       } catch (err) {
@@ -70,6 +99,54 @@ export const SpaceDetails = () => {
 
     fetchSpaceData();
   }, [id]);
+
+  const handleToggleWishlist = async () => {
+    if (!space) return;
+    const newState = !isWishlisted;
+    setIsWishlisted(newState);
+
+    try {
+      const stored = JSON.parse(localStorage.getItem('spaceloop_wishlist') || '[]');
+      let updated;
+      if (newState) {
+        updated = [...stored.filter((item) => (item.id || item) !== space.id), space];
+        success(`Saved "${space.title}" to your wishlist`);
+        if (isAuthenticated) {
+          await wishlistApi.addToWishlist(space.id);
+        }
+      } else {
+        updated = stored.filter((item) => (item.id || item) !== space.id);
+        success(`Removed "${space.title}" from your wishlist`);
+        if (isAuthenticated) {
+          await wishlistApi.removeFromWishlist(space.id);
+        }
+      }
+      localStorage.setItem('spaceloop_wishlist', JSON.stringify(updated));
+    } catch {
+      // safe fallback
+    }
+  };
+
+  const handleSendInquiry = async (e) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      toastError('Please sign in to send an inquiry to the host.');
+      return;
+    }
+    if (!inquiryMessage.trim()) return;
+
+    setSubmittingInquiry(true);
+    try {
+      await inquiriesApi.sendInquiry(id, { message: inquiryMessage.trim() });
+      success('Inquiry sent to host! You can view responses in your Seeker Portal.');
+      setInquiryMessage('');
+      setInquiryModalOpen(false);
+    } catch (err) {
+      toastError(err.message || 'Failed to send inquiry to host.');
+    } finally {
+      setSubmittingInquiry(false);
+    }
+  };
 
   const handleAddReview = async (e) => {
     e.preventDefault();
@@ -160,6 +237,18 @@ export const SpaceDetails = () => {
                   <span>Instant 4-Digit PIN Access</span>
                 </div>
               )}
+              <button
+                type="button"
+                onClick={handleToggleWishlist}
+                aria-label="Save to Wishlist"
+                className={`absolute top-4 right-4 p-2.5 rounded-full backdrop-blur-md transition-all shadow-md cursor-pointer ${
+                  isWishlisted
+                    ? 'bg-rose-500 text-white'
+                    : 'bg-surface/90 hover:bg-surface text-text-primary border border-border'
+                }`}
+              >
+                <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
+              </button>
             </div>
 
             {imagesList.length > 1 && (
@@ -272,7 +361,17 @@ export const SpaceDetails = () => {
                 </div>
               </div>
             </div>
-            <span className="text-xs text-text-muted">Host response rate: 100%</span>
+            <div className="flex flex-col sm:items-end gap-2 w-full sm:w-auto">
+              <span className="text-xs text-text-muted">Host response rate: 100%</span>
+              <Button
+                variant="outline"
+                size="xs"
+                icon={MessageSquare}
+                onClick={() => setInquiryModalOpen(true)}
+              >
+                Ask Host a Question
+              </Button>
+            </div>
           </div>
 
           {/* Reviews Section */}
@@ -346,6 +445,59 @@ export const SpaceDetails = () => {
           <BookingWidget space={space} />
         </div>
       </div>
+
+      {/* Host Inquiry Modal */}
+      {inquiryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md bg-surface border border-border rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-primary" />
+                <h3 className="text-base font-bold text-text-primary">Send Host Inquiry</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInquiryModalOpen(false)}
+                className="text-text-muted hover:text-text-primary text-xs font-bold p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-xs text-text-secondary">
+              Ask {space.host?.full_name || 'the host'} regarding equipment, quiet hours, or special accommodations for "{space.title}".
+            </p>
+            <form onSubmit={handleSendInquiry} className="space-y-3">
+              <textarea
+                required
+                rows={4}
+                value={inquiryMessage}
+                onChange={(e) => setInquiryMessage(e.target.value)}
+                placeholder="Hi, I'm planning to work here tomorrow. Is there high-speed WiFi and space for two laptop setups?"
+                className="w-full px-3.5 py-2.5 text-xs rounded-2xl bg-surface-elevated border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:border-primary resize-none"
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setInquiryModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  icon={Send}
+                  disabled={submittingInquiry || !inquiryMessage.trim()}
+                >
+                  {submittingInquiry ? 'Sending...' : 'Send Message'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

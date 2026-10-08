@@ -49,7 +49,7 @@ export const BookingAccess = () => {
     try {
       setLoading(true);
       const res = await bookingsApi.getBooking(id);
-      const data = res.booking || res;
+      const data = res?.data?.booking || res?.data || res?.booking || res;
       setBooking(data);
 
       // Fetch immutable ledger

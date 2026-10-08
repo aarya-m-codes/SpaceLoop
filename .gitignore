@@ -38,6 +38,7 @@ uploads/
 
 # Pytest / Testing
 .pytest_cache/
+scratch/
 .coverage
 htmlcov/
 

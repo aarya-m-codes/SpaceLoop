@@ -364,6 +364,7 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     from backend.modules.spaces.photo_service import UPLOAD_FOLDER
 
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
+    app.register_blueprint(auth_bp, url_prefix="/api/auth", name="auth_legacy")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
     app.register_blueprint(admin_bp, url_prefix="/api/v1/admin", name="admin_v1")
     app.register_blueprint(spaces_bp, url_prefix="/api/spaces")
