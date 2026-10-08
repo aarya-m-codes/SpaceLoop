@@ -1,197 +1,547 @@
-# SpaceLoop Marketplace
+<div align="center">
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
-[![Node 20+](https://img.shields.io/badge/Node-20%2B-green.svg)](https://nodejs.org/)
+# 🌀 SpaceLoop
 
-SpaceLoop is an intelligent physical storage, creative studio, and workspace sharing marketplace. It connects Seekers and Hosts through dynamic AI matching, verified identity credentials, micro-escrow deposits, GPS-geofenced temporal access controls, and autonomous fraud detection engines.
+### **AI-Native Peer-to-Peer Physical Space Marketplace & Zero-Hardware Telemetry OS**
+
+<p align="center">
+  <a href="https://github.com/kanishksingh-01/spaceloop">
+    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=20&duration=3000&pause=1000&color=6366F1&center=true&vCenter=true&multiline=true&width=750&height=80&lines=AI-Native+Peer-to-Peer+Workspace+Marketplace;Zero-Hardware+Physical+Telemetry+OS+%E2%80%A2+Sec+52+Micro-Leases;6-Language+NLP+Multilingual+Intelligence+%E2%80%A2+TOTP+MFA" alt="Typing SVG" />
+  </a>
+</p>
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-spaceloop.onrender.com-6366f1?style=for-the-badge&logo=render&logoColor=white)](https://spaceloop.onrender.com)
+[![Vercel Edge](https://img.shields.io/badge/Vercel-Edge%20Frontend-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://spaceloop.vercel.app)
+[![Python Version](https://img.shields.io/badge/Python-3.11%2B-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![React Version](https://img.shields.io/badge/React-18.3%20%7C%20TypeScript-61dafb?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-Vite%206-38bdf8?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Security Standards](https://img.shields.io/badge/Security-OWASP%20ASVS%20V2%20%7C%20DPDP-10b981?style=for-the-badge&logo=shield&logoColor=white)](https://owasp.org/)
+[![License](https://img.shields.io/badge/License-MIT-emerald?style=for-the-badge)](LICENSE)
+
+<br/>
+
+<p align="center">
+  <a href="#-executive-summary">Executive Summary</a> •
+  <a href="#-the-problem">The Problem</a> •
+  <a href="#-core-solution--features">Key Features</a> •
+  <a href="#-system-architecture">Architecture</a> •
+  <a href="#-multi-tier-ai-engine">AI Engine</a> •
+  <a href="#-zero-hardware-india-stack">India Stack & Telemetry</a> •
+  <a href="#-6-language-nlp--multilingual-intelligence">6-Language NLP</a> •
+  <a href="#-trust-safety--fraud-detection">Trust & Fraud</a> •
+  <a href="#-host-portal-suite">Host Portal</a> •
+  <a href="#-api-reference">APIs</a> •
+  <a href="#-quick-start">Quick Start</a> •
+  <a href="#-team-logic-loop">Architects</a>
+</p>
+
+</div>
 
 ---
 
-## Canonical Architecture
+## ⚡ Executive Summary
 
-The repository follows a clean, decoupled monorepo architecture:
+**SpaceLoop** transforms underutilized urban real estate into flexible, on-demand temporary micro-leases. Across modern Indian metropolises, millions of square feet—garages, sound booths, off-peak retail storefronts, basements, conference rooms, photo studios, and study pods—sit vacant >65% of the day. Meanwhile, creators, students, freelancers, and micro-entrepreneurs face exorbitant commercial leases, rigid multi-year contracts, and steep security deposits.
+
+SpaceLoop solves this with an **AI-driven marketplace operating system** paired with a **Zero-Hardware Physical Telemetry Stack**:
+
+```mermaid
+flowchart LR
+    Host([Host Snap & Notes]) --> AI_Scan[Multimodal AI Space Inspector]
+    AI_Scan --> Listing[Verified Active Listing]
+    Seeker([Seeker Natural Language Query]) --> AI_Match[Hybrid Intent Matchmaker]
+    Listing --> AI_Match
+    AI_Match --> Lease[Sec 52 Micro-Lease Synthesizer]
+    Lease --> Hold[₹100 UPI Micro-Escrow Hold]
+    Hold --> CheckIn[GPS Radar + ₹5 Printable Door QR Pass]
+    CheckIn --> Session[Live In-Room Session Console]
+    Session --> CheckOut[CV Room Condition & Appliance Delta]
+    CheckOut --> Refund[Instant UPI Escrow Release + OTI Update]
+
+    style Host fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#ffffff
+    style Seeker fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#ffffff
+    style AI_Scan fill:#312e81,stroke:#a5b4fc,stroke-width:2px,color:#ffffff
+    style AI_Match fill:#312e81,stroke:#a5b4fc,stroke-width:2px,color:#ffffff
+    style Lease fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#ffffff
+    style Hold fill:#701a75,stroke:#f472b6,stroke-width:2px,color:#ffffff
+    style CheckIn fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#ffffff
+    style Session fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#ffffff
+    style CheckOut fill:#831843,stroke:#fb7185,stroke-width:2px,color:#ffffff
+    style Refund fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#ffffff
+```
+
+---
+
+## 💡 The Problem
+
+| Urban Inefficiency | The Real-World Impact | The SpaceLoop Fix |
+|---|---|---|
+| **Underutilized Urban Dead Space** | Garages, study nooks, and boutique spaces sit empty >65% of the day while property taxes accumulate. | Liquid, hourly/daily micro-rentals with dynamic earnings pricing. |
+| **Tenancy Law & Squatter Paranoia** | Property owners fear long-term lease disputes and adverse possession claims under traditional tenancy acts. | **Section 52 Indian Easements Act (1882)** revocable licenses with zero tenancy rights created. |
+| **Expensive IoT Smart-Lock Hardware** | Smart locks cost ₹15,000–₹40,000+, require battery changes, and need stable Wi-Fi. | **Zero-Hardware Telemetry**: Printable ₹5 cryptographic door QR passes, smartphone GPS radar (<50m), and caretaker PINs. |
+| **High Security Deposits & Friction** | Seekers cannot lock up ₹5,000–₹20,000 for a 3-hour study session. | **₹100 Automated UPI Micro-Escrow** with instant programmatic refunds upon Computer Vision room exit verification. |
+| **Unverified Bad Actors & Collusion** | High fraud risk in peer-to-peer physical space sharing. | **Dual-Sided DPDP Act (2023) Verification**: DigiLocker masked Aadhaar, `.ac.in` student SSO, and State Discom electricity meter CA checks. |
+
+---
+
+## 🚀 Core Solution & Features
+
+### 1. 🤖 Multimodal AI Space Inspector
+Hosts upload a single room photo and bullet notes. SpaceLoop's vision-LLM pipeline automatically extracts:
+- **Spatial Geometry & Sqft Estimation:** Usable square footage, capacity limits, and optimal layout.
+- **Acoustic Background Profile:** Noise decibel ratings (e.g., `<36 dB Studio Quiet`).
+- **Natural & Ambient Lighting:** Lux and daylight rating for creators, photographers, and video calls.
+- **Power & Utility Mapping:** Identifies grounded outlets, dedicated 20A circuits, Wi-Fi 6, and EV charging points.
+- **Copywriting & SEO:** Auto-generates high-converting listing titles, tags, and safety advisories.
+
+### 2. 🎯 Natural Language Intent Matchmaker & Vector Search
+Seekers search with conversational, multi-variable requests:
+> *"Need a soundproof room near Hauz Khas under ₹300/hr for 4 people to record a podcast with high-speed Wi-Fi and power outlets on Sunday afternoon"*
+
+- **Multi-Constraint Parser:** Extracts budget thresholds, geographic bounding boxes, acoustic limits, and hardware dependencies.
+- **Deterministic Match Scoring:** Combines Haversine distance, budget-fit ratio, tag overlap, and compatibility heuristics to output a **0–100% Match Score** with explainable *"Why this matches"* rationales.
+
+### 3. 📜 Plain-English AI Micro-Lease Synthesizer
+Eliminates legal hesitation by generating an instantaneous, customized **Temporary Space Use License Agreement** on every booking:
+- **Section 52 of the Indian Easements Act, 1882 Compliant:** Formulated strictly as a revocable license rather than a leasehold, completely extinguishing tenancy claims.
+- **Context-Tailored House Rules:** Dynamically injects quiet curfews, maximum guest caps, electrical load limits, and checkout checklists.
+
+### 4. 🚪 Zero-Hardware Access & Live Session Console
+Seekers unlock physical spaces with zero hardware installed by the host:
+- **Cryptographic Door QR Pass:** Printable ₹5 QR code carrying a cryptographically signed `room_qr_token`.
+- **GPS Radar Verification:** Client-side GPS geofencing validates device presence within **<50 meters** of the property coordinates.
+- **4-Digit Caretaker Fallback PIN:** Dynamic PIN for human-attended handshakes.
+- **Live In-Room HUD:** Real-time countdown timer, Wi-Fi credentials, host emergency contact, and one-tap extension.
+
+### 5. 👁️ Computer Vision Room Condition Delta & Appliance Check
+At checkout, seekers capture an exit photo:
+- **Condition Match Score:** Compares check-in vs check-out room geometry to ensure furniture, walls, and flooring remain unaltered.
+- **Electrical Shutdown Verification:** Detects glowing indicators, running fans, and illuminated lights to enforce energy conservation.
+- **Programmatic Escrow Refund:** Automatically releases the ₹100 UPI hold within seconds if condition match is verified.
+
+### 6. 🏆 Objective Telemetry Index (OTI)
+Replaces subjective, biased star reviews with deterministic telemetry metrics:
+
+$$\text{OTI} = (0.35 \times \text{Punctuality}) + (0.35 \times \text{Cleanliness CV}) + (0.20 \times \text{Identity Verification}) + (0.10 \times \text{Dispute Record})$$
+
+- **Punctuality (35%):** Measured by GPS timestamped vacating of the premises.
+- **Cleanliness (35%):** Computer Vision room delta and appliance power-off score.
+- **Identity Trust (20%):** DigiLocker Aadhaar, student university SSO, or Discom CA validation.
+- **Dispute History (10%):** Record of clean deposit releases without host damages claims.
+
+### 7. 🌐 6-Language NLP & Multilingual Intelligence
+SpaceLoop provides native linguistic intelligence across six distinct Indian languages:
+- **English** (`en`)
+- **हिन्दी (Hindi)** (`hi`)
+- **मराठी (Marathi)** (`mr`)
+- **गढ़वाली (Garhwali)** (`gsw`)
+- **कुमाऊँनी (Kumaoni)** (`kfy`)
+- **जौनसारी (Jaunsari)** (`jns`)
+
+Every aspect—UI elements, conversational search queries, error codes, legal micro-lease summaries, and LoopBot AI interactions—operates seamlessly in the user's preferred language with zero external runtime dependencies.
+
+### 8. 🔐 Foolproof Multi-Factor Authentication (MFA / TOTP)
+Built on **RFC 6238-compliant TOTP** standards:
+- **Three-Tier Security State:** Distinguishes between `Password Authenticated`, `MFA Required`, and `Fully Authenticated`.
+- **Encrypted Secrets at Rest:** High-entropy TOTP secrets encrypted with AES-256 before database persistence.
+- **Standard Authenticator Support:** Works natively with Google Authenticator, Microsoft Authenticator, and 1Password via standard `otpauth://` QR codes and manual base32 keys.
+- **Brute-Force Barriers & Single-Use Recovery Codes:** Exponential backoff rate limiting and single-use emergency recovery codes.
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+flowchart TB
+    subgraph Client["Frontend Layer (React 18 + Vite 6 + TypeScript)"]
+        UI[Tailwind CSS Dark Theme SPA]
+        Shell[Host Portal Suite - 13 Views]
+        HUD[Live In-Room Telemetry Console]
+        Bot[LoopBot RAG Concierge Widget]
+        i18n_mod[6-Language NLP & Localization Engine]
+    end
+
+    subgraph SecurityGateway["Security & Edge Gateway"]
+        CORS[CORS & Security Headers CSP]
+        RateLimit[Flask-Limiter IP Sliding Window]
+        CSRF[Flask-WTF CSRF Protection]
+        SessionMgr[Strict Session & Cookie Hardening]
+        MFAValidator[TOTP Multi-Factor Authentication Guard]
+    end
+
+    subgraph AppServer["Backend Core (Python 3.11 / Flask 3.0 REST)"]
+        AuthSvc[Auth & Identity Service - TOTP MFA]
+        SpaceSvc[Space Management & Dynamic Pricing]
+        BookSvc[Booking & Micro-Lease Engine]
+        AccessSvc[Zero-Hardware Telemetry Engine]
+        AuditSvc[Immutable Audit Logging]
+    end
+
+    subgraph AIEngine["Multi-Tier AI Reasoning Engine"]
+        Router{Model Router}
+        GroqLLM[Groq LLaMA 3.3 70B / 120B]
+        GeminiLLM[Google Gemini 3.8 Flash]
+        HeuristicFallback[Deterministic Rule Fallback]
+    end
+
+    subgraph TrustAndFraud["Trust, Safety & Fraud Subsystem"]
+        EventIngest[Normalized Event Ingest]
+        FeatExtract[Pandas & NumPy Feature Extraction]
+        AnomalyModel[Unsupervised Isolation Forest]
+        RuleMatrix[Deterministic Fraud Rule Matrix]
+        RiskDecide[Risk & Action Arbitrator]
+    end
+
+    subgraph Persistence["Storage & Database Layer"]
+        DB[(PostgreSQL / SQLite WAL)]
+        VectorStore[(JSONB / pgvector Embeddings)]
+        AuditStore[(Audit & Fraud Alerts Store)]
+    end
+
+    subgraph ExternalServices["External Service Adapters"]
+        DigiLocker[DigiLocker Aadhaar Tokenizer]
+        Discom[Discom Utility Meter CA API]
+        UPI[NPCI UPI ₹1 Penny Drop & Micro-Escrow]
+        Resend[Resend Transactional Email API]
+    end
+
+    Client --> SecurityGateway
+    SecurityGateway --> AppServer
+    AppServer --> AIEngine
+    AppServer --> TrustAndFraud
+    AppServer --> Persistence
+    AppServer --> ExternalServices
+
+    Router -->|Primary 120B/70B| GroqLLM
+    Router -->|Multimodal & Vision| GeminiLLM
+    Router -->|Offline / Failover| HeuristicFallback
+
+    EventIngest --> FeatExtract --> AnomalyModel --> RuleMatrix --> RiskDecide --> AuditStore
+```
+
+---
+
+## 🧠 Multi-Tier AI Engine
+
+SpaceLoop follows the **AI Should Assist, Not Control** architectural principle. Critical business operations (pricing bounds, booking validations, physical access, escrow disbursements) remain 100% deterministic and functional even during total external AI outages.
+
+```mermaid
+flowchart TD
+    Req[Incoming AI Task: Scan / Match / Lease / Chat] --> CheckSim{Simulation / Failure Mode?}
+    CheckSim -- Yes --> Heuristic[Deterministic Heuristic Engine]
+    CheckSim -- No --> CheckGroq{Groq API Available?}
+    
+    CheckGroq -- Yes --> TryGroq[Groq LLaMA 3.3 70B / 120B]
+    TryGroq -- Success --> ParseJSON[Structured JSON Output]
+    TryGroq -- Timeout/429 --> CheckGemini{Gemini API Available?}
+    
+    CheckGroq -- No / No Key --> CheckGemini
+    CheckGemini -- Yes --> TryGemini[Google Gemini 3.8 Flash]
+    TryGemini -- Success --> ParseJSON
+    TryGemini -- Timeout/429 --> Heuristic
+    
+    CheckGemini -- No / No Key --> Heuristic
+    Heuristic --> ParseJSON
+    ParseJSON --> Sanitize[Input/Output Security Sanitizer]
+    Sanitize --> Resp[Deliver to Application Flow]
+```
+
+### Capabilities & Responsibilities
+
+| Subsystem | Primary Model | Fallback Model | Deterministic Heuristic Fallback |
+|---|---|---|---|
+| **Space Inspection & Tagging** | `gemini-3.8-flash` (Multimodal Vision) | `llama-3.3-70b-versatile` | Keyword extraction, rule-based square footage estimator & default safety checks |
+| **Natural Language Intent Match** | `openai/gpt-oss-120b` (Groq) | `gemini-1.5-flash` | Haversine distance, budget filter, tag overlap scoring |
+| **Micro-Lease Synthesizer** | `llama-3.3-70b-versatile` (Groq) | `gemini-3.8-flash` | Section 52 Easements Act statutory template with slot interpolation |
+| **LoopBot RAG Concierge** | `openai/gpt-oss-120b` (Groq) | `gemini-3.8-flash` | Indexed FAQ knowledge base & space catalog semantic search |
+| **Checkout Condition Delta** | `gemini-3.8-flash` (Vision) | OpenCV Delta / Heuristic | Structural feature comparison, lighting threshold validator |
+
+---
+
+## 🇮🇳 Zero-Hardware India Stack
+
+SpaceLoop is engineered from the ground up for the Indian urban ecosystem, utilizing legal and digital infrastructure without requiring expensive imported IoT smart devices:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Seeker as Seeker
+    participant App as SpaceLoop App
+    participant Space as Host Premise
+    participant NPCI as NPCI UPI Escrow
+    participant OTI as OTI Engine
+
+    Seeker->>App: Book Space + Pay ₹100 Deposit
+    App->>NPCI: Hold ₹100 Micro-Escrow
+    Seeker->>Space: Arrive at Location
+    Seeker->>App: Scan ₹5 Printable Door QR Pass
+    App->>App: Validate GPS Distance (<50m Geofence)
+    App-->>Seeker: Access Granted + Display In-Room Console
+    Note over Seeker,Space: Booking active (Live HUD Countdown)
+    Seeker->>App: Complete Session & Snap Exit Photo
+    App->>App: Run CV Condition Delta & Appliance Check
+    App->>NPCI: Trigger Instant ₹100 Escrow Refund
+    NPCI-->>Seeker: ₹100 Credited to UPI VPA
+    App->>OTI: Increment On-Time Vacate & Cleanliness Metric
+```
+
+### 1. Section 52, Indian Easements Act (1882)
+Every booking issues a non-exclusive, revocable license agreement. This guarantees:
+- **Zero Tenancy Creation:** Seekers possess no tenant status or rights of exclusive possession.
+- **Right of Re-Entry:** Hosts retain unfettered dominion and right of inspection at all times.
+- **Immediate Eviction:** Expiration of the booking window automatically terminates the license.
+
+### 2. DPDP Act 2023 Compliant Identity Engine
+- **DigiLocker Aadhaar Tokenization:** Aadhaar numbers are never stored in plaintext. SpaceLoop extracts a one-way cryptographic SHA-256 hash and renders masked representations (`XXXX-XXXX-4821`).
+- **Student Verification:** Direct institutional validation for `.ac.in` and `.edu.in` academic domains.
+- **Discom Utility Verification:** Direct cross-referencing of Consumer Account (CA) electricity meter numbers (BESCOM, TPDDL, Tata Power, Adani Electricity) to prove property ownership.
+- **NPCI ₹1 UPI Penny Drop:** Instant verification of host bank accounts and VPAs against beneficiary names before enabling payout disbursements.
+
+---
+
+## 🛡️ Trust, Safety & Fraud Detection
+
+SpaceLoop features a modular, enterprise-grade **Fraud & Trust Engine** running in real-time alongside transactional flows:
+
+```mermaid
+flowchart LR
+    Event[Incoming Transaction Event] --> Ingest[Fraud Service Ingestion]
+    Ingest --> Features[Feature Extractor - Pandas/NumPy]
+    Features --> Anomaly[Isolation Forest Anomaly Model]
+    Features --> Rules[Deterministic Rule Engine]
+    Anomaly --> Risk[Risk Engine Arbiter]
+    Rules --> Risk
+    Risk --> Decision{Decision Engine}
+    Decision -->|Score < 0.35| Allow[Allow Transaction]
+    Decision -->|Score 0.35 - 0.70| Review[Flag for Admin Review]
+    Decision -->|Score > 0.70| Block[Hold / Block Action]
+    Decision --> Alert[Persist FraudAlertRecord]
+```
+
+### Comprehensive Security Controls
+
+| Category | Control Implementation | Standard Reference |
+|---|---|---|
+| **Authentication & MFA** | PBKDF2:SHA256 (600k iterations) password hashing, session regeneration, RFC 6238 TOTP Multi-Factor Authentication with AES-256 encrypted secrets and single-use recovery codes. | OWASP ASVS V2 |
+| **Authorization & IDOR** | Strict resource ownership checks (`SPACE_UPDATE`, `BOOKING_CHECKIN`, `BOOKING_CANCEL`). Prevents horizontal privilege escalation. | OWASP Top 10 A01:2021 |
+| **Transport & Session** | `HttpOnly`, `SameSite=Lax`, `Secure` cookies, global `Flask-WTF` CSRF protection, strict Content-Security-Policy (CSP). | OWASP Top 10 A05:2021 |
+| **Rate Limiting** | Sliding window rate limits via `Flask-Limiter` (Login: 5/min, Register: 3/min, KYC: 10/min, AI Scan: 15/min, MFA: 5/min). | OWASP Top 10 A04:2021 |
+| **Auditability** | Immutable append-only audit trail (`audit_logs`, `access_logs`, `fraud_events`, `fraud_alerts`, `email_logs`). | SOC 2 / ISO 27001 |
+
+---
+
+## 💼 Host Portal Suite
+
+The SpaceLoop Host Portal (`/host/*`) provides a dedicated 13-view management suite for space operators:
 
 ```
-SpaceLoop/
-├── frontend/         # Canonical React 18 + Vite frontend application
-│   ├── src/          # Components, pages, hooks, contexts, routes, and styles
-│   ├── public/       # Static assets and images
-│   ├── index.html    # Vite entrypoint HTML
-│   ├── vite.config.js# Vite build and dev configuration (proxies /api to backend)
-│   ├── package.json  # Frontend npm dependencies
-│   └── package-lock.json
-├── backend/          # Canonical Flask Python backend application
-│   ├── app/          # Application factory bootstrap and v1 REST API blueprints
-│   ├── core/         # Core extensions: SQLAlchemy database, CORS, Geo, Cache
-│   ├── modules/      # Domain modules: auth, bookings, escrow, search, spaces, trust_safety
-│   ├── fraud_engine/ # ML Isolation Forest & heuristic fraud detection engine
-│   ├── config.py     # Environment configurations (Development, Testing, Production)
-│   ├── models.py     # Unified SQLAlchemy data models
-│   ├── security.py   # Password hashing, cryptographic tokens, and access PINs
-│   ├── space_ai.py   # AI search adaptation & deterministic fallback engine
-│   ├── seed_data.py  # Seed generator for bootstrap development data
-│   ├── requirements.txt # Python production dependencies
-│   └── run.py        # Authoritative WSGI / server entrypoint (`backend.run:app`)
-├── database/         # Schema definitions, migrations, and seeds
-├── contracts/        # API schemas and specifications
-├── infrastructure/   # Docker container configurations and Nginx gateway
-├── deployment/       # Staging and production deployment manifests
-├── tests/            # Automated pytest test suites and production simulation tests
-├── render.yaml       # Render blueprint specification for Web Service & PostgreSQL
-├── Procfile          # Render web service process definition
-├── Dockerfile        # Multi-stage production container build
-├── .env.example      # Reference environment variable specification
-└── README.md
+host/
+├── Overview           → High-level revenue, occupancy stats, and immediate alerts
+├── My Spaces          → Space portfolio management, drafts, and pricing toggles
+├── Space Detail       → Deep inspection, photos, AI tags, and geometry specs
+├── Create Space       → AI-assisted listing wizard with auto-amenity extraction
+├── Bookings           → Real-time booking requests, check-in statuses, and history
+├── Booking Detail     → Micro-lease agreements, guest telemetry, and dispute triage
+├── Calendar           → Multi-space scheduling grid with buffer time controls
+├── Live Sessions      → Real-time active in-room telemetry HUD & occupant radar
+├── Verification       → Discom CA verification & UPI penny drop onboarding
+├── Access & Security  → Printable door QR pass generator & dynamic caretaker PINs
+├── Condition & Escrow → Computer Vision check-in/check-out delta viewer & deposit releases
+├── Analytics          → Hourly demand heatmaps, OTI trends, and revenue projections
+├── Activity Audit     → Immutable audit logging of all host account actions
+├── Host Settings      → Payout VPA configuration, instant booking, and notification prefs
+└── Notifications      → Real-time drawer alerts for bookings, deposits, and verifications
 ```
 
 ---
 
-## Database Configuration
+## 📡 API Reference
 
-- **Development**: SQLite stored locally in `instance/spaceloop_dev.db`. Automatically configured when `DATABASE_URL` is unset.
-- **Production**: PostgreSQL configured via `DATABASE_URL`. Handles standard connection pooling and automatically normalizes legacy `postgres://` URLs to `postgresql://` for SQLAlchemy 2.0.
-- **Initialization Command**:
-  ```bash
-  python -m flask --app backend.run:app init-db
-  ```
-- **Seeding Command (Development)**:
-  ```bash
-  python -m flask --app backend.run:app seed-db
-  ```
+<details open>
+<summary><b>Core Business APIs (<code>/api/*</code>)</b></summary>
+<br/>
+
+| Method | Route | Description | Auth Scope |
+|---|---|---|---|
+| `GET` | `/api/spaces` | Query active space listings with multi-variable filters | Public |
+| `GET` | `/api/spaces/<id>` | Fetch space specifications, amenities, and host trust metrics | Public |
+| `POST` | `/api/spaces` | Publish a new space listing | Verified Host |
+| `POST` | `/api/spaces/<id>/edit` | Edit space pricing, rules, or details (IDOR protected) | Space Owner |
+| `POST` | `/api/spaces/<id>/toggle-status` | Pause or resume space availability | Space Owner |
+| `POST` | `/api/spaces/ai-scan` | Multimodal AI vision analysis on space photo & notes | Public |
+| `POST` | `/api/spaces/ai-match` | Natural language conversational intent matchmaker | Public |
+| `POST` | `/api/bookings` | Create instant booking & synthesize AI Micro-Lease | Verified Seeker |
+| `POST` | `/api/booking/<id>/check-in` | GPS radar (<50m) & Door QR access handshake | Booking Seeker |
+| `POST` | `/api/booking/<id>/check-out` | Computer Vision exit condition delta & ₹100 refund | Booking Seeker |
+| `POST` | `/api/booking/<id>/cancel` | Cancel reservation and release escrow deposit | Seeker / Host |
+| `POST` | `/api/calculator/estimate` | Calculate host earnings & dynamic hourly pricing | Public |
+| `POST` | `/api/ai/chat` | Query LoopBot RAG conversational concierge | Public |
+| `POST` | `/api/verify/student` | Verify student DigiLocker Aadhaar & `.ac.in` domain | Authenticated |
+| `POST` | `/api/verify/host` | Verify Discom CA electricity bill & UPI penny drop | Authenticated |
+
+</details>
+
+<details open>
+<summary><b>Identity, Authentication & MFA APIs (<code>/api/v1/auth/*</code>)</b></summary>
+<br/>
+
+| Method | Route | Description | Auth Scope |
+|---|---|---|---|
+| `POST` | `/api/v1/auth/register` | Register new account with role validation | Public |
+| `POST` | `/api/v1/auth/login` | Authenticate credentials & determine MFA requirement | Public |
+| `POST` | `/api/v1/auth/logout` | Terminate session & clear cookies | Authenticated |
+| `GET` | `/api/v1/auth/me` | Fetch authenticated user profile & OTI score | Authenticated |
+| `POST` | `/api/v1/auth/forgot-password` | Issue secure password reset token via Resend | Public |
+| `POST` | `/api/v1/auth/reset-password` | Reset account password with token | Public |
+| `POST` | `/api/v1/auth/mfa/setup` | Generate encrypted TOTP secret & QR code URI | Authenticated |
+| `POST` | `/api/v1/auth/mfa/verify` | Verify TOTP code and finalize MFA enrollment | Authenticated |
+| `POST` | `/api/v1/auth/mfa/login-challenge` | Verify TOTP or recovery code for pre-auth session | Pre-Auth |
+| `POST` | `/api/v1/auth/mfa/disable` | Disable MFA requiring password confirmation | Authenticated |
+
+</details>
 
 ---
 
-## Environment Variables
+## ⚡ Quick Start
 
-Copy `.env.example` to `.env` and set values appropriate for your environment:
+### Prerequisites
+- **Python:** `3.11` or higher
+- **Node.js:** `18.x` or `20.x`
+- **npm:** `9.x` or higher
 
 ```bash
+# 1. Clone the repository
+git clone https://github.com/kanishksingh-01/spaceloop.git
+cd spaceloop
+
+# 2. Set up Python virtual environment
+python -m venv venv
+source venv/bin/activate       # Linux/macOS
+# Windows: .\venv\Scripts\Activate.ps1
+
+# 3. Install Python backend dependencies
+pip install -r requirements.txt
+
+# 4. Configure environment variables
 cp .env.example .env
+
+# 5. Seed the database with demo listings and users
+python seed_data.py
+
+# 6. Start the Flask Backend Server (Port 5000)
+python app.py
 ```
 
-Key variables:
-- `DATABASE_URL`: Connection string (SQLite in dev, PostgreSQL in prod).
-- `SECRET_KEY`: Random 32+ character key for sessions and cryptography.
-- `JWT_SECRET_KEY`: Random 32+ character key for JWT token signing.
-- `CORS_ORIGINS`: Allowed origins (e.g. `http://localhost:3000,http://127.0.0.1:3000`).
-- `FLASK_ENV`: `development` or `production`.
-- `PORT`: HTTP port (defaults to 5000).
-
----
-
-## Local Development Workflow
-
-### 1. Install Dependencies
+In a separate terminal, start the React frontend:
 
 ```bash
-# Python backend dependencies
-pip install -r backend/requirements.txt
-
-# Frontend dependencies
+# 7. Install and launch React Vite frontend (Port 3000)
 cd frontend
-npm ci
-cd ..
-```
-
-### 2. Initialize Development Database
-
-```bash
-python -m flask --app backend.run:app init-db
-python -m flask --app backend.run:app seed-db
-```
-
-### 3. Run Development Servers
-
-**Backend:**
-```bash
-python backend/run.py
-```
-Backend runs on `http://localhost:5000`.
-
-**Frontend:**
-```bash
-cd frontend
+npm install
 npm run dev
 ```
-Frontend development server runs on `http://localhost:3000` and automatically proxies `/api` and `/uploads` requests to the backend.
+
+Visit **`http://localhost:3000`** in your browser.
 
 ---
 
-## Testing
+## 👥 Pre-Seeded Demo Accounts
 
-Run the full automated test suite with pytest:
+All pre-seeded test fixtures use the password: **`password123`**
 
-```bash
-python -m pytest
-```
-
-Run specific test modules:
-```bash
-# Core API & journey tests
-python -m pytest tests/integration/test_end_to_end_journeys.py
-
-# Production single-service simulation tests
-python -m pytest tests/test_production_simulation.py
-```
+| Persona | Email | Role | Verification & Badges | Purpose |
+|---|---|---|---|---|
+| **Host (Delhi)** | `sunita@spaceloop.in` | Host (`owner`) | Discom Verified, UPI Penny Drop, OTI 99.2 | Study rooms and quiet workspace host |
+| **Seeker (Student)** | `aarav@iitd.ac.in` | Seeker (`seeker`) | DigiLocker Aadhaar, IIT Delhi `.ac.in` | Student hackathon and study room renter |
+| **Host (Dev)** | `dev-host@spaceloop.local` | Host (`owner`) | BESCOM Verified, UPI Verified | Automated test suite host fixture |
+| **Seeker (Dev)** | `dev-seeker@spaceloop.local` | Seeker (`seeker`) | Student & Aadhaar Verified | Automated test suite seeker fixture |
+| **Administrator** | `dev-admin@spaceloop.local` | Admin (`is_admin=True`) | Super Admin Authority | System governance, fraud triage & disputes |
 
 ---
 
-## Production Build & Single-Service Hosting
+## 🧪 Testing & Quality Assurance
 
-The backend is configured to serve the production frontend SPA build directly alongside all REST APIs, enabling deployment on a single Web Service without requiring separate frontend hosting.
+SpaceLoop maintains an end-to-end automated test suite covering all functional, security, and AI subsystems:
 
-### Build Production Frontend:
 ```bash
-npm run build --prefix frontend
-```
-Builds the optimized production bundle to `frontend/dist/`.
+# Run the 14-Point End-to-End Functional Audit Suite
+python test_all_features_functional.py
 
-### Start Production Backend:
-```bash
-gunicorn --bind 0.0.0.0:5000 --workers 4 --threads 2 --timeout 120 backend.run:app
+# Run the Pytest Unit & Integration Test Suite
+pytest tests/
 ```
 
-The server serves:
-- `GET /` $\to$ `frontend/dist/index.html`
-- `GET /<asset>` $\to$ static JS, CSS, and image assets from `frontend/dist/`
-- `GET /<client-route>` $\to$ SPA fallback routing (returns `index.html` so browser refreshes do not 404)
-- `GET /health` and `GET /api/v1/health` $\to$ platform health and database status
-- `ALL /api/...` $\to$ Flask REST API endpoints
+### Verified Test Coverage
+- **14/14 End-to-End Functional Subsystems Verified:** Homepage, Spaces API, Space Detail, AI Scan, Natural Language Match, Create Space, Earnings Calculator, LoopBot RAG, Student KYC, Host KYC, Instant Booking + Micro-Lease, GPS Check-In, CV Check-Out & UPI Escrow, HTML Template Views.
+- **Authentication & Security Controls:** Password complexity, rate limiting, session regeneration, IDOR barriers, RFC 6238 TOTP MFA validation, and single-use recovery code lifecycle.
+- **Trust & Safety Engine:** 26-feature Isolation Forest anomaly detection, rule matrix triggers, and risk level assignment.
 
 ---
 
-## Deployment to Render
+## 🚀 Deployment
 
-Deploy as **one Render Web Service** connected to a **Render PostgreSQL** instance:
+### 1. Deploy to Render (1-Click Blueprint)
 
-### 1. Render Web Service Settings
-- **Environment**: Python
-- **Build Command**:
-  ```bash
-  pip install -r backend/requirements.txt && npm ci --prefix frontend && npm run build --prefix frontend
-  ```
-- **Start Command**:
-  ```bash
-  gunicorn --bind 0.0.0.0:$PORT --workers 4 --threads 2 --timeout 120 backend.run:app
-  ```
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/kanishksingh-01/spaceloop)
 
-### 2. Render Environment Variables
-Add the following in the Render Dashboard:
-- `DATABASE_URL`: Set to the Render PostgreSQL Internal Database URL.
-- `SECRET_KEY`: Strong random secret key.
-- `JWT_SECRET_KEY`: Strong random JWT signing key.
-- `FLASK_ENV`: `production`
-- `PYTHON_VERSION`: `3.11` (or `3.12` / `3.13`)
+Configured via [`render.yaml`](render.yaml) with Python 3.11, Gunicorn WSGI (`2 workers, 4 threads`), auto-seeding SQLite WAL / PostgreSQL, and `/api/health` monitoring.
 
-### 3. Initialize Database on Render
-Run this one-time command via the Render Shell or one-off Job:
+- **Render Live URL:** [https://spaceloop.onrender.com](https://spaceloop.onrender.com)
+
+### 2. Deploy to Vercel (Edge Frontend)
+Configured via [`vercel.json`](vercel.json) with React 18 single-page application routing and serverless Python API proxying.
+
+- **Vercel Edge URL:** [https://spaceloop.vercel.app](https://spaceloop.vercel.app)
+
+### 3. Docker Container Deployment
 ```bash
-python -m flask --app backend.run:app init-db
+# Build multi-stage container
+docker build -t spaceloop:latest .
+
+# Run container
+docker run -p 5000:5000 --env-file .env spaceloop:latest
 ```
 
 ---
 
-## License
+## 👥 Team LOGIC LOOP
 
-MIT License - see [LICENSE](LICENSE) for details.
+Built with ❤️ by **Team LOGIC LOOP** *(GH Raisoni International Skill Tech University, Pune)* for **Hack2Ignite 2026**:
+
+<div align="center">
+<table>
+  <tr>
+    <td align="center" width="25%">
+      <img src="public/team/rohit.jpg" width="100px;" alt="Rohit Pal" style="border-radius:50%; object-fit:cover;"/><br />
+      <b>Rohit Pal</b><br />
+      <sub>AI / ML & Computer Vision Specialist</sub><br />
+      <small><code>CV-ROOM-DELTA-SCAN</code></small>
+    </td>
+    <td align="center" width="25%">
+      <img src="public/team/kanishk.png" width="100px;" alt="Kanishk Singh" style="border-radius:50%; object-fit:cover;"/><br />
+      <b>Kanishk Singh</b><br />
+      <sub>Founding Architect & Backend Lead</sub><br />
+      <small><code>CORE-WSGI-TRANSACT</code></small>
+    </td>
+    <td align="center" width="25%">
+      <img src="public/team/zara.jpg" width="100px;" alt="Zara Quadri" style="border-radius:50%; object-fit:cover;"/><br />
+      <b>Zara Quadri</b><br />
+      <sub>Frontend / UI-UX Lead Developer</sub><br />
+      <small><code>UI-REACT-VIEWPORT</code></small>
+    </td>
+    <td align="center" width="25%">
+      <img src="public/team/aarya.jpg" width="100px;" alt="Aarya Maurya" style="border-radius:50%; object-fit:cover;"/><br />
+      <b>Aarya Maurya</b><br />
+      <sub>System Architect & Security Lead</sub><br />
+      <small><code>SEC-ZERO-TRUST-SHIELD</code></small>
+    </td>
+  </tr>
+</table>
+</div>
+
+---
+
+## 📄 License
+
+SpaceLoop is licensed under the [MIT License](LICENSE).  
+Copyright © 2026 Team LOGIC LOOP. All rights reserved.

@@ -109,17 +109,16 @@ const TEAM_MEMBERS = [
     },
   },
   {
-    id: 'architect-indrayani',
+    id: 'architect-rohit',
     badgeNumber: '04',
-    name: 'Indrayani Mazumder',
+    name: 'Rohit Pal',
     role: 'AI / ML & Computer Vision Specialist',
     domain: 'Multimodal Room Vision & Section 52 Matching Engine',
     intro:
       'Leads SpaceLoop’s multimodal computer vision and spatial intelligence pipeline. Architected the post-occupancy room condition delta analyzer, automatic electrical appliance off-detection, and the Groq + Gemini dual-engine intent parser.',
-    email: 'indrayanimazumder@gmail.com',
-    linkedin:
-      'https://www.linkedin.com/in/indrayani-mazumder-2a7204226?utm_source=share_via&utm_content=profile&utm_medium=member_android',
-    photoUrl: '/team/indrayani.jpg',
+    email: 'rohitpal.dev@gmail.com',
+    linkedin: 'https://www.linkedin.com/in/rohit-pal',
+    photoUrl: '/team/rohit.jpg',
     accentColor: 'from-cyan-500/20 to-teal-500/20 border-cyan-500/30 text-cyan-400',
     subsystem: {
       title: 'Multimodal Room Vision & Semantic Matcher',
@@ -165,6 +164,35 @@ export const ArchitecturePage = () => {
           <p className="text-text-secondary text-base sm:text-lg max-w-2xl mx-auto">
             Engineered by Team LogicLoop at Hack2Ignite 2026. A production-grade distributed architecture merging the Indian Easements Act, India Stack digital rails, and zero-trust telemetry.
           </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
+            <a
+              href="https://spaceloop.onrender.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary/90 shadow-sm transition"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Live Demo (Render)</span>
+            </a>
+            <a
+              href="https://spaceloop.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-elevated hover:bg-surface-elevated/80 border border-border text-xs font-semibold text-text-primary transition"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Vercel Edge Deployment</span>
+            </a>
+            <a
+              href="https://github.com/kanishksingh-01/spaceloop"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-elevated hover:bg-surface-elevated/80 border border-border text-xs font-semibold text-text-primary transition"
+            >
+              <Terminal className="w-3.5 h-3.5" />
+              <span>GitHub Repository</span>
+            </a>
+          </div>
         </div>
       </div>
 

@@ -177,6 +177,7 @@ export const AppRoutes = () => {
         <Route path="/trust-safety" element={<TrustSafetyPage />} />
         <Route path="/admin/trust-safety" element={<TrustSafetyPage />} />
         <Route path="/architecture" element={<ArchitecturePage />} />
+        <Route path="/about" element={<ArchitecturePage />} />
 
         {/* Email Verification Handlers */}
         <Route path="/verify-email" element={<VerifyEmailPage />} />
