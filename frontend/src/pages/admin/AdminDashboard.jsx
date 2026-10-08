@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Shield,
   AlertTriangle,
@@ -45,6 +46,7 @@ export const AdminDashboard = ({
   initialSpaceStatusFilter = '',
 }) => {
   const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
   const { success, error: toastError, info } = useToast();
 
   // Active navigation tab
@@ -360,7 +362,7 @@ export const AdminDashboard = ({
           title="Admin Authorization Required"
           description="Access to the SpaceLoop Admin Console and Governance Architecture is restricted to authorized platform administrators."
           actionText="Return to Explore"
-          actionFn={() => (window.location.href = '/explore')}
+          actionFn={() => navigate('/explore')}
         />
       </div>
     );

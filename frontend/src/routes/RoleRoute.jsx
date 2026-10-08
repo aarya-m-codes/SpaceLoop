@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ErrorState } from '../components/common/ErrorState';
 
@@ -13,6 +13,7 @@ import { ErrorState } from '../components/common/ErrorState';
 export const RoleRoute = ({ role, children }) => {
   const { isAuthenticated, user, activeRole, loading } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -42,7 +43,7 @@ export const RoleRoute = ({ role, children }) => {
             title="Admin Access Restricted"
             description="You do not have administrative credentials to enter the SpaceLoop Governance Portal. All unauthorized administrative access attempts are logged."
             actionText="Return to Seeker Portal"
-            actionFn={() => (window.location.href = '/seeker')}
+            actionFn={() => navigate('/seeker')}
           />
         </div>
       </div>
@@ -59,7 +60,7 @@ export const RoleRoute = ({ role, children }) => {
             title="Host Portal Access Restricted"
             description="You are currently signed in with a Seeker account. Switch to Host mode in your account menu or register as a host to list and manage workspaces."
             actionText="Return to Seeker Dashboard"
-            actionFn={() => (window.location.href = '/seeker')}
+            actionFn={() => navigate('/seeker')}
           />
         </div>
       </div>

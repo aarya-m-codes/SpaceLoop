@@ -46,7 +46,7 @@ export const AdminPortal = () => {
             title="Admin Access Denied"
             description="You do not have administrative credentials to enter the SpaceLoop Governance Portal. All unauthorized administrative access attempts are audited."
             actionText="Go to Seeker Portal"
-            actionFn={() => (window.location.href = '/seeker')}
+            actionFn={() => navigate('/seeker')}
           />
         </div>
       </div>

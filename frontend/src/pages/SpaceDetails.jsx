@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useLocation } from 'react-router-dom';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Star,
@@ -217,6 +217,7 @@ const normalizeSpace = (raw) => {
 export const SpaceDetails = () => {
   const { id } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const { success, error: toastError } = useToast();
 
@@ -455,9 +456,9 @@ export const SpaceDetails = () => {
           type="unavailable"
           title="Space Not Found"
           description="The architectural space you are looking for does not exist or has been removed."
-          onBack={() => (window.location.href = '/explore')}
+          onBack={() => navigate('/explore')}
           actionText="Explore Active Spaces"
-          actionFn={() => (window.location.href = '/explore')}
+          actionFn={() => navigate('/explore')}
         />
       </div>
     );
@@ -489,7 +490,7 @@ export const SpaceDetails = () => {
       {/* Back Link with History & Route Fallback */}
       <button
         type="button"
-        onClick={() => (window.history.length > 1 ? window.history.back() : (window.location.href = '/explore'))}
+        onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/explore'))}
         className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-secondary hover:text-primary transition-colors cursor-pointer"
       >
         <ArrowLeft className="w-4 h-4" />

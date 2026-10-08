@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Calendar,
   Clock,
@@ -21,6 +21,7 @@ import { ErrorState } from '../components/common/ErrorState';
 
 export const SeekerBookings = () => {
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const { success, error: toastError } = useToast();
 
   const [bookings, setBookings] = useState([]);
@@ -82,7 +83,7 @@ export const SeekerBookings = () => {
           title="Sign in to View Bookings"
           description="Please log in with your SpaceLoop account to access your reservation history and digital access PINs."
           actionText="Sign In"
-          actionFn={() => (window.location.href = '/auth')}
+          actionFn={() => navigate('/auth')}
         />
       </div>
     );
