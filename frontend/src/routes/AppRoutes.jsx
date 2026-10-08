@@ -9,6 +9,11 @@ import { ExploreSpaces } from '../pages/ExploreSpaces';
 import { SpaceDetails } from '../pages/SpaceDetails';
 import { BookingCheckout } from '../pages/BookingCheckout';
 import { BookingAccess } from '../pages/BookingAccess';
+import { SessionPage } from '../pages/SessionPage';
+import { CalculatorPage } from '../pages/CalculatorPage';
+import { HowItWorksPage } from '../pages/HowItWorksPage';
+import { TrustSafetyPage } from '../pages/TrustSafetyPage';
+import { ArchitecturePage } from '../pages/ArchitecturePage';
 import { AuthPage } from '../pages/AuthPage';
 import { NotFound } from '../pages/NotFound';
 
@@ -138,10 +143,18 @@ export const AppRoutes = () => {
         <Route path="/explore" element={<ExploreSpaces />} />
         <Route path="/spaces/:id" element={<SpaceDetails />} />
 
-        {/* Checkout & Physical Access */}
+        {/* Checkout & Physical Access & Real-Time Session Cockpit */}
         <Route path="/checkout/:spaceId" element={<BookingCheckout />} />
         <Route path="/booking/:id/access" element={<BookingAccess />} />
         <Route path="/access/:id" element={<BookingAccess />} />
+        <Route path="/session/:id" element={<SessionPage />} />
+        <Route path="/booking/:id/session" element={<SessionPage />} />
+
+        {/* Feature Pages */}
+        <Route path="/calculator" element={<CalculatorPage />} />
+        <Route path="/how-it-works" element={<HowItWorksPage />} />
+        <Route path="/trust-safety" element={<TrustSafetyPage />} />
+        <Route path="/architecture" element={<ArchitecturePage />} />
 
         {/* Authentication */}
         <Route path="/auth" element={<AuthPage />} />

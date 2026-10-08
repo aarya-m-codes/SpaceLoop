@@ -354,11 +354,14 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     from backend.app.api.v1.ai import _handle_chat_request, ai_bp
     from backend.app.api.v1.auth import auth_bp
     from backend.app.api.v1.bookings import bookings_bp
+    from backend.app.api.v1.calculator import calculator_bp
     from backend.app.api.v1.escrow import escrow_bp
     from backend.app.api.v1.fraud import fraud_bp
     from backend.app.api.v1.loopbot import handle_loopbot_chat_request, loopbot_bp
     from backend.app.api.v1.search import search_bp
     from backend.app.api.v1.spaces import spaces_bp
+    from backend.app.api.v1.system import system_bp
+    from backend.app.api.v1.trust import trust_bp
     from backend.app.api.v1.trust_safety import trust_safety_bp
     from backend.app.api.v1.verification import verification_bp
     from backend.modules.spaces.photo_service import UPLOAD_FOLDER
@@ -373,6 +376,12 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     app.register_blueprint(bookings_bp, url_prefix="/api/v1/bookings", name="bookings_v1")
     app.register_blueprint(bookings_bp, url_prefix="/api/booking", name="booking_singular")
     app.register_blueprint(bookings_bp, url_prefix="/api/v1/booking", name="booking_v1_singular")
+    app.register_blueprint(calculator_bp, url_prefix="/api/calculator")
+    app.register_blueprint(calculator_bp, url_prefix="/api/v1/calculator", name="calculator_v1")
+    app.register_blueprint(system_bp, url_prefix="/api/system")
+    app.register_blueprint(system_bp, url_prefix="/api/v1/system", name="system_v1")
+    app.register_blueprint(trust_bp, url_prefix="/api/trust")
+    app.register_blueprint(trust_bp, url_prefix="/api/v1/trust", name="trust_v1")
     app.register_blueprint(escrow_bp, url_prefix="/api/escrow")
     app.register_blueprint(escrow_bp, url_prefix="/api/v1/escrow", name="escrow_v1")
     app.register_blueprint(ai_bp, url_prefix="/api/ai")

@@ -55,7 +55,7 @@ export const Footer = () => {
             </ul>
           </div>
 
-          {/* Hosting */}
+          {/* Hosting & Monetization */}
           <div className="space-y-3">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-text-muted">
               Host With Us
@@ -67,47 +67,47 @@ export const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/host/earnings" className="text-text-secondary hover:text-primary transition-colors">
-                  Host Earnings Calculator
+                <Link to="/calculator" className="text-text-secondary hover:text-primary transition-colors">
+                  Earnings Calculator
                 </Link>
               </li>
               <li>
-                <Link to="/safety" className="text-text-secondary hover:text-primary transition-colors">
-                  SpaceLoop Protection
+                <Link to="/how-it-works" className="text-text-secondary hover:text-primary transition-colors">
+                  How It Works
                 </Link>
               </li>
               <li>
-                <Link to="/resources" className="text-text-secondary hover:text-primary transition-colors">
-                  Host Resources
+                <Link to="/trust-safety" className="text-text-secondary hover:text-primary transition-colors">
+                  Trust & Safety Protocol
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Company & Legal */}
+          {/* Company & Architecture */}
           <div className="space-y-3">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Company
+              Platform & Architecture
             </h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link to="/about" className="text-text-secondary hover:text-primary transition-colors">
-                  About SpaceLoop
+                <Link to="/architecture" className="text-text-secondary hover:text-primary transition-colors">
+                  System Architecture & Team
                 </Link>
               </li>
               <li>
-                <Link to="/privacy" className="text-text-secondary hover:text-primary transition-colors">
-                  Privacy Policy
+                <Link to="/trust-safety" className="text-text-secondary hover:text-primary transition-colors">
+                  Zero-Trust Telemetry
                 </Link>
               </li>
               <li>
-                <Link to="/terms" className="text-text-secondary hover:text-primary transition-colors">
-                  Terms of Service
+                <Link to="/how-it-works" className="text-text-secondary hover:text-primary transition-colors">
+                  Section 52 Legal Framework
                 </Link>
               </li>
               <li>
-                <Link to="/help" className="text-text-secondary hover:text-primary transition-colors">
-                  Help Center
+                <Link to="/explore" className="text-text-secondary hover:text-primary transition-colors">
+                  Browse Workspaces
                 </Link>
               </li>
             </ul>

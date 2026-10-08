@@ -320,3 +320,101 @@ def sweep_expired_holds():
         "data": {"released_count": count},
         "message": f"Swept and released {count} expired pending slot holds.",
     }), 200
+
+
+@bookings_bp.route("/<int:booking_id>/micro-lease", methods=["GET"])
+@require_auth
+def get_micro_lease(booking_id: int):
+    """Generate or retrieve statutory temporary micro-lease agreement (Section 52 Indian Easements Act 1882)."""
+    from backend.app.persistence.models.schema import Booking, Space, User
+    from backend.space_ai import generate_micro_lease
+
+    booking = Booking.query.get(booking_id)
+    if not booking:
+        return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": f"Booking #{booking_id} not found."}}), 404
+
+    space = Space.query.get(booking.space_id)
+    host = User.query.get(space.host_id) if space else None
+    renter = User.query.get(booking.guest_id)
+
+    space_dict = space.to_dict() if space else {}
+    if host:
+        space_dict["host_name"] = host.full_name
+        space_dict["owner_name"] = host.full_name
+
+    booking_dict = booking.to_dict()
+    if renter:
+        booking_dict["renter_name"] = renter.full_name
+        booking_dict["guest_name"] = renter.full_name
+
+    agreement_text = generate_micro_lease(space_dict, booking_dict)
+    return jsonify({
+        "success": True,
+        "booking_id": booking_id,
+        "agreement_id": f"SL-AGR-{booking_id}",
+        "agreement_text": agreement_text,
+        "agreement_markdown": agreement_text,
+        "micro_lease": agreement_text,
+        "statute": "Section 52, Indian Easements Act, 1882",
+    }), 200
+
+
+@bookings_bp.route("/<int:booking_id>/inspect-condition", methods=["POST"])
+@require_auth
+def inspect_condition(booking_id: int):
+    """Run Computer Vision condition delta inspection on session check-out photos."""
+    from backend.space_ai import evaluate_room_condition_delta
+
+    payload: dict[str, Any] = request.get_json(silent=True) or {}
+    entry_photo = payload.get("entry_photo", payload.get("checkin_photo_url", ""))
+    exit_photo = payload.get("exit_photo", payload.get("checkout_photo_url", payload.get("photos", "")))
+    simulate_damaged = bool(payload.get("simulate_damaged", False))
+
+    inspection = evaluate_room_condition_delta(
+        entry_photo_url=entry_photo,
+        exit_photo_url=exit_photo,
+        simulate_damaged=simulate_damaged,
+    )
+    condition_pct = inspection.get("condition_match_score", 98.0)
+    return jsonify({
+        "success": True,
+        "booking_id": booking_id,
+        "condition_match_pct": condition_pct,
+        "condition_match_score": condition_pct,
+        "inspection": inspection,
+        **inspection,
+    }), 200
+
+
+@bookings_bp.route("/<int:booking_id>/status", methods=["GET"])
+@require_auth
+def booking_session_status(booking_id: int):
+    """Return real-time session status, countdown window, arrival PIN, and door pass."""
+    from backend.app.persistence.models.schema import Booking, Space
+
+    booking = Booking.query.get(booking_id)
+    if not booking:
+        return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": f"Booking #{booking_id} not found."}}), 404
+
+    space = Space.query.get(booking.space_id)
+    booking_dict = booking.to_dict()
+    if space:
+        booking_dict["space"] = space.to_dict()
+
+    access_code = getattr(booking, "access_code", None) or getattr(booking, "room_qr_token", None) or (getattr(space, "room_qr_token", None) if space else None) or "DEMO_QR_PASS"
+    checkin_time = getattr(booking, "check_in_time", None) or getattr(booking, "checked_in_at", None)
+    checked_in_iso = checkin_time.isoformat() if checkin_time else None
+
+    return jsonify({
+        "success": True,
+        "booking": booking_dict,
+        "space": space.to_dict() if space else None,
+        "status": booking.status,
+        "arrival_pin": booking.arrival_pin or "8421",
+        "room_qr_token": access_code,
+        "access_code": access_code,
+        "checked_in_at": checked_in_iso,
+        "check_in_time": checked_in_iso,
+        "start_iso": booking.start_time.isoformat() if booking.start_time else None,
+        "end_iso": booking.end_time.isoformat() if booking.end_time else None,
+    }), 200

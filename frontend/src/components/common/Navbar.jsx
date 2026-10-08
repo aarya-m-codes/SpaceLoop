@@ -198,16 +198,61 @@ export const Navbar = () => {
                     <div className="space-y-1">
                       {/* How It Works */}
                       <Link
-                        to="/#how-it-works"
-                        onClick={handleHowItWorksClick}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors group"
+                        to="/how-it-works"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors group"
                       >
-                        <div className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-primary group-hover:bg-primary-light transition-colors shrink-0">
-                          <Compass className="w-4 h-4" />
+                        <div className="w-7 h-7 rounded-lg bg-surface border border-border flex items-center justify-center text-primary group-hover:bg-primary-light transition-colors shrink-0">
+                          <Compass className="w-3.5 h-3.5" />
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="font-semibold text-text-primary text-sm">How It Works</span>
-                          <span className="text-[11px] text-text-muted truncate">Discover, book, unlock & use</span>
+                          <span className="font-semibold text-text-primary text-xs">How It Works</span>
+                          <span className="text-[10px] text-text-muted truncate">The SpaceLoop protocol</span>
+                        </div>
+                      </Link>
+
+                      {/* Calculator */}
+                      <Link
+                        to="/calculator"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors group"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-surface border border-border flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500/10 transition-colors shrink-0">
+                          <DollarSign className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-semibold text-text-primary text-xs">Earnings Calculator</span>
+                          <span className="text-[10px] text-text-muted truncate">Estimate host revenue</span>
+                        </div>
+                      </Link>
+
+                      {/* Trust & Safety */}
+                      <Link
+                        to="/trust-safety"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors group"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-surface border border-border flex items-center justify-center text-amber-400 group-hover:bg-amber-500/10 transition-colors shrink-0">
+                          <Shield className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-semibold text-text-primary text-xs">Trust & Safety</span>
+                          <span className="text-[10px] text-text-muted truncate">Zero-trust telemetry & OTI</span>
+                        </div>
+                      </Link>
+
+                      {/* Architecture */}
+                      <Link
+                        to="/architecture"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors group"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-surface border border-border flex items-center justify-center text-purple-400 group-hover:bg-purple-500/10 transition-colors shrink-0">
+                          <Layers className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-semibold text-text-primary text-xs">System Architecture</span>
+                          <span className="text-[10px] text-text-muted truncate">Team LogicLoop blueprint</span>
                         </div>
                       </Link>
 
@@ -215,14 +260,14 @@ export const Navbar = () => {
                       <Link
                         to="/host"
                         onClick={() => setMenuOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors group"
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors group"
                       >
-                        <div className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-primary group-hover:bg-primary-light transition-colors shrink-0">
-                          <PlusCircle className="w-4 h-4" />
+                        <div className="w-7 h-7 rounded-lg bg-surface border border-border flex items-center justify-center text-primary group-hover:bg-primary-light transition-colors shrink-0">
+                          <PlusCircle className="w-3.5 h-3.5" />
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="font-semibold text-text-primary text-sm">List a Space</span>
-                          <span className="text-[11px] text-text-muted truncate">Earn revenue from your workspace</span>
+                          <span className="font-semibold text-text-primary text-xs">List a Space</span>
+                          <span className="text-[10px] text-text-muted truncate">Monetize your unused space</span>
                         </div>
                       </Link>
 
@@ -230,14 +275,14 @@ export const Navbar = () => {
                       <Link
                         to="/bookings"
                         onClick={() => setMenuOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors group"
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors group"
                       >
-                        <div className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-primary group-hover:bg-primary-light transition-colors shrink-0">
-                          <Calendar className="w-4 h-4" />
+                        <div className="w-7 h-7 rounded-lg bg-surface border border-border flex items-center justify-center text-primary group-hover:bg-primary-light transition-colors shrink-0">
+                          <Calendar className="w-3.5 h-3.5" />
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="font-semibold text-text-primary text-sm">Bookings</span>
-                          <span className="text-[11px] text-text-muted truncate">Manage active reservations & PINs</span>
+                          <span className="font-semibold text-text-primary text-xs">My Bookings</span>
+                          <span className="text-[10px] text-text-muted truncate">Manage reservations & passes</span>
                         </div>
                       </Link>
                     </div>

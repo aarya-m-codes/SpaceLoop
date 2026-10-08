@@ -623,6 +623,14 @@ class SpaceInquiry(db.Model):
     space = relationship("Space", back_populates="inquiries", foreign_keys=[space_id])
     sender = relationship("User", back_populates="inquiries", foreign_keys=[sender_id])
 
+    @property
+    def question(self) -> str:
+        return self.message
+
+    @property
+    def reply(self) -> str | None:
+        return self.host_reply
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
@@ -633,7 +641,10 @@ class SpaceInquiry(db.Model):
             "space_city": self.space.city if self.space else None,
             "space_image": (self.space.images[0] if (self.space and self.space.images and len(self.space.images) > 0) else None),
             "message": self.message,
+            "question": self.message,
             "host_reply": self.host_reply,
+            "reply": self.host_reply,
+            "answer": self.host_reply,
             "status": self.status.lower() if self.status else "pending",
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

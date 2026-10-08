@@ -430,34 +430,96 @@ def remove_from_wishlist(space_id: int):
 # SEEKER INQUIRIES & MESSAGES ENDPOINTS
 # =========================================================================
 
-@spaces_bp.route("/<int:space_id>/inquiries", methods=["POST"])
-@require_auth
-def send_inquiry(space_id: int):
-    """Submit a space inquiry to the host."""
+@spaces_bp.route("/<int:space_id>/qr-pass", methods=["GET"])
+def get_space_qr_pass(space_id: int):
+    """Retrieve host door QR pass token and printable badge details."""
+    from backend.app.persistence.models.schema import Space
+
     space = Space.query.get(space_id)
     if not space:
-        return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": "Space listing not found."}}), 404
+        return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": f"Space #{space_id} not found."}}), 404
 
-    payload = request.get_json(silent=True) or {}
-    message_text = payload.get("message", "").strip()
-    if not message_text:
-        return jsonify({"success": False, "error": {"code": "BAD_REQUEST", "message": "Inquiry message is required."}}), 400
-
-    inquiry = SpaceInquiry(
-        space_id=space_id,
-        sender_id=g.current_user.id,
-        message=message_text,
-        status="PENDING",
-    )
-    db.session.add(inquiry)
-    db.session.commit()
-
+    qr_token = space.room_qr_token or f"SL-SPACE-{space.id}-PASS"
     return jsonify({
         "success": True,
-        "message": f"Inquiry for '{space.title}' sent to host successfully.",
+        "space_id": space.id,
+        "title": space.title,
+        "room_qr_token": qr_token,
+        "qr_token": qr_token,
+        "physical_access_type": space.physical_access_type,
+        "geofence_radius": space.geofence_radius,
+        "address": f"{space.address_line1}, {space.city}",
+        "access_instructions": "Scan using SpaceLoop App within 50m of the physical premises.",
+    }), 200
+
+
+@spaces_bp.route("/<int:space_id>/inquiries", methods=["GET", "POST"])
+def space_inquiries(space_id: int):
+    """List or post inquiries for a physical space listing."""
+    from backend.app.persistence.models.schema import Space, SpaceInquiry, db
+    from backend.modules.auth.session import resolve_authenticated_user
+
+    space = Space.query.get(space_id)
+    if not space:
+        return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": f"Space #{space_id} not found."}}), 404
+
+    if request.method == "POST":
+        current_user = resolve_authenticated_user()
+        payload = request.get_json(silent=True) or {}
+        question = payload.get("question", payload.get("message", "")).strip()
+        if not question:
+            return jsonify({"success": False, "error": {"code": "BAD_REQUEST", "message": "Question text is required."}}), 400
+
+        sender_id = current_user.id if current_user else 1
+        inquiry = SpaceInquiry(
+            space_id=space_id,
+            sender_id=sender_id,
+            message=question,
+        )
+        db.session.add(inquiry)
+        db.session.commit()
+        return jsonify({
+            "success": True,
+            "data": inquiry.to_dict(),
+            "inquiry": inquiry.to_dict(),
+            "message": f"Inquiry for '{space.title}' sent to host successfully.",
+        }), 201
+
+    inquiries = SpaceInquiry.query.filter_by(space_id=space_id).order_by(SpaceInquiry.created_at.desc()).all()
+    inquiry_list = [i.to_dict() for i in inquiries]
+    return jsonify({
+        "success": True,
+        "data": inquiry_list,
+        "inquiries": inquiry_list,
+        "items": inquiry_list,
+        "total": len(inquiry_list),
+    }), 200
+
+
+@spaces_bp.route("/inquiries/<int:inquiry_id>/reply", methods=["POST"])
+@require_auth
+def reply_space_inquiry(inquiry_id: int):
+    """Host reply to a space inquiry."""
+    from backend.app.persistence.models.schema import SpaceInquiry, db
+
+    inquiry = SpaceInquiry.query.get(inquiry_id)
+    if not inquiry:
+        return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": f"Inquiry #{inquiry_id} not found."}}), 404
+
+    payload = request.get_json(silent=True) or {}
+    answer = payload.get("answer", payload.get("reply", "")).strip()
+    if not answer:
+        return jsonify({"success": False, "error": {"code": "BAD_REQUEST", "message": "Reply answer text is required."}}), 400
+
+    inquiry.host_reply = answer
+    inquiry.status = "REPLIED"
+    db.session.commit()
+    return jsonify({
+        "success": True,
         "data": inquiry.to_dict(),
         "inquiry": inquiry.to_dict(),
-    }), 201
+        "message": "Reply sent successfully.",
+    }), 200
 
 
 @spaces_bp.route("/my-inquiries", methods=["GET"])
@@ -518,4 +580,3 @@ def mark_notification_read(notification_id: int):
         notif.is_read = True
         db.session.commit()
     return jsonify({"success": True}), 200
-

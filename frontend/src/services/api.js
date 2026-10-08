@@ -250,6 +250,24 @@ export const spacesApi = {
       method: 'POST',
       body: formData,
     }),
+
+  getInquiries: (spaceId) =>
+    request(`/api/v1/spaces/${spaceId}/inquiries`, { method: 'GET' }),
+
+  submitInquiry: (spaceId, payload) =>
+    request(`/api/v1/spaces/${spaceId}/inquiries`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  replyInquiry: (inquiryId, payload) =>
+    request(`/api/v1/spaces/inquiries/${inquiryId}/reply`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getQrPass: (spaceId) =>
+    request(`/api/v1/spaces/${spaceId}/qr-pass`, { method: 'GET' }),
 };
 
 // ==========================================
@@ -313,6 +331,18 @@ export const bookingsApi = {
       method: 'POST',
       body: JSON.stringify({ dispute_reason: reason }),
     }),
+
+  getMicroLease: (id) =>
+    request(`/api/v1/bookings/${id}/micro-lease`, { method: 'GET' }),
+
+  inspectCondition: (id, payload) =>
+    request(`/api/v1/bookings/${id}/inspect-condition`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getSessionStatus: (id) =>
+    request(`/api/v1/bookings/${id}/status`, { method: 'GET' }),
 };
 
 // ==========================================
@@ -479,6 +509,72 @@ export const trustSafetyApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+
+  getOtiBreakdown: (entityType, entityId) =>
+    request(`/api/v1/trust/oti-breakdown?entity_type=${encodeURIComponent(entityType)}&entity_id=${encodeURIComponent(entityId)}`, { method: 'GET' }),
+
+  simulateOti: (payload) =>
+    request('/api/v1/trust/simulate-oti', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getStats: () =>
+    request('/api/v1/trust/stats', { method: 'GET' }),
+
+  takeAction: (assessmentId, action, notes = '') =>
+    request(`/api/trust-safety/assessments/${assessmentId}/action`, {
+      method: 'POST',
+      body: JSON.stringify({ action, notes }),
+    }),
+};
+
+// ==========================================
+// DYNAMIC HOST EARNINGS CALCULATOR APIS
+// ==========================================
+export const calculatorApi = {
+  estimate: (payload) =>
+    request('/api/v1/calculator/estimate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getCategories: () =>
+    request('/api/v1/calculator/categories', { method: 'GET' }),
+};
+
+// ==========================================
+// REAL-TIME SESSION COCKPIT APIS
+// ==========================================
+export const sessionApi = {
+  getStatus: (bookingId) =>
+    request(`/api/v1/bookings/${bookingId}/status`, { method: 'GET' }),
+
+  getMicroLease: (bookingId) =>
+    request(`/api/v1/bookings/${bookingId}/micro-lease`, { method: 'GET' }),
+
+  inspectCondition: (bookingId, payload) =>
+    request(`/api/v1/bookings/${bookingId}/inspect-condition`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+};
+
+// ==========================================
+// SYSTEM STATUS & MULTI-RAIL TELEMETRY APIS
+// ==========================================
+export const systemApi = {
+  getStatus: () =>
+    request('/api/v1/system/status', { method: 'GET' }),
+
+  getConnectivity: () =>
+    request('/api/v1/system/connectivity', { method: 'GET' }),
+
+  toggleAiSimulation: (enabled) =>
+    request('/api/v1/system/dev/toggle-ai-simulation', {
+      method: 'POST',
+      body: JSON.stringify({ enabled }),
+    }),
 };
 
 // ==========================================
@@ -556,4 +652,7 @@ export default {
   wishlist: wishlistApi,
   reviews: reviewsApi,
   notifications: notificationsApi,
+  calculator: calculatorApi,
+  session: sessionApi,
+  system: systemApi,
 };
