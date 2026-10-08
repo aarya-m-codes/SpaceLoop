@@ -200,6 +200,87 @@ def _ensure_demo_accounts_internal() -> dict[str, str]:
                 db.session.add(arjun_space)
                 status_report["host_arjun_space"] = "created"
 
+        # Ensure realistic Pune & Kharadi spaces exist for natural geographic searches
+        host_rahul = User.query.filter_by(email="host.rahul@spaceloop.in").first() or host_arjun
+        if host_rahul:
+            pune_space1 = Space.query.filter_by(title="Kharadi CyberCity Quiet Work Pod & Private Desk").first()
+            if not pune_space1:
+                pune_space1 = Space(
+                    host_id=host_rahul.id,
+                    title="Kharadi CyberCity Quiet Work Pod & Private Desk",
+                    description="Ultra-quiet ergonomic private work pods near EON Free Zone. Features dedicated parking, 1Gbps internet, power backup, and acoustic insulation.",
+                    space_type="desk",
+                    address_line1="Tower 3, CyberCity IT Park, Kharadi",
+                    neighborhood="Kharadi",
+                    city="Pune",
+                    state="Maharashtra",
+                    pincode="411014",
+                    latitude=18.5514,
+                    longitude=73.9535,
+                    price_per_hour=220.0,
+                    price_per_day=1500.0,
+                    capacity=4,
+                    amenities=["Dedicated Parking", "High-Speed WiFi", "Ergonomic Chairs", "Power Backup", "Air Conditioned", "Quiet Zone"],
+                    rules="Quiet zone. Maintain phone calls in dedicated booth.",
+                    ai_noise_level="quiet",
+                    is_active=True,
+                    is_approved=True,
+                )
+                db.session.add(pune_space1)
+                status_report["pune_space_cybercity"] = "created"
+
+            pune_space2 = Space.query.filter_by(title="Kharadi EON Tech Hub Studio & Meeting Room").first()
+            if not pune_space2:
+                pune_space2 = Space(
+                    host_id=host_rahul.id,
+                    title="Kharadi EON Tech Hub Studio & Meeting Room",
+                    description="Modern soundproof studio and executive meeting room in EON IT Park. Includes valet parking, 4K conference screen, and high-speed fiber.",
+                    space_type="studio",
+                    address_line1="Phase 2, EON Free Zone, Kharadi",
+                    neighborhood="Kharadi",
+                    city="Pune",
+                    state="Maharashtra",
+                    pincode="411014",
+                    latitude=18.5529,
+                    longitude=73.9511,
+                    price_per_hour=450.0,
+                    price_per_day=3200.0,
+                    capacity=8,
+                    amenities=["Valet Parking", "Soundproofing", "4K Conference Display", "High-Speed WiFi", "Whiteboard", "Tea/Coffee Bar", "Air Conditioned"],
+                    rules="Prior reservation required for recording studio equipment.",
+                    ai_noise_level="soundproof",
+                    is_active=True,
+                    is_approved=True,
+                )
+                db.session.add(pune_space2)
+                status_report["pune_space_eon"] = "created"
+
+            pune_space3 = Space.query.filter_by(title="Viman Nagar Acoustic Creative Loft").first()
+            if not pune_space3:
+                pune_space3 = Space(
+                    host_id=host_rahul.id,
+                    title="Viman Nagar Acoustic Creative Loft",
+                    description="Peaceful creative workspace and desks near Pune Airport. Features parking space, soundproofing, and specialty coffee.",
+                    space_type="desk",
+                    address_line1="Plot 45, Symbiosis Road, Viman Nagar",
+                    neighborhood="Viman Nagar",
+                    city="Pune",
+                    state="Maharashtra",
+                    pincode="411014",
+                    latitude=18.5679,
+                    longitude=73.9143,
+                    price_per_hour=180.0,
+                    price_per_day=1200.0,
+                    capacity=6,
+                    amenities=["Parking Space", "High-Speed WiFi", "Soundproofing", "Air Conditioned", "Ergonomic Chairs"],
+                    rules="No smoking on premises.",
+                    ai_noise_level="quiet",
+                    is_active=True,
+                    is_approved=True,
+                )
+                db.session.add(pune_space3)
+                status_report["pune_space_viman"] = "created"
+
         db.session.commit()
         logger.info(f"Demo accounts successfully synchronized: {status_report}")
         return status_report

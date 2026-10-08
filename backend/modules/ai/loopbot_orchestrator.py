@@ -181,6 +181,7 @@ class LoopBotOrchestrator:
         return {
             "response": response_text,
             "message": response_text,
+            "reply": response_text,
             "type": response_type,
             "intent": legacy_intent,
             "standard_intent": standard_intent,
@@ -238,6 +239,7 @@ class LoopBotOrchestrator:
                 return {
                     "response": msg,
                     "message": msg,
+                    "reply": msg,
                     "type": "booking_status",
                     "intent": cls.INTENT_BOOKING,
                     "standard_intent": IntentParser.INTENT_BOOKING_CREATE,
@@ -267,6 +269,7 @@ class LoopBotOrchestrator:
                 return {
                     "response": msg,
                     "message": msg,
+                    "reply": msg,
                     "type": "booking_status",
                     "intent": cls.INTENT_CANCELLATION,
                     "standard_intent": IntentParser.INTENT_BOOKING_CANCEL,
@@ -292,6 +295,7 @@ class LoopBotOrchestrator:
         return {
             "response": cancel_msg,
             "message": cancel_msg,
+            "reply": cancel_msg,
             "type": "message",
             "intent": cls.INTENT_PLATFORM_HELP,
             "standard_intent": IntentParser.INTENT_GENERAL,
@@ -323,8 +327,16 @@ class LoopBotOrchestrator:
         """Execute corresponding SpaceLoop domain tool and determine response type."""
         # 1. Search Spaces
         if standard_intent == IntentParser.INTENT_SPACE_SEARCH:
+            loc_part = entities.get("neighborhood") or entities.get("city") or ""
+            typ_part = entities.get("space_type") or "workspace"
+            # If the user query is a short constraint refinement, construct rich query
+            if loc_part and len(raw_msg.split()) <= 4:
+                search_q = f"quiet {typ_part} in {loc_part}"
+            else:
+                search_q = raw_msg
+
             tool_res = LoopBotTools.search_spaces(
-                query=raw_msg,
+                query=search_q,
                 city=entities.get("city"),
                 neighborhood=entities.get("neighborhood"),
                 budget=entities.get("budget"),
@@ -333,34 +345,99 @@ class LoopBotOrchestrator:
                 capacity=entities.get("capacity"),
                 limit=4,
             )
+            if tool_res and tool_res.get("spaces"):
+                ConversationManager.set_search_results(conv_id, tool_res["spaces"])
             return tool_res, "space_results"
 
-        # 2. Specific Space Details
+        # 2. Specific Space Details & Listing Inspection (e.g. "which one has parking?", "the second one")
         elif standard_intent == IntentParser.INTENT_SPACE_DETAILS:
+            lower_msg = raw_msg.lower()
+            recent_spaces = ConversationManager.get_search_results(conv_id)
+
+            # Check if user is asking about an amenity on current search results (e.g. parking, wifi, ac)
+            amenity_keywords = ["parking", "valet", "wifi", "soundproof", "quiet", "ac", "coffee", "display"]
+            matched_amenity = next((am for am in amenity_keywords if am in lower_msg), None)
+            if recent_spaces and matched_amenity:
+                matching_spaces = [
+                    s for s in recent_spaces
+                    if any(matched_amenity in str(a).lower() for a in s.get("amenities", []))
+                    or (matched_amenity == "soundproof" and s.get("ai_noise_level") == "soundproof")
+                    or (matched_amenity == "quiet" and s.get("ai_noise_level") in ("quiet", "soundproof"))
+                ]
+                tool_res = {
+                    "success": True,
+                    "inspected_spaces": matching_spaces,
+                    "query_attribute": matched_amenity,
+                    "spaces": matching_spaces if matching_spaces else recent_spaces,
+                    "count": len(matching_spaces),
+                }
+                return tool_res, "space_results"
+
+            # Check if user is referencing an ordinal space ("the second one", "first one", "last one")
+            resolved = ConversationManager.resolve_space_reference(conv_id, raw_msg)
+            if resolved:
+                ConversationManager.set_selected_space(conv_id, resolved)
+                entities["selected_space_id"] = resolved.get("id")
+                tool_res = {
+                    "success": True,
+                    "space": resolved,
+                    "spaces": [resolved],
+                    "count": 1,
+                }
+                return tool_res, "space_details"
+
             space_id = entities.get("selected_space_id")
+            if not space_id:
+                sel = ConversationManager.get_selected_space(conv_id)
+                if sel:
+                    space_id = sel.get("id")
+
             if space_id:
                 tool_res = LoopBotTools.get_space(space_id)
                 return tool_res, "space_details"
 
-        # 3. Space Availability / Precheck
+        # 3. Space Availability / Precheck / Pricing Quote (e.g. "how much for 4 hours?")
         elif standard_intent == IntentParser.INTENT_SPACE_AVAILABILITY:
-            space_id = entities.get("selected_space_id")
+            target_space = ConversationManager.resolve_space_reference(conv_id, raw_msg) or ConversationManager.get_selected_space(conv_id)
+            if not target_space:
+                recent_spaces = ConversationManager.get_search_results(conv_id)
+                if recent_spaces:
+                    target_space = recent_spaces[0]
+
+            space_id = (target_space or {}).get("id") or entities.get("selected_space_id")
             if space_id:
+                dur = entities.get("duration_hours") or 2.0
                 tool_res = LoopBotTools.check_availability(
                     space_id=space_id,
-                    duration_hours=entities.get("duration_hours") or 2.0,
+                    duration_hours=dur,
                     guest_count=entities.get("capacity") or 1,
                 )
                 return tool_res, "booking_preview"
 
         # 4. Booking Creation (Consequential - Sets Confirmation Gate)
         elif standard_intent == IntentParser.INTENT_BOOKING_CREATE:
-            space_id = entities.get("selected_space_id")
-            if space_id and current_user:
+            target_space = ConversationManager.resolve_space_reference(conv_id, raw_msg) or ConversationManager.get_selected_space(conv_id)
+            if not target_space:
+                recent_spaces = ConversationManager.get_search_results(conv_id)
+                if recent_spaces:
+                    target_space = recent_spaces[0]
+
+            space_id = (target_space or {}).get("id") or entities.get("selected_space_id")
+            if space_id:
+                dur = entities.get("duration_hours") or 2.0
+                # If guest user is not logged in, provide booking preview card
+                if not current_user:
+                    tool_res = LoopBotTools.check_availability(
+                        space_id=space_id,
+                        duration_hours=dur,
+                        guest_count=entities.get("capacity") or 1,
+                    )
+                    return tool_res, "booking_preview"
+
                 tool_res = LoopBotTools.create_booking(
                     space_id=space_id,
                     current_user=current_user,
-                    duration_hours=entities.get("duration_hours") or 2.0,
+                    duration_hours=dur,
                     guest_count=entities.get("capacity") or 1,
                     confirmed=False,
                 )
@@ -613,7 +690,17 @@ class LoopBotOrchestrator:
         groq_key = os.getenv("GROQ_API_KEY")
         if groq_key:
             try:
-                res = cls._call_groq(groq_key, message, intent, entities, sources, language, session)
+                res = cls._call_groq(
+                    api_key=groq_key,
+                    message=message,
+                    intent=intent,
+                    entities=entities,
+                    sources=sources,
+                    language=language,
+                    session=session,
+                    tool_data=tool_data,
+                    pending_action=pending_action,
+                )
                 if res and res.strip():
                     return res.strip(), "groq"
             except Exception as exc:
@@ -623,7 +710,17 @@ class LoopBotOrchestrator:
         gemini_key = os.getenv("GEMINI_API_KEY")
         if gemini_key:
             try:
-                res = cls._call_gemini(gemini_key, message, intent, entities, sources, language, session)
+                res = cls._call_gemini(
+                    api_key=gemini_key,
+                    message=message,
+                    intent=intent,
+                    entities=entities,
+                    sources=sources,
+                    language=language,
+                    session=session,
+                    tool_data=tool_data,
+                    pending_action=pending_action,
+                )
                 if res and res.strip():
                     return res.strip(), "gemini"
             except Exception as exc:
@@ -650,8 +747,10 @@ class LoopBotOrchestrator:
         sources: list[dict[str, Any]],
         language: str,
         session: dict[str, Any],
+        tool_data: dict[str, Any] | None = None,
+        pending_action: dict[str, Any] | None = None,
     ) -> str | None:
-        """Call Groq API using LLaMA 3.3 70B."""
+        """Call Groq API with candidate model cascade and verified tool data."""
         return LLMProvider._call_groq(
             api_key=api_key,
             user_message=message,
@@ -660,8 +759,8 @@ class LoopBotOrchestrator:
             sources=sources,
             language=language,
             conversation_history=session.get("messages", []),
-            tool_data=None,
-            pending_action=None,
+            tool_data=tool_data,
+            pending_action=pending_action,
         )
 
     @classmethod
@@ -674,8 +773,10 @@ class LoopBotOrchestrator:
         sources: list[dict[str, Any]],
         language: str,
         session: dict[str, Any],
+        tool_data: dict[str, Any] | None = None,
+        pending_action: dict[str, Any] | None = None,
     ) -> str | None:
-        """Call Google Gemini 2.5 Flash API."""
+        """Call Google Gemini Flash API with verified tool data."""
         return LLMProvider._call_gemini(
             api_key=api_key,
             user_message=message,
@@ -684,8 +785,8 @@ class LoopBotOrchestrator:
             sources=sources,
             language=language,
             conversation_history=session.get("messages", []),
-            tool_data=None,
-            pending_action=None,
+            tool_data=tool_data,
+            pending_action=pending_action,
         )
 
     @classmethod
@@ -701,6 +802,7 @@ class LoopBotOrchestrator:
         return {
             "response": resp,
             "message": resp,
+            "reply": resp,
             "type": "message",
             "intent": cls.INTENT_PLATFORM_HELP,
             "standard_intent": IntentParser.INTENT_GENERAL,

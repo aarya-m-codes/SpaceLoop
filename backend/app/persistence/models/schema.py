@@ -155,6 +155,14 @@ class Space(db.Model):
     inquiries = relationship("SpaceInquiry", back_populates="space", cascade="all, delete-orphan")
     embedding = relationship("SpaceEmbedding", back_populates="space", uselist=False, cascade="all, delete-orphan")
 
+    @property
+    def hourly_price(self) -> float:
+        return float(self.price_per_hour or 0.0)
+
+    @property
+    def hourly_rate(self) -> float:
+        return float(self.price_per_hour or 0.0)
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,

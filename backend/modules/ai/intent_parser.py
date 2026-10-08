@@ -209,17 +209,57 @@ class IntentParser:
         ]):
             return cls.INTENT_REFUND_HELP, cls.LEGACY_INTENT_MAP[cls.INTENT_REFUND_HELP]
 
-        # 6. Escrow Status & Pricing Formula & Fees
+        # 6. Booking Create (requesting to book)
+        if any(re.search(pat, lower) for pat in [
+            r"book\s+(?:it|this|that|space|desk|room|studio|now|one|the\s+\w+)",
+            r"reserve\s+(?:it|this|that|space|now|one|the\s+\w+)",
+            r"book\s+for\s+\d+", r"i\s+want\s+to\s+book", r"book\s+kar\s*(?:do|de|lo)",
+            r"booking\s+kar\s*(?:do|de|lo|na)", r"booking\s+karo", r"reserve\s+kar\s*(?:do|de)",
+            r"confirm\s+booking", r"let's\s+book", r"lets\s+book",
+        ]):
+            return cls.INTENT_BOOKING_CREATE, cls.LEGACY_INTENT_MAP[cls.INTENT_BOOKING_CREATE]
+
+        # 7. Space Availability & Precheck / Pricing Quote for duration
+        if any(re.search(pat, lower) for pat in [
+            r"how\s+much\s+(?:for|for\s+the)\s+\d+",
+            r"(?:pricing|price|cost|quote)\s+for\s+\d+",
+            r"how\s+much\s+(?:will|does)\s+it\s+cost",
+            r"kitna\s+(?:paisa|kharcha|lagega)\s+(?:hoga\s+)?(?:\d+\s+ghante)?",
+            r"kiti\s+(?:paise|kharch)\s+hotil",
+            r"is it available", r"check availability", r"availability", r"available slots",
+            r"free slot", r"minimum hours", r"can i book for", r"precheck",
+        ]):
+            return cls.INTENT_SPACE_AVAILABILITY, cls.LEGACY_INTENT_MAP[cls.INTENT_SPACE_AVAILABILITY]
+
+        # 8. Questions about current listings or specific listing attributes (e.g. parking, wifi)
+        if any(re.search(pat, lower) for pat in [
+            r"which\s+(?:one|space|desk)\s+(?:has|have|offers)\b",
+            r"does\s+(?:that\s+one|the\s+second|the\s+first|it)\s+have\b",
+            r"(?:parking|wifi|ac|coffee|valet)\s+(?:hai\s+kya|ahe\s+ka)",
+            r"kisme\s+(?:parking|wifi|ac)\s+hai",
+            r"compare\s+(?:them|spaces|listings)",
+        ]):
+            return cls.INTENT_SPACE_DETAILS, cls.LEGACY_INTENT_MAP[cls.INTENT_SPACE_DETAILS]
+
+        # 9. Ordinal reference or specific listing selection ("the second one", "first one", "space 2")
+        if any(re.search(pat, lower) for pat in [
+            r"^(?:the\s+)?(?:first|1st|second|2nd|third|3rd|fourth|4th|last)\s+(?:one|space|desk|room)?$",
+            r"^(?:pehla|pahila|dusra|doosra|teesra|tisra|aakhri)\s*(?:wala|waala)?$",
+            r"tell me about space", r"space #\d+", r"space details", r"details of space",
+            r"show space", r"amenities of space",
+        ]):
+            return cls.INTENT_SPACE_DETAILS, cls.LEGACY_INTENT_MAP[cls.INTENT_SPACE_DETAILS]
+
+        # 10. Escrow Status & Pricing Formula & Fees (general policy questions)
         if any(re.search(pat, lower) for pat in [
             r"escrow", r"₹100 deposit", r"100 deposit", r"security deposit",
             r"platform fee", r"5% fee", r"5 percent", r"ledger balance", r"deposit status",
-            r"pricing", r"fee structure", r"how much does it cost", r"breakdown",
-            r"शुल्क", r"किराया", r"भाडे", r"किती पैसे", r"kitna paisa", r"kitna kharcha",
-            r"shulk", r"kiraya", r"bhade", r"hisab",
+            r"fee structure", r"fee breakdown", r"what is escrow",
+            r"शुल्क", r"किराया", r"भाडे",
         ]):
             return cls.INTENT_ESCROW_STATUS, cls.LEGACY_INTENT_MAP[cls.INTENT_ESCROW_STATUS]
 
-        # 7. Host Help & Listing Management (Checked before space details & search)
+        # 11. Host Help & Listing Management (Checked before space details & search)
         if any(re.search(pat, lower) for pat in [
             r"list my space", r"list a space", r"host on spaceloop", r"become a host",
             r"host payout", r"payout setup", r"upi vpa", r"penny drop", r"discom",
@@ -230,35 +270,14 @@ class IntentParser:
         ]):
             return cls.INTENT_HOST_HELP, cls.LEGACY_INTENT_MAP[cls.INTENT_HOST_HELP]
 
-        # 8. Booking Status (specific booking inquiries)
+        # 12. Booking Status (specific booking inquiries)
         if any(re.search(pat, lower) for pat in [
             r"my booking", r"booking status", r"booking #\d+", r"view booking",
             r"is my booking confirmed", r"active booking",
         ]):
             return cls.INTENT_BOOKING_STATUS, cls.LEGACY_INTENT_MAP[cls.INTENT_BOOKING_STATUS]
 
-        # 9. Booking Create (requesting to book)
-        if any(re.search(pat, lower) for pat in [
-            r"book space", r"book this space", r"i want to book", r"reserve space",
-            r"reserve this", r"book it", r"reserve now", r"book for \d+",
-        ]):
-            return cls.INTENT_BOOKING_CREATE, cls.LEGACY_INTENT_MAP[cls.INTENT_BOOKING_CREATE]
-
-        # 10. Space Availability & Precheck
-        if any(re.search(pat, lower) for pat in [
-            r"is it available", r"check availability", r"availability", r"available slots",
-            r"free slot", r"minimum hours", r"can i book for", r"precheck",
-        ]):
-            return cls.INTENT_SPACE_AVAILABILITY, cls.LEGACY_INTENT_MAP[cls.INTENT_SPACE_AVAILABILITY]
-
-        # 11. Space Details
-        if any(re.search(pat, lower) for pat in [
-            r"tell me about space", r"space #\d+", r"space details", r"details of space",
-            r"show space", r"amenities of space",
-        ]):
-            return cls.INTENT_SPACE_DETAILS, cls.LEGACY_INTENT_MAP[cls.INTENT_SPACE_DETAILS]
-
-        # 12. Trust, Safety & KYC
+        # 13. Trust, Safety & KYC
         if any(re.search(pat, lower) for pat in [
             r"trust score", r"objective trust", r"is host verified", r"safety",
             r"safe to use", r"kyc", r"identity verification", r"सुरक्षा", r"vishwas",
@@ -362,11 +381,33 @@ class IntentParser:
             "power": ["power", "outlets", "charging", "plugs"],
             "monitor": ["monitor", "display", "screen"],
             "coffee": ["coffee", "tea", "beverages"],
+            "parking": ["parking", "valet", "garage", "vehicle", "car"],
         }
         lower = text.lower()
         for am_name, terms in amenity_keywords.items():
             if any(term in lower for term in terms):
                 existing_amenities.add(am_name)
+
+        # Ordinal reference detection: e.g. "the second one", "first one", "3rd"
+        ordinal_patterns = [
+            (r"\b(?:first|1st|pehla|pahila)\b", 0),
+            (r"\b(?:second|2nd|dusra|doosra)\b", 1),
+            (r"\b(?:third|3rd|teesra|tisra)\b", 2),
+            (r"\b(?:fourth|4th|chautha)\b", 3),
+            (r"\b(?:last|aakhri|shevat)\b", -1),
+        ]
+        for pat, idx in ordinal_patterns:
+            if re.search(pat, lower):
+                merged["ordinal_index"] = idx
+                break
+
+        # 'Cheaper' / 'Sasta' relative adjustment
+        if re.search(r"\b(?:make\s+it\s+cheaper|cheaper|sasta|kuch\s+sasta|cheap\s+one|less\s+expensive)\b", lower):
+            cur_b = merged.get("budget")
+            if cur_b:
+                merged["budget"] = max(150.0, round(float(cur_b) * 0.75, 2))
+            else:
+                merged["budget"] = 400.0
 
         merged["amenities"] = sorted(list(existing_amenities))
         return merged

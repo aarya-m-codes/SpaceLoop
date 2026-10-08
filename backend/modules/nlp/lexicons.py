@@ -178,6 +178,13 @@ NEIGHBORHOOD_MAP: dict[str, dict[str, Any]] = {
         "lng": 73.7868,
         "aliases": ["baner", "बाणेर"],
     },
+    "kharadi": {
+        "name": "Kharadi",
+        "city": "Pune",
+        "lat": 18.5514,
+        "lng": 73.9535,
+        "aliases": ["kharadi", "kharadi it park", "kharadi eon", "खराडी"],
+    },
 }
 
 # Space typology mappings

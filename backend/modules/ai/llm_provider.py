@@ -96,30 +96,86 @@ class LLMProvider:
         tool_data: dict[str, Any] | None = None,
         pending_action: dict[str, Any] | None = None,
     ) -> str:
-        """Construct authoritative grounded prompt enforcing SpaceLoop invariants."""
+        """Construct authoritative grounded prompt enforcing SpaceLoop invariants and tool grounding."""
         context_block = RAGService.build_llm_context(sources)
-        tool_context = f"Verified Live Platform Data: {tool_data}" if tool_data else "No live tool state queried."
-        pending_context = f"Pending Confirmation Action: {pending_action}" if pending_action else ""
+
+        # Build clean, high-fidelity tool grounding context
+        tool_lines = []
+        if tool_data:
+            if "spaces" in tool_data and tool_data["spaces"]:
+                tool_lines.append("CURRENT ACTIVE SPACELOOP LISTINGS IN DATABASE:")
+                for i, sp in enumerate(tool_data["spaces"], 1):
+                    loc = f"{sp.get('neighborhood')}, {sp.get('city')}" if sp.get('neighborhood') else sp.get('city', '')
+                    amenities_str = ", ".join(sp.get("amenities", []) or [])
+                    tool_lines.append(
+                        f"  Listing #{i} (ID: {sp.get('id')}): '{sp.get('title')}' in {loc} | "
+                        f"Price: ₹{sp.get('price_per_hour')}/hr | Capacity: {sp.get('capacity', 1)} | "
+                        f"Amenities: [{amenities_str}] | Acoustic Level: {sp.get('ai_noise_level', 'quiet')}"
+                    )
+            elif "inspected_spaces" in tool_data:
+                attr = tool_data.get("query_attribute", "amenities")
+                matches = tool_data.get("inspected_spaces", [])
+                if matches:
+                    tool_lines.append(f"CURRENT LISTINGS OFFERING '{attr.upper()}':")
+                    for sp in matches:
+                        tool_lines.append(f"  - '{sp.get('title')}' (ID: {sp.get('id')}) offers {', '.join(sp.get('amenities', []))} (₹{sp.get('price_per_hour')}/hr)")
+                else:
+                    tool_lines.append(f"No current listings offer '{attr}'.")
+            elif "pricing" in tool_data and tool_data["pricing"]:
+                p = tool_data["pricing"]
+                sp_info = tool_data.get("space", {})
+                sp_title = sp_info.get("title") or f"Space #{sp_info.get('id')}"
+                tool_lines.append(
+                    f"AUTHORITATIVE PRICING QUOTE FOR '{sp_title}':\n"
+                    f"  - Duration: {tool_data.get('duration_hours', 2)} hours\n"
+                    f"  - Rental Subtotal: ₹{p.get('subtotal', 0):.2f}\n"
+                    f"  - Platform Fee (5%): ₹{p.get('platform_fee', 0):.2f}\n"
+                    f"  - Refundable Security Deposit: ₹{p.get('escrow_deposit', 100):.2f}\n"
+                    f"  - Total Payable: ₹{p.get('final_amount', 0):.2f}\n"
+                    f"  - Slot Available: {tool_data.get('available', True)}"
+                )
+            elif "booking" in tool_data:
+                b = tool_data["booking"]
+                tool_lines.append(
+                    f"CONFIRMED BOOKING RECORD:\n"
+                    f"  - Booking ID: #{b.get('id')}\n"
+                    f"  - Status: {b.get('status')}\n"
+                    f"  - Arrival 4-Digit PIN: {b.get('arrival_pin')}\n"
+                    f"  - Check-in Guard: 50m GPS geofence + 15m window"
+                )
+            elif "confirmation_required" == tool_data.get("type"):
+                tool_lines.append(f"PENDING USER CONFIRMATION:\n  {tool_data.get('action_summary')}")
+            else:
+                tool_lines.append(f"Platform Data: {tool_data}")
+
+        tool_context = "\n".join(tool_lines) if tool_lines else "No specific tool data queried."
+        pending_context = f"Pending Confirmation Action: {pending_action.get('action_summary')}" if pending_action else ""
 
         return (
-            "You are LoopBot, the native AI concierge and platform assistant for SpaceLoop "
-            "— India's peer-to-peer physical workspace marketplace (desks, studios, offices, meeting rooms).\n\n"
-            f"USER LANGUAGE: {language.upper()}.\n\n"
-            "CRITICAL INVARIANTS:\n"
-            "1. You NEVER execute unauthorized financial or booking mutations. Every consequential action "
-            "(booking creation or cancellation) requires explicit confirmation.\n"
-            "2. PRICING FORMULA: Space Subtotal = hourly rate × duration hours. Platform fee = 5% of subtotal. "
-            "Refundable security deposit = ₹100.00. Total paid = Subtotal + 5% Fee + ₹100.\n"
-            "3. CANCELLATION: SpaceLoop retains ONLY the 5% platform fee. Seeker receives 100% rental subtotal "
-            "+ 100% of ₹100 deposit refunded. On host rejection, seeker gets full 100% refund of all fees.\n"
-            "4. PHYSICAL ACCESS: 15-minute temporal window guard before start time, 50m GPS geofencing (Haversine), "
-            "4-digit arrival PIN fallback, dynamic QR code, and AccessLog.\n"
-            "5. LEGAL: All bookings are revocable leave-and-license under Section 52 of the Indian Easements Act 1882; "
-            "no tenancy or leasehold rights are ever created.\n"
-            "6. Ground your answers strictly in the verified platform specifications and tool data below.\n\n"
+            "You are LoopBot, SpaceLoop's native AI concierge.\n"
+            "SpaceLoop is India's premier marketplace for flexible peer-to-peer workspace reservations (desks, soundproof studios, cabins, meeting rooms).\n\n"
+            f"USER LANGUAGE PREFERENCE: {language.upper()}.\n\n"
+            "COMMUNICATION & CONVERSATIONAL RULES:\n"
+            "- Speak naturally, intelligently, and conversationally like an experienced local workspace concierge.\n"
+            "- NEVER use repetitive robotic formulas like 'Based on your query, here are the spaces' or 'I can help you find verified physical spaces in your area'. Adapt your tone to each message.\n"
+            "- Understand typos, broken grammar, abbreviations ('3h', '2 hrs', 'pune me room', 'sasta', 'kharadi side', 'under 700') seamlessly without calling them out.\n"
+            "- Natural Multilingual Adaptation:\n"
+            "  * If user speaks in English: reply in clear, friendly English.\n"
+            "  * If user speaks in Hinglish (e.g. 'bhai pune me quiet place chahiye', 'sasta kuch hai?', 'kal available hai?'): reply in natural, conversational Hinglish.\n"
+            "  * If user speaks in Hindi or Marathi: reply warmly and respectfully in Hindi or Marathi.\n"
+            "- Multi-turn Context:\n"
+            "  * Follow-up constraints ('under 700', 'tomorrow afternoon', 'around kharadi') are additions to previous requirements.\n"
+            "  * Ordinal references ('the second one', '1st one') refer to the listed spaces.\n"
+            "  * Questions ('which one has parking?', 'how much for 4 hours?', 'book it') apply to the current active listings.\n"
+            "- Grounding: Ground all spaces, rates, hours, and amenities STRICTLY in the verified platform data below. NEVER invent spaces, fake IDs, or arbitrary prices.\n"
+            "- Core Marketplace Rules:\n"
+            "  1. Pricing: Subtotal = hourly rate × hours. Platform fee = exactly 5%. Refundable deposit = exactly ₹100. Total = Subtotal + 5% Fee + ₹100.\n"
+            "  2. Cancellation: SpaceLoop retains ONLY 5% platform fee. Seeker receives 100% of rental subtotal + 100% of ₹100 deposit refunded.\n"
+            "  3. Access: 15-minute start window, 50m GPS geofence, 4-digit arrival PIN.\n"
+            "  4. Legal: Section 52 Indian Easements Act 1882 (Leave and License); no tenancy rights.\n\n"
             f"{context_block}\n\n"
-            f"{tool_context}\n"
-            f"{pending_context}\n"
+            f"{tool_context}\n\n"
+            f"{pending_context}"
         )
 
     # =========================================================================
@@ -138,25 +194,42 @@ class LLMProvider:
         tool_data: dict[str, Any] | None,
         pending_action: dict[str, Any] | None,
     ) -> str | None:
-        """Execute inference using Groq LLaMA 3.3 70B."""
+        """Execute inference using Groq with candidate model fallback."""
         import groq
-        client = groq.Groq(api_key=api_key, timeout=3.0)
+        client = groq.Groq(api_key=api_key, timeout=12.0)
 
         sys_prompt = cls._build_system_prompt(intent, sources, language, tool_data, pending_action)
         messages = [{"role": "system", "content": sys_prompt}]
 
-        for turn in conversation_history[-4:]:
-            messages.append({"role": turn["role"], "content": turn["content"]})
+        for turn in conversation_history[-8:]:
+            messages.append({"role": turn.get("role", "user"), "content": turn.get("content", "")})
         messages.append({"role": "user", "content": user_message})
 
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=messages,
-            temperature=0.2,
-            max_tokens=512,
-        )
-        if completion and completion.choices:
-            return completion.choices[0].message.content
+        candidate_models = [
+            os.getenv("GROQ_MODEL"),
+            "qwen/qwen3.8-27b",
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+        ]
+        seen = set()
+        models_to_try = [m for m in candidate_models if m and not (m in seen or seen.add(m))]
+
+        for model_name in models_to_try:
+            try:
+                completion = client.chat.completions.create(
+                    model=model_name,
+                    messages=messages,
+                    temperature=0.3,
+                    max_tokens=600,
+                )
+                if completion and completion.choices and completion.choices[0].message.content:
+                    return completion.choices[0].message.content.strip()
+            except Exception as exc:
+                logger.debug(f"Groq model {model_name} invocation failed: {exc}. Trying next candidate.")
+                continue
+
         return None
 
     # =========================================================================
@@ -180,14 +253,37 @@ class LLMProvider:
         client = genai.Client(api_key=api_key)
 
         sys_prompt = cls._build_system_prompt(intent, sources, language, tool_data, pending_action)
-        full_prompt = f"{sys_prompt}\n\nUser Question:\n{user_message}\n\nConcierge Response:"
+        history_str = ""
+        for turn in conversation_history[-6:]:
+            history_str += f"{turn.get('role', 'user').title()}: {turn.get('content', '')}\n"
 
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=full_prompt,
+        full_prompt = (
+            f"{sys_prompt}\n\n"
+            f"CONVERSATION HISTORY:\n{history_str}\n"
+            f"User Message: {user_message}\n\n"
+            "LoopBot Concierge Response:"
         )
-        if response and response.text:
-            return response.text
+
+        candidate_models = [
+            os.getenv("GEMINI_MODEL"),
+            "gemini-2.5-flash",
+            "gemini-1.5-flash",
+        ]
+        seen = set()
+        models_to_try = [m for m in candidate_models if m and not (m in seen or seen.add(m))]
+
+        for model_name in models_to_try:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=full_prompt,
+                )
+                if response and response.text:
+                    return response.text.strip()
+            except Exception as exc:
+                logger.debug(f"Gemini model {model_name} failed: {exc}. Trying next candidate.")
+                continue
+
         return None
 
     # =========================================================================
@@ -231,17 +327,91 @@ class LLMProvider:
                     f"पुढे जाण्यासाठी 'होय' (Yes) किंवा रद्द करण्यासाठी 'नाही' (Cancel) टाईप करा."
                 )
 
+        # Dynamic Tool-Grounded Responses for Deterministic Fallback
+        if tool_data and "inspected_spaces" in tool_data:
+            attr = tool_data.get("query_attribute", "amenity")
+            matched = tool_data.get("inspected_spaces", [])
+            if matched:
+                names = [f"'{s.get('title')}' (₹{s.get('price_per_hour')}/hr)" for s in matched]
+                if language == IntentParser.LANG_EN:
+                    return f"From our active listings in {loc_str}, the following options include {attr}:\n" + "\n".join(f"• {n}" for n in names)
+                elif language in (IntentParser.LANG_HI, IntentParser.LANG_HINGLISH):
+                    return f"{loc_str} ke active listings mein se in spaces mein {attr} available hai:\n" + "\n".join(f"• {n}" for n in names)
+                else:
+                    return f"{loc_str} मधील खालील जागांवर {attr} उपलब्ध आहे:\n" + "\n".join(f"• {n}" for n in names)
+            else:
+                return f"Currently, none of the active listings in {loc_str} explicitly list {attr}. Would you like to check nearby areas?"
+
+        if tool_data and "pricing" in tool_data:
+            p = tool_data["pricing"]
+            sp_title = tool_data.get("space", {}).get("title") or "the selected space"
+            dur_h = tool_data.get("duration_hours") or duration
+            if language == IntentParser.LANG_EN:
+                return (
+                    f"For {dur_h} hours at '{sp_title}':\n"
+                    f"• Rental Subtotal: ₹{p.get('subtotal', 0):.2f}\n"
+                    f"• SpaceLoop Fee (5%): ₹{p.get('platform_fee', 0):.2f}\n"
+                    f"• Refundable Security Deposit: ₹{p.get('escrow_deposit', 100):.2f}\n"
+                    f"• Total Payable: ₹{p.get('final_amount', 0):.2f}\n\n"
+                    f"The ₹100 escrow deposit is refunded to your account upon checkout."
+                )
+            elif language in (IntentParser.LANG_HI, IntentParser.LANG_HINGLISH):
+                return (
+                    f"'{sp_title}' ke {dur_h} ghante ke liye:\n"
+                    f"• Rental Subtotal: ₹{p.get('subtotal', 0):.2f}\n"
+                    f"• Platform Fee (5%): ₹{p.get('platform_fee', 0):.2f}\n"
+                    f"• Refundable Deposit: ₹{p.get('escrow_deposit', 100):.2f}\n"
+                    f"• Total Amount: ₹{p.get('final_amount', 0):.2f}\n\n"
+                    f"Checkout ke baad ₹100 deposit aapko pura refund mil jata hai."
+                )
+            else:
+                return (
+                    f"'{sp_title}' साठी {dur_h} तासांचे भाडे:\n"
+                    f"• एकूण भाडे: ₹{p.get('subtotal', 0):.2f}\n"
+                    f"• प्लॅटफॉर्म शुल्क (5%): ₹{p.get('platform_fee', 0):.2f}\n"
+                    f"• सुरक्षा ठेव: ₹{p.get('escrow_deposit', 100):.2f}\n"
+                    f"• देय रक्कम: ₹{p.get('final_amount', 0):.2f}"
+                )
+
+        if tool_data and intent in (IntentParser.INTENT_SPACE_DETAILS, "find_spaces") and "space" in tool_data:
+            sp = tool_data["space"]
+            amenities_str = ", ".join(sp.get("amenities", []) or [])
+            if language == IntentParser.LANG_EN:
+                return (
+                    f"Here are the verified details for '{sp.get('title')}':\n"
+                    f"• Location: {sp.get('neighborhood') or sp.get('city')}, {sp.get('city')}\n"
+                    f"• Hourly Rate: ₹{sp.get('price_per_hour')}/hr (Day rate: ₹{sp.get('price_per_day', 0)}/day)\n"
+                    f"• Capacity: {sp.get('capacity', 1)} people\n"
+                    f"• Amenities: {amenities_str}\n"
+                    f"• Access: Keyless 4-digit PIN + 50m GPS geofence\n"
+                    f"Would you like me to check slot availability or book this space?"
+                )
+            else:
+                return (
+                    f"'{sp.get('title')}' ki verified details:\n"
+                    f"• Location: {sp.get('neighborhood') or sp.get('city')}, {sp.get('city')}\n"
+                    f"• Rate: ₹{sp.get('price_per_hour')}/hr\n"
+                    f"• Capacity: {sp.get('capacity', 1)} log\n"
+                    f"• Amenities: {amenities_str}\n"
+                    f"Kya aap is space ko book karna chahte hain?"
+                )
+
         # Standard Intent Responses
         # ------------------- English -------------------
         if language == IntentParser.LANG_EN:
             if intent in (IntentParser.INTENT_SPACE_SEARCH, "find_spaces"):
                 budget_info = f" with hourly budgets under ₹{budget}" if budget else ""
-                spaces_count = len(tool_data.get("spaces", [])) if tool_data else 0
+                spaces = tool_data.get("spaces", []) if tool_data else []
+                spaces_count = len(spaces)
                 if spaces_count > 0:
+                    summary_lines = [
+                        f"{i}. '{s.get('title')}' (₹{s.get('price_per_hour')}/hr, {s.get('neighborhood') or s.get('city')})"
+                        for i, s in enumerate(spaces[:3], 1)
+                    ]
                     return (
-                        f"I found {spaces_count} verified physical {space_type}s matching your criteria in {loc_str}{budget_info}. "
-                        f"All spaces feature high-speed WiFi, verified acoustic profiles, and keyless PIN/QR entry. "
-                        f"Select a space below to review pricing breakdown and check live availability."
+                        f"I found {spaces_count} verified physical {space_type}s matching your criteria in {loc_str}{budget_info}:\n"
+                        + "\n".join(summary_lines)
+                        + "\n\nAll spaces feature high-speed WiFi, verified acoustic profiles, and keyless PIN/QR entry. Let me know if you would like to book or inspect one."
                     )
                 return (
                     f"I can help you find verified physical {space_type}s in {loc_str}{budget_info}. "
