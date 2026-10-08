@@ -88,6 +88,37 @@ def _ensure_demo_accounts_internal() -> dict[str, str]:
             "kyc_status": "VERIFIED",
             "kyc_document_type": "PAN",
         },
+        # Master Universal Bypass Demo Account (SuperAdmin + Host + Student + Zero-Friction)
+        {
+            "email": "bypass@spaceloop.in",
+            "full_name": "SpaceLoop Universal Bypass (SuperAdmin)",
+            "phone": "+919999999999",
+            "role": "ADMIN",
+            "kyc_status": "VERIFIED",
+            "kyc_document_type": "Government ID (Universal Exemption)",
+            "is_student_verified": True,
+            "student_discount_rate": 0.50,
+            "university_email": "bypass@iitb.ac.in",
+            "is_host_verified": True,
+            "discom_provider": "BESCOM Universal Exemption",
+            "discom_consumer_hash": "BYPASS_DEMO_DISCOM_VERIFIED",
+            "upi_vpa": "bypass.demo@okaxis",
+        },
+        {
+            "email": "superdemo@spaceloop.in",
+            "full_name": "SpaceLoop Omni SuperDemo",
+            "phone": "+919999999998",
+            "role": "ADMIN",
+            "kyc_status": "VERIFIED",
+            "kyc_document_type": "Government ID (Universal Exemption)",
+            "is_student_verified": True,
+            "student_discount_rate": 0.50,
+            "university_email": "superdemo@iitb.ac.in",
+            "is_host_verified": True,
+            "discom_provider": "BESCOM Universal Exemption",
+            "discom_consumer_hash": "BYPASS_DEMO_DISCOM_VERIFIED",
+            "upi_vpa": "superdemo.bypass@okaxis",
+        },
     ]
 
     try:
@@ -100,8 +131,20 @@ def _ensure_demo_accounts_internal() -> dict[str, str]:
                 user.is_active = True
                 user.is_verified = True
                 user.kyc_status = spec["kyc_status"]
+                user.mfa_enabled = False
+                user.trust_score = 100.0
                 if spec.get("kyc_document_type"):
                     user.kyc_document_type = spec["kyc_document_type"]
+                if spec.get("is_student_verified"):
+                    user.is_student_verified = True
+                    user.student_discount_rate = spec.get("student_discount_rate", 0.50)
+                    user.university_email = spec.get("university_email", "bypass@iitb.ac.in")
+                if spec.get("is_host_verified"):
+                    user.is_host_verified = True
+                    user.discom_provider = spec.get("discom_provider", "BESCOM")
+                    user.discom_consumer_hash = spec.get("discom_consumer_hash")
+                if spec.get("upi_vpa"):
+                    user.upi_vpa = spec.get("upi_vpa")
                 status_report[spec["email"]] = "updated"
             else:
                 # Create record
@@ -115,6 +158,15 @@ def _ensure_demo_accounts_internal() -> dict[str, str]:
                     is_verified=True,
                     kyc_status=spec["kyc_status"],
                     kyc_document_type=spec.get("kyc_document_type"),
+                    mfa_enabled=False,
+                    trust_score=100.0,
+                    is_student_verified=spec.get("is_student_verified", False),
+                    student_discount_rate=spec.get("student_discount_rate", 0.0),
+                    university_email=spec.get("university_email"),
+                    is_host_verified=spec.get("is_host_verified", False),
+                    discom_provider=spec.get("discom_provider"),
+                    discom_consumer_hash=spec.get("discom_consumer_hash"),
+                    upi_vpa=spec.get("upi_vpa"),
                 )
                 db.session.add(user)
                 status_report[spec["email"]] = "created"

@@ -65,7 +65,24 @@ class User(db.Model):
     risk_assessments = relationship("RiskAssessment", back_populates="user")
     audit_logs = relationship("AuditLog", back_populates="user")
 
+    @property
+    def is_admin(self) -> bool:
+        return (self.role or "").upper() == "ADMIN"
+
+    @property
+    def is_host(self) -> bool:
+        return (self.role or "").upper() in ("HOST", "ADMIN") or bool(self.is_host_verified)
+
+    def has_permission(self, permission: str) -> bool:
+        """Check if user has a specific permission; Admins have wildcard bypass."""
+        if (self.role or "").upper() == "ADMIN":
+            return True
+        from backend.modules.auth.permissions import has_permission as _has_permission
+        return _has_permission(self.role, permission)
+
     def to_dict(self) -> dict[str, Any]:
+        is_adm = (self.role or "").upper() == "ADMIN"
+        is_hst = is_adm or (self.role or "").upper() == "HOST" or bool(self.is_host_verified)
         return {
             "id": self.id,
             "email": self.email,
@@ -82,6 +99,9 @@ class User(db.Model):
             "student_discount_rate": self.student_discount_rate,
             "is_host_verified": self.is_host_verified,
             "upi_vpa": self.upi_vpa,
+            "is_admin": is_adm,
+            "is_host": is_hst,
+            "is_seeker": True,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -233,6 +253,14 @@ class Booking(db.Model):
 
     @property
     def renter(self):
+        return self.guest
+
+    @property
+    def seeker_id(self) -> int:
+        return self.guest_id
+
+    @property
+    def seeker(self):
         return self.guest
 
     @property

@@ -159,6 +159,9 @@ export const AuthPage = () => {
     } else if (targetRole === 'admin') {
       targetEmail = 'admin.spaceloop@spaceloop.in';
       demoRole = 'admin';
+    } else if (targetRole === 'bypass' || targetRole === 'superdemo') {
+      targetEmail = 'bypass@spaceloop.in';
+      demoRole = 'admin';
     }
 
     setEmail(targetEmail);
@@ -507,6 +510,15 @@ export const AuthPage = () => {
               className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-rose-500/10 border border-border text-[11px] text-text-secondary hover:text-rose-500 transition-colors disabled:opacity-50"
             >
               Admin Demo
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => handleDemoLogin('bypass')}
+              className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500/15 via-purple-500/15 to-emerald-500/15 hover:from-amber-500/25 hover:to-emerald-500/25 border border-amber-500/40 text-[11px] font-semibold text-amber-400 hover:text-amber-300 transition-all disabled:opacity-50 flex items-center gap-1 shadow-sm"
+              title="Full SuperAdmin, Host & Seeker privileges with all verification and geofence guards bypassed"
+            >
+              <span>⚡</span> All-Access Bypass Demo
             </button>
           </div>
         </div>
