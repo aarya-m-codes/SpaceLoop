@@ -5,11 +5,14 @@ from backend.space_ai import calculate_earnings_estimate
 calculator_bp = Blueprint("calculator_api", __name__)
 
 
-@calculator_bp.route("/estimate", methods=["POST"])
+@calculator_bp.route("/estimate", methods=["POST", "GET"])
 def estimate_earnings():
     """Calculate projected monthly and annual host revenue."""
-    payload = request.get_json(silent=True) or {}
-    
+    if request.method == "POST":
+        payload = request.get_json(silent=True) or {}
+    else:
+        payload = request.args.to_dict()
+
     category = payload.get("space_type") or payload.get("category", "Workspace")
     sqft = payload.get("square_feet") or payload.get("sqft", 250)
     city = payload.get("city", "Bengaluru")

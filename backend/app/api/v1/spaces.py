@@ -453,6 +453,36 @@ def get_space_qr_pass(space_id: int):
     }), 200
 
 
+@spaces_bp.route("/<int:space_id>/door-pass", methods=["GET"])
+def get_door_pass(space_id: int):
+    """Retrieve printable door pass signage metadata for a space."""
+    space = SpaceService.get_space(space_id)
+    if not space:
+        return jsonify({"success": False, "error": {"code": "NOT_FOUND", "message": "Space not found"}}), 404
+
+    qr_payload = f"https://spaceloop.vercel.app/spaces/{space.id}?checkin=qr&token=DOOR-{space.id}"
+    return jsonify({
+        "success": True,
+        "space": {
+            "id": space.id,
+            "title": space.title,
+            "address": getattr(space, 'address_line1', getattr(space, 'address', '')),
+            "city": space.city,
+            "postal_code": getattr(space, 'pincode', getattr(space, 'postal_code', '')),
+            "capacity": space.capacity,
+            "price_per_hour": space.price_per_hour,
+            "host_id": space.host_id,
+            "door_qr_payload": qr_payload,
+            "wifi_ssid": getattr(space, 'wifi_ssid', None) or f"{space.title} Guest WiFi",
+            "instructions": [
+                "Scan this QR code with the SpaceLoop app or camera to initiate GPS check-in.",
+                "Ensure you are within 50 meters of the door for automated unlock.",
+                "Alternatively, enter your 4-digit arrival PIN on the keybox/keypad."
+            ]
+        }
+    }), 200
+
+
 @spaces_bp.route("/<int:space_id>/inquiries", methods=["GET", "POST"])
 def space_inquiries(space_id: int):
     """List or post inquiries for a physical space listing."""
@@ -580,3 +610,4 @@ def mark_notification_read(notification_id: int):
         notif.is_read = True
         db.session.commit()
     return jsonify({"success": True}), 200
+

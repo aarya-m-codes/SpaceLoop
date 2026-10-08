@@ -248,3 +248,40 @@ def verify_aadhaar():
                 "message": "An error occurred during Aadhaar verification.",
             },
         }), 500
+
+
+@verification_bp.route("/discom", methods=["POST"])
+def verify_discom():
+    """Verify Discom utility electricity bill specifically."""
+    payload = request.get_json() or {}
+    consumer_no = payload.get("consumer_no") or payload.get("discom_consumer_no") or payload.get("consumer_number")
+    provider = payload.get("provider") or payload.get("discom_provider", "MSEDCL")
+    if not consumer_no:
+        return jsonify({"success": False, "error": {"code": "MISSING_FIELD", "message": "Consumer number is required"}}), 400
+    
+    # Simulate / verify with Discom adapter
+    from backend.modules.verification.adapters.discom_adapter import DiscomVerificationAdapter
+    adapter = DiscomVerificationAdapter()
+    res = adapter.verify(consumer_no=consumer_no, provider=provider)
+    return jsonify({
+        "success": res.get("verified", True),
+        "data": res
+    }), 200
+
+
+@verification_bp.route("/upi", methods=["POST"])
+def verify_upi():
+    """Verify UPI VPA address with Penny Drop verification."""
+    payload = request.get_json() or {}
+    vpa = payload.get("upi_vpa") or payload.get("vpa")
+    if not vpa or "@" not in vpa:
+        return jsonify({"success": False, "error": {"code": "INVALID_VPA", "message": "Valid UPI VPA address is required"}}), 400
+
+    from backend.modules.verification.adapters.upi_adapter import UPIVerificationAdapter
+    adapter = UPIVerificationAdapter()
+    res = adapter.verify(upi_vpa=vpa)
+    return jsonify({
+        "success": res.get("verified", True),
+        "data": res
+    }), 200
+

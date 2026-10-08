@@ -23,6 +23,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { Button } from './Button';
+import { LanguageSelector } from './LanguageSelector';
 
 export const Navbar = () => {
   const { theme, toggleTheme, isDark } = useTheme();
@@ -287,11 +288,43 @@ export const Navbar = () => {
                       </Link>
                     </div>
 
-                    <div className="pt-2 mt-2 border-t border-border flex flex-col gap-1.5">
+                    <div className="pt-2 mt-2 border-t border-border flex flex-col gap-1 text-xs">
+                      <Link
+                        to="/calculator"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-1.5 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors"
+                      >
+                        <span>Earnings Calculator</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-text-muted" />
+                      </Link>
+                      <Link
+                        to="/verify"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-1.5 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors"
+                      >
+                        <span>Verification Hub (KYC)</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-text-muted" />
+                      </Link>
+                      <Link
+                        to="/trust-safety"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-1.5 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors"
+                      >
+                        <span>Trust & Safety (Sec 52)</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-text-muted" />
+                      </Link>
+                      <Link
+                        to="/architecture"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-1.5 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors"
+                      >
+                        <span>System Architecture</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-text-muted" />
+                      </Link>
                       <Link
                         to="/explore"
                         onClick={() => setMenuOpen(false)}
-                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-primary hover:bg-primary-light transition-colors"
+                        className="flex items-center justify-between px-3 py-2 mt-1 rounded-xl font-semibold text-primary hover:bg-primary-light transition-colors"
                       >
                         <span>Explore All Spaces</span>
                         <ArrowRight className="w-3.5 h-3.5" />
@@ -489,6 +522,9 @@ export const Navbar = () => {
                 </Link>
               </div>
             )}
+
+            {/* Regional Language Selector */}
+            <LanguageSelector compact />
 
             {/* Theme Toggle Button at Extreme Right */}
             <motion.button

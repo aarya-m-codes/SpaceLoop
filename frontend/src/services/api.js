@@ -152,6 +152,22 @@ export const authApi = {
       body: JSON.stringify(typeof payload === 'string' ? { code: payload } : payload),
     }),
 
+  verifyEmail: (token) =>
+    request(`/api/v1/auth/verify-email?token=${encodeURIComponent(token)}`, {
+      method: 'GET',
+    }),
+
+  resendVerification: (email) =>
+    request('/api/v1/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  instantVerify: () =>
+    request('/api/v1/auth/instant-verify', {
+      method: 'POST',
+    }),
+
   disableMfa: (payload) =>
     request('/api/v1/auth/mfa/disable', {
       method: 'POST',
@@ -639,6 +655,78 @@ export const adminApi = {
   },
 };
 
+// ==========================================
+// SESSIONS, CALCULATOR & LEASE APIS
+// ==========================================
+export const sessionsApi = {
+  getActive: () =>
+    request('/api/v1/sessions/active', { method: 'GET' }),
+
+  getStatus: (id, coords) => {
+    const qs = coords && coords.lat != null && coords.lng != null ? `?lat=${coords.lat}&lng=${coords.lng}` : '';
+    return request(`/api/v1/sessions/${id}${qs}`, { method: 'GET' });
+  },
+
+  extend: (id, hours = 1.0) =>
+    request(`/api/v1/sessions/${id}/extend`, {
+      method: 'POST',
+      body: JSON.stringify({ extension_hours: hours }),
+    }),
+};
+
+export const leasesApi = {
+  getBookingLease: (bookingId) =>
+    request(`/api/v1/leases/bookings/${bookingId}/lease`, { method: 'GET' }),
+
+  getSpaceTemplate: (spaceId) =>
+    request(`/api/v1/leases/spaces/${spaceId}/lease-template`, { method: 'GET' }),
+};
+
+export const doorPassApi = {
+  getDoorPass: (spaceId) =>
+    request(`/api/v1/spaces/${spaceId}/door-pass`, { method: 'GET' }),
+};
+
+// ==========================================
+// HOST PORTAL APIS
+// ==========================================
+export const hostApi = {
+  getDashboard: () =>
+    request('/api/v1/hosts/dashboard', { method: 'GET' }),
+
+  getActivity: (category) => {
+    const qs = category && category !== 'all' ? `?category=${category}` : '';
+    return request(`/api/v1/hosts/activity${qs}`, { method: 'GET' });
+  },
+
+  getNotifications: () =>
+    request('/api/v1/hosts/notifications', { method: 'GET' }),
+
+  markNotificationRead: (id) =>
+    request(`/api/v1/hosts/notifications/${id}/read`, { method: 'POST' }),
+
+  markAllNotificationsRead: () =>
+    request('/api/v1/hosts/notifications/read-all', { method: 'POST' }),
+
+  deleteNotification: (id) =>
+    request(`/api/v1/hosts/notifications/${id}`, { method: 'DELETE' }),
+
+  getEscrowLedger: () =>
+    request('/api/v1/hosts/escrow/ledger', { method: 'GET' }),
+
+  getAccessLogs: () =>
+    request('/api/v1/hosts/access-logs', { method: 'GET' }),
+
+  getSettings: () =>
+    request('/api/v1/hosts/settings', { method: 'GET' }),
+
+  updateSettings: (settings) =>
+    request('/api/v1/hosts/settings', {
+      method: 'POST',
+      body: JSON.stringify(settings),
+    }),
+};
+
 export default {
   auth: authApi,
   admin: adminApi,
@@ -654,5 +742,10 @@ export default {
   notifications: notificationsApi,
   calculator: calculatorApi,
   session: sessionApi,
+  sessions: sessionsApi,
   system: systemApi,
+  leases: leasesApi,
+  doorPass: doorPassApi,
+  host: hostApi,
 };
+

@@ -364,6 +364,10 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     from backend.app.api.v1.trust import trust_bp
     from backend.app.api.v1.trust_safety import trust_safety_bp
     from backend.app.api.v1.verification import verification_bp
+    from backend.app.api.v1.sessions import sessions_bp
+    from backend.app.api.v1.calculator import calculator_bp
+    from backend.app.api.v1.leases import leases_bp
+    from backend.app.api.v1.hosts import hosts_bp, get_host_dashboard
     from backend.modules.spaces.photo_service import UPLOAD_FOLDER
 
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
@@ -396,10 +400,22 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     app.register_blueprint(fraud_bp, url_prefix="/api/v1/fraud", name="fraud_v1")
     app.register_blueprint(verification_bp, url_prefix="/api/verify")
     app.register_blueprint(verification_bp, url_prefix="/api/v1/verify", name="verify_v1")
+    app.register_blueprint(verification_bp, url_prefix="/api/v1/verification", name="verification_canonical")
     app.register_blueprint(access_bp, url_prefix="/api/access")
     app.register_blueprint(access_bp, url_prefix="/api/v1/access", name="access_v1")
     app.register_blueprint(search_bp, url_prefix="/api/v1/search")
     app.register_blueprint(search_bp, url_prefix="/api/search", name="search_legacy")
+    app.register_blueprint(sessions_bp, url_prefix="/api/v1/sessions")
+    app.register_blueprint(sessions_bp, url_prefix="/api/sessions", name="sessions_legacy")
+    app.register_blueprint(leases_bp, url_prefix="/api/v1/leases")
+    app.register_blueprint(leases_bp, url_prefix="/api/leases", name="leases_legacy")
+    app.register_blueprint(hosts_bp, url_prefix="/api/v1/hosts")
+    app.register_blueprint(hosts_bp, url_prefix="/api/host", name="host_legacy")
+    app.register_blueprint(hosts_bp, url_prefix="/api/hosts", name="hosts_legacy")
+
+    # Direct routes for Host Dashboard
+    app.add_url_rule("/api/dashboard", "api_dashboard_direct", get_host_dashboard, methods=["GET"])
+
 
     # Direct routes for LoopBot conversational endpoints
     app.add_url_rule("/api/assistant", "api_assistant", _handle_chat_request, methods=["POST"])
@@ -422,7 +438,7 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
     if not app.config.get("TESTING"):
         with app.app_context():
             try:
-                import models  # noqa: F401
+                from backend.app.persistence.models import Space
                 db.create_all()
                 try:
                     try:
@@ -430,7 +446,6 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
                     except ImportError:
                         from seed_data import ensure_demo_accounts, seed_all
                     ensure_demo_accounts(app)
-                    from models import Space
                     if Space.query.count() == 0:
                         seed_all(app)
                 except Exception as seed_err:
@@ -442,4 +457,23 @@ def create_app(config_class: type[BaseConfig] | None = None) -> Flask:
 
 
 # Default application instance for WSGI servers
-app = create_app()
+_default_app = None
+
+
+def get_default_app():
+    global _default_app
+    if _default_app is None:
+        _default_app = create_app()
+    return _default_app
+
+
+class _LazyApp:
+    def __getattr__(self, name):
+        return getattr(get_default_app(), name)
+
+    def __call__(self, *args, **kwargs):
+        return get_default_app()(*args, **kwargs)
+
+
+app = _LazyApp()
+

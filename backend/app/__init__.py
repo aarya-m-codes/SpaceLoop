@@ -9,4 +9,3 @@ def create_app(*args: Any, **kwargs: Any) -> Any:
 
 
 __all__ = ["create_app"]
-
